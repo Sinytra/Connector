@@ -95,7 +95,6 @@ public class ConnectorModContainer extends ModContainer {
             initFunc.accept(instance);
             LOGGER.trace(LOADING, "Loaded mod instance {} of type {}", getModId(), modClass.getName());
             return instance;
-
         } catch (Throwable e) {
             LOGGER.error(LOADING, "Failed to create mod instance. ModID: {}, class {}", getModId(), modClass.getName(), e);
             throw new ModLoadingException(modInfo, ModLoadingStage.CONSTRUCT, "fml.modloading.failedtoloadmod", e, modClass);

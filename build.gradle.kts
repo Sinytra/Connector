@@ -1,20 +1,69 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import net.minecraftforge.gradle.common.util.RunConfig
+import net.minecraftforge.gradle.mcp.tasks.GenerateSRG
+import net.minecraftforge.srgutils.IMappingFile
 import java.time.LocalDateTime
 
 plugins {
     java
     `maven-publish`
     id("net.minecraftforge.gradle") version "5.1.+"
+    id("com.github.johnrengelman.shadow") version "8.1.+" apply false
 }
 
 version = "1.0"
 group = "dev.su5ed.connector"
 
 val versionMc: String by project
+val versionFabricLoader: String by project
+
+val language by sourceSets.registering
+
+val shadow: Configuration by configurations.creating
+val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
+    configurations = listOf(shadow)
+
+    exclude("*.json")
+    exclude("META-INF/services/net.fabricmc.*")
+    exclude("META-INF/services/org.spongepowered.*")
+    exclude("ui/**")
+    exclude("assets/fabricloader/**")
+//    relocate("net.fabricmc", "net.fabricmc.relocate")
+
+    archiveClassifier.set("deps")
+}
+val languageJar: Jar by tasks.creating(Jar::class) {
+    dependsOn("languageClasses")
+
+    from(language.get().output)
+    manifest.attributes("FMLModType" to "LANGPROVIDER")
+
+    archiveClassifier.set("language")
+}
+val fullJar: Jar by tasks.creating(Jar::class) {
+    dependsOn(tasks.jar, depsJar)
+
+    from(zipTree(tasks.jar.get().archiveFile))
+    from(zipTree(depsJar.archiveFile))
+    from(languageJar)
+    manifest.attributes("Additional-Dependencies-Language" to languageJar.archiveFile.get().asFile.name)
+
+    archiveClassifier.set("full")
+}
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(17))
     withSourcesJar()
+}
+
+configurations {
+    compileOnly {
+        extendsFrom(shadow)
+    }
+
+    "languageImplementation" {
+        extendsFrom(configurations.minecraft.get(), shadow)
+    }
 }
 
 println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty("java.vm.version")} (${System.getProperty("java.vendor")}), Arch: ${System.getProperty("os.arch")}")
@@ -35,6 +84,12 @@ minecraft {
                 create("connector") {
                     sources(sourceSets.main.get())
                 }
+            }
+
+            val existing = lazyTokens["minecraft_classpath"]
+            lazyToken("minecraft_classpath") {
+                fullJar.archiveFile.get().asFile.absolutePath
+                    .let { path -> existing?.let { "$path;${it.get()}" } ?: path }
             }
         }
 
@@ -61,14 +116,27 @@ sourceSets.main {
 }
 
 repositories {
-    
+    maven {
+        name = "Fabric"
+        url = uri("https://maven.fabricmc.net")
+    }
 }
 
 dependencies {
     minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-45.0.64")
+
+    shadow(group = "net.fabricmc", name = "fabric-loader", version = versionFabricLoader)
 }
 
 tasks {
+    create<GenerateSRG>("createObfToMcp") {
+        notch = true
+        dependsOn(extractSrg)
+        srg.set(extractSrg.flatMap { it.output })
+        mappings.set(minecraft.mappings)
+        format.set(IMappingFile.Format.TSRG)
+    }
+
     jar {
         finalizedBy("reobfJar")
 
@@ -87,6 +155,12 @@ tasks {
 
     withType<JavaCompile> {
         options.encoding = "UTF-8" // Use the UTF-8 charset for Java compilation
+    }
+
+    configureEach {
+        if (name == "prepareRuns") {
+            dependsOn(fullJar)
+        }
     }
 }
 

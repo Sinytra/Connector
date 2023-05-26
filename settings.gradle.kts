@@ -1,9 +1,13 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        maven { 
+        maven {
             name = "MinecraftForge"
             url = uri("https://maven.minecraftforge.net/")
+        }
+        maven {
+            name = "Sponge Snapshots"
+            url = uri("https://repo.spongepowered.org/repository/maven-public/")
         }
     }
 }

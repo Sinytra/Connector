@@ -12,6 +12,7 @@ plugins {
     `maven-publish`
     id("net.minecraftforge.gradle") version "5.1.+"
     id("com.github.johnrengelman.shadow") version "8.1.+" apply false
+    id("org.spongepowered.mixin") version "0.7.+"
 }
 
 version = "1.0"

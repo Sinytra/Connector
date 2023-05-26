@@ -1,5 +1,9 @@
 package dev.su5ed.connector;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.jarhandling.SecureJar;
@@ -14,26 +18,34 @@ import net.minecraftforge.fml.loading.moddiscovery.ModJarMetadata;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
 import net.minecraftforge.forgespi.locating.ModFileLoadingException;
+import net.minecraftforge.srgutils.IMappingFile;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
+import java.util.zip.ZipFile;
 
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
@@ -47,6 +59,7 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Marker FART_MARKER = MarkerFactory.getMarker("FART");
+    private static final int CACHE_VERSION = 1;
 
     private final Path modFolder = FMLPaths.MODSDIR.get();
     private final Path selfPath;
@@ -113,7 +126,7 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
 
         String checksum;
         try (InputStream is = new FileInputStream(input)) {
-            checksum = DigestUtils.sha256Hex(is);
+            checksum = CACHE_VERSION + "," + DigestUtils.sha256Hex(is);
         }
 
         if (Files.exists(inputCache) && Files.exists(output)) {
@@ -129,9 +142,46 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
             Files.copy(yarnResource, yarnToMcp);
         }
 
+        Path intermediaryToSrg = remappedDir.resolve("intermediaryToSrg.tsrg");
+        if (Files.notExists(intermediaryToSrg)) {
+            Path intermediaryResource = this.selfPath.resolve(intermediaryToSrg.getFileName().toString());
+            Files.copy(intermediaryResource, intermediaryToSrg);
+        }
+        
+        Set<String> configs = new HashSet<>();
+        Set<String> refmaps = new HashSet<>();
+        try (ZipFile zipFile = new ZipFile(input)) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(zipFile.getInputStream(zipFile.getEntry(FABRIC_MOD_JSON))))) {
+                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                JsonArray mixins = json.getAsJsonArray("mixins");
+                for (JsonElement element : mixins) {
+                    configs.add(element.getAsString());
+                }
+            }
+
+            zipFile.stream()
+                .filter(entry -> configs.contains(entry.getName()))
+                .forEach(entry -> {
+                    try (Reader reader = new InputStreamReader(zipFile.getInputStream(entry))) {
+                        JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                        if (json.has("refmap")) {
+                            String refmap = json.get("refmap").getAsString();
+                            refmaps.add(refmap);
+                        }
+                    } catch (IOException e) {
+                        LOGGER.error("Error reading mixin config entry {} in file {}", entry.getName(), input.getAbsolutePath());
+                        throw new UncheckedIOException(e);
+                    }
+                });
+        }
+
+        IMappingFile mappingFile = IMappingFile.load(intermediaryToSrg.toFile());
+        SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(mappingFile);
+
         try (Renamer renamer = Renamer.builder()
             .map(yarnToMcp.toFile())
             .setCollectAbstractParams(false)
+            .add(new RefmapTransformer(configs, refmaps, remapper))
             .logger(s -> LOGGER.trace(FART_MARKER, s))
             .debug(s -> LOGGER.trace(FART_MARKER, s))
             .build())
@@ -170,9 +220,4 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
 
     @Override
     public void initArguments(Map<String, ?> arguments) {}
-
-    @Override
-    public boolean isValid(IModFile modFile) {
-        return true;
-    }
 }

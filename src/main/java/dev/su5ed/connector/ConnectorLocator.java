@@ -8,6 +8,7 @@ import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.jarhandling.SecureJar;
 import net.minecraftforge.fart.api.Renamer;
+import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.fml.loading.LogMarkers;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
@@ -19,6 +20,7 @@ import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
 import net.minecraftforge.forgespi.locating.ModFileLoadingException;
 import net.minecraftforge.srgutils.IMappingFile;
+import net.minecraftforge.srgutils.INamedMappingFile;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
@@ -136,16 +138,11 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
             }
         }
 
-        Path yarnToMcp = remappedDir.resolve("yarnToMcp.tsrg");
-        if (Files.notExists(yarnToMcp)) {
-            Path yarnResource = this.selfPath.resolve(yarnToMcp.getFileName().toString());
-            Files.copy(yarnResource, yarnToMcp);
-        }
-
-        Path intermediaryToSrg = remappedDir.resolve("intermediaryToSrg.tsrg");
-        if (Files.notExists(intermediaryToSrg)) {
-            Path intermediaryResource = this.selfPath.resolve(intermediaryToSrg.getFileName().toString());
-            Files.copy(intermediaryResource, intermediaryToSrg);
+        // TODO Cache mapping
+        Path mappingsFile = remappedDir.resolve("mappings.tsrg");
+        if (Files.notExists(mappingsFile)) {
+            Path mappingsResource = this.selfPath.resolve(mappingsFile.getFileName().toString());
+            Files.copy(mappingsResource, mappingsFile);
         }
         
         Set<String> configs = new HashSet<>();
@@ -175,12 +172,13 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
                 });
         }
 
-        IMappingFile mappingFile = IMappingFile.load(intermediaryToSrg.toFile());
-        SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(mappingFile);
+        INamedMappingFile namedMapping = INamedMappingFile.load(mappingsFile.toFile());
+        IMappingFile yarnToOfficial = namedMapping.getMap("yarn", "official");
+        IMappingFile intermediaryToSrg = namedMapping.getMap("intermediary", "srg");
+        SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(intermediaryToSrg);
 
         try (Renamer renamer = Renamer.builder()
-            .map(yarnToMcp.toFile())
-            .setCollectAbstractParams(false)
+            .add(Transformer.renamerFactory(yarnToOfficial, false))
             .add(new RefmapTransformer(configs, refmaps, remapper))
             .logger(s -> LOGGER.trace(FART_MARKER, s))
             .debug(s -> LOGGER.trace(FART_MARKER, s))

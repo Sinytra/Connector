@@ -1,4 +1,4 @@
-package dev.su5ed.connector;
+package dev.su5ed.connector.fart;
 
 import com.google.common.collect.Maps;
 import com.google.gson.GsonBuilder;
@@ -64,7 +64,7 @@ public class SrgRemappingReferenceMapper {
         }
         Matcher fieldMatcher = FIELD_REF_PATTERN.matcher(reference);
         if (fieldMatcher.matches()) {
-            return remapRefMapEntry(methodMatcher, ":", (name, desc) -> this.fields.get(name), IMappingFile.IField::getMappedDescriptor);
+            return remapRefMapEntry(fieldMatcher, ":", (name, desc) -> this.fields.get(name), IMappingFile.IField::getMappedDescriptor);
         }
         return reference;
     }

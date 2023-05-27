@@ -7,8 +7,21 @@ import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.jarhandling.SecureJar;
+import dev.su5ed.connector.fart.AccessWidenerTransformer;
+import dev.su5ed.connector.fart.MixinTargetTransformer;
+import dev.su5ed.connector.fart.RefmapTransformer;
+import dev.su5ed.connector.fart.SrgRemappingReferenceMapper;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.loader.impl.FabricLoaderImpl;
+import net.fabricmc.loader.impl.metadata.DependencyOverrides;
+import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
+import net.fabricmc.loader.impl.metadata.ModMetadataParser;
+import net.fabricmc.loader.impl.metadata.ParseMetadataException;
+import net.fabricmc.loader.impl.metadata.VersionOverrides;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fart.api.Renamer;
 import net.minecraftforge.fart.api.Transformer;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.fml.loading.LogMarkers;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
@@ -26,9 +39,9 @@ import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UncheckedIOException;
@@ -36,16 +49,19 @@ import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.jar.Attributes;
+import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
-import java.util.zip.ZipFile;
 
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
@@ -56,6 +72,7 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
     private static final String SUFFIX = ".jar";
     private static final String JIJ_ATTRIBUTE_PREFIX = "Additional-Dependencies-";
     private static final String LANGUAGE_JIJ_DEP = "Language";
+    private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Marker FART_MARKER = MarkerFactory.getMarker("FART");
@@ -73,6 +90,8 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
         Path manifestPath = SELF_PATH.resolve("META-INF/MANIFEST.MF");
         uncheck(() -> manifest.read(Files.newInputStream(manifestPath)));
         this.attributes = manifest.getMainAttributes();
+
+        FabricLoaderImpl.INSTANCE.setGameProvider(new ConnectorGameProvider());
     }
 
     @Override
@@ -139,27 +158,44 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
         Path mappingsOutput = remappedDir.resolve(mappingInput.getFileName().toString());
         ConnectorUtil.cache(String.valueOf(CACHE_VERSION), mappingInput, mappingsOutput, () -> Files.copy(mappingInput, mappingsOutput));
 
-        Set<String> configs = new HashSet<>();
+        Set<String> configs;
         Set<String> refmaps = new HashSet<>();
-        try (ZipFile zipFile = new ZipFile(input)) {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(zipFile.getInputStream(zipFile.getEntry(FABRIC_MOD_JSON))))) {
-                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-                JsonArray mixins = json.getAsJsonArray("mixins");
-                if (mixins != null) {
-                    for (JsonElement element : mixins) {
-                        configs.add(element.getAsString());
-                    }
-                }
+        Set<String> mixinClasses = new HashSet<>();
+        Attributes manifestAttributes;
+        try (JarFile jarFile = new JarFile(input)) {
+            manifestAttributes = jarFile.getManifest().getMainAttributes();
+
+            try (InputStream ins = jarFile.getInputStream(jarFile.getEntry(FABRIC_MOD_JSON))) {
+                // TODO Keep for later, pass into mod file info
+                LoaderModMetadata metadata = ModMetadataParser.parseMetadata(ins, "", Collections.emptyList(), new VersionOverrides(), new DependencyOverrides(Paths.get("randomMissing")), false);
+
+                configs = new HashSet<>(metadata.getMixinConfigs(getEnvType()));
+            } catch (ParseMetadataException e) {
+                throw new RuntimeException(e);
             }
 
-            zipFile.stream()
+            jarFile.stream()
                 .filter(entry -> configs.contains(entry.getName()))
                 .forEach(entry -> {
-                    try (Reader reader = new InputStreamReader(zipFile.getInputStream(entry))) {
+                    try (Reader reader = new InputStreamReader(jarFile.getInputStream(entry))) {
                         JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                         if (json.has("refmap")) {
                             String refmap = json.get("refmap").getAsString();
                             refmaps.add(refmap);
+                        }
+                        if (json.has("package")) {
+                            String pkg = json.get("package").getAsString();
+                            String pkgPath = pkg.replace('.', '/') + '/';
+
+                            Set.of("mixins", "client", "server").stream()
+                                .flatMap(str -> {
+                                    JsonArray array = json.getAsJsonArray(str);
+                                    return Optional.ofNullable(array).stream()
+                                        .flatMap(arr -> arr.asList().stream()
+                                            .map(JsonElement::getAsString));
+                                })
+                                .map(name -> pkgPath + name.replace('.', '/'))
+                                .forEach(mixinClasses::add);
                         }
                     } catch (IOException e) {
                         LOGGER.error("Error reading mixin config entry {} in file {}", entry.getName(), input.getAbsolutePath());
@@ -169,12 +205,15 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
         }
 
         INamedMappingFile namedMapping = INamedMappingFile.load(mappingsOutput.toFile());
-        IMappingFile yarnToOfficial = namedMapping.getMap("yarn", "official");
+        // TODO Get current env mapping other than official
+        String fromMapping = Optional.ofNullable(manifestAttributes.getValue(FABRIC_MAPPING_NAMESPACE)).filter(str -> !str.equals("named")).orElse("yarn");
+        IMappingFile modToOfficial = namedMapping.getMap(fromMapping, "official");
         IMappingFile intermediaryToSrg = namedMapping.getMap("intermediary", "srg");
         SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(intermediaryToSrg);
 
         try (Renamer renamer = Renamer.builder()
-            .add(Transformer.renamerFactory(yarnToOfficial, false))
+            .add(MixinTargetTransformer.factory(mixinClasses, modToOfficial))
+            .add(Transformer.renamerFactory(modToOfficial, false))
             .add(new RefmapTransformer(configs, refmaps, remapper))
             .add(new AccessWidenerTransformer(namedMapping))
             .logger(s -> LOGGER.trace(FART_MARKER, s))
@@ -199,6 +238,10 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
             throw new IllegalArgumentException("Required " + name + " embedded jar not found");
         }
         return SELF_PATH.resolve(depName);
+    }
+
+    private static EnvType getEnvType() {
+        return FMLEnvironment.dist == Dist.CLIENT ? EnvType.CLIENT : EnvType.SERVER;
     }
 
     @Override

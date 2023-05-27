@@ -1,4 +1,4 @@
-package dev.su5ed.connector;
+package dev.su5ed.connector.fart;
 
 import com.google.gson.Gson;
 import net.minecraftforge.fart.api.Transformer;

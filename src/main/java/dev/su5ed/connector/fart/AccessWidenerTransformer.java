@@ -1,4 +1,4 @@
-package dev.su5ed.connector;
+package dev.su5ed.connector.fart;
 
 import net.fabricmc.accesswidener.AccessWidenerReader;
 import net.fabricmc.accesswidener.AccessWidenerVisitor;

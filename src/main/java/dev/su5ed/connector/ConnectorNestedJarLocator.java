@@ -42,6 +42,7 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
     private IModFile createJijModFile(Path tempDir, String parentName, Path path) throws IOException {
         Files.createDirectories(tempDir);
 
+        // TODO Remap nested jars along with the main jar?
         String parentNameWithoutExt = parentName.split("\\.(?!.*\\.)")[0];
         // Extract JiJ
         Path extracted = tempDir.resolve(parentNameWithoutExt + "$" + path.getFileName().toString());

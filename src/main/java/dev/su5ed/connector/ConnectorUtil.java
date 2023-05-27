@@ -34,6 +34,7 @@ public final class ConnectorUtil {
                     }
                 }
 
+                Files.deleteIfExists(output);
                 action.run();
                 Files.writeString(inputCache, checksum);
             }

@@ -32,7 +32,6 @@ import net.minecraftforge.fml.loading.moddiscovery.ModJarMetadata;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
 import net.minecraftforge.forgespi.locating.IModProvider;
-import net.minecraftforge.forgespi.locating.ModFileLoadingException;
 import net.minecraftforge.srgutils.IMappingFile;
 import net.minecraftforge.srgutils.INamedMappingFile;
 import org.slf4j.Logger;
@@ -73,16 +72,17 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
     private static final String JIJ_ATTRIBUTE_PREFIX = "Additional-Dependencies-";
     private static final String LANGUAGE_JIJ_DEP = "Language";
     private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
+    private static final int CACHE_VERSION = 1;
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Marker FART_MARKER = MarkerFactory.getMarker("FART");
-    private static final int CACHE_VERSION = 1;
 
     private static final Path MOD_FOLDER = FMLPaths.MODSDIR.get();
     private static final Path SELF_PATH = uncheck(() -> {
         URL jarLocation = ConnectorLocator.class.getProtectionDomain().getCodeSource().getLocation();
         return Path.of(jarLocation.toURI());
     });
+
     private final Attributes attributes;
 
     public ConnectorLocator() {
@@ -99,30 +99,35 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
         LOGGER.debug(LogMarkers.SCAN, "Scanning mods dir {} for mods", MOD_FOLDER);
         List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
 
-        Stream<IModLocator.ModFileOrException> fabricMods = uncheck(() -> Files.list(MOD_FOLDER))
+        List<Path> discoveredRemapped = uncheck(() -> Files.list(MOD_FOLDER))
             .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
             .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
-            .map(this::createConnectorMod);
+            .filter(this::processConnectorPreviewJar)
+            .map(path -> uncheck(() -> cacheRemapJar(path.toFile())))
+            .toList();
+        List<Path> moduleSafeJars = SplitPackageMerger.handleSplitPackages(discoveredRemapped);
+        Stream<IModLocator.ModFileOrException> fabricJars = moduleSafeJars.stream()
+            .map(path -> new ModFileOrException(createConnectorModFile(path, this), null));
+
         Stream<IModLocator.ModFileOrException> additionalDeps = getAdditionalDependencies()
             .map(this::createMod);
 
-        return Stream.concat(fabricMods, additionalDeps).toList();
+        return Stream.concat(fabricJars, additionalDeps).toList();
     }
 
-    protected IModLocator.ModFileOrException createConnectorMod(Path path) {
+    protected boolean processConnectorPreviewJar(Path path) {
         SecureJar secureJar = SecureJar.from(path);
+        String name = secureJar.name();
         if (secureJar.moduleDataProvider().findFile(FABRIC_MOD_JSON).isPresent()) {
             LOGGER.debug(LogMarkers.SCAN, "Found {} mod: {}", FABRIC_MOD_JSON, path);
-
-            IModFile modFile = createConnectorModFile(path, this);
-            return new ModFileOrException(modFile, null);
-        } else {
-            return new IModLocator.ModFileOrException(null, new ModFileLoadingException("Invalid mod file found " + path));
+            return true;
         }
+
+        LOGGER.info("Fabric mod metadata not found in jar {}, ignoring", name);
+        return false;
     }
 
     public static IModFile createConnectorModFile(Path path, IModProvider provider) {
-        Path remapped = uncheck(() -> cacheRemapJar(path.toFile()));
         // TODO Method Handle
         ModJarMetadata mjm = uncheck(() -> {
             Constructor<ModJarMetadata> cst = ModJarMetadata.class.getDeclaredConstructor();
@@ -131,9 +136,9 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
         });
         SecureJar modJar = SecureJar.from(
             Manifest::new,
-            jar -> jar.moduleDataProvider().findFile(FABRIC_MOD_JSON).isPresent() ? mjm : JarMetadata.from(jar, remapped),
+            jar -> jar.moduleDataProvider().findFile(FABRIC_MOD_JSON).isPresent() ? mjm : JarMetadata.from(jar, path),
             (root, p) -> true,
-            remapped
+            path
         );
         IModFile mod = new ModFile(modJar, provider, ConnectorModMetadataParser::fabricModJsonParser);
         mjm.setModFile(mod);

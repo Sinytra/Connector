@@ -51,9 +51,10 @@ public final class ConnectorModMetadataParser {
             Map<String, List<EntrypointMetadata>> entryPoints = metadata.getEntrypointKeys().stream()
                 .collect(Collectors.toMap(Function.identity(), metadata::getEntrypoints, (a, b) -> a));
             config.add(List.of("modproperties", metadata.getId()), Map.of("entrypoints", entryPoints));
+            config.add("properties", Map.of("jars", metadata.getJars()));
 
             Config modListConfig = config.createSubConfig();
-            modListConfig.add("modId", metadata.getId());
+            modListConfig.add("modId", normalizeModid(metadata.getId()));
             modListConfig.add("version", metadata.getVersion().getFriendlyString());
             modListConfig.add("displayName", metadata.getName());
             modListConfig.add("description", metadata.getDescription());
@@ -85,6 +86,10 @@ public final class ConnectorModMetadataParser {
             LOGGER.error("Error parsing metadata", e);
             throw new RuntimeException(e);
         }
+    }
+
+    public static String normalizeModid(String modid) {
+        return modid.replace('-', '_');
     }
 
     private ConnectorModMetadataParser() {}

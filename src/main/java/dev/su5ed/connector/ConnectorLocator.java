@@ -18,19 +18,17 @@ import net.minecraftforge.fml.loading.moddiscovery.ModFile;
 import net.minecraftforge.fml.loading.moddiscovery.ModJarMetadata;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
+import net.minecraftforge.forgespi.locating.IModProvider;
 import net.minecraftforge.forgespi.locating.ModFileLoadingException;
 import net.minecraftforge.srgutils.IMappingFile;
 import net.minecraftforge.srgutils.INamedMappingFile;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UncheckedIOException;
@@ -63,25 +61,26 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
     private static final Marker FART_MARKER = MarkerFactory.getMarker("FART");
     private static final int CACHE_VERSION = 1;
 
-    private final Path modFolder = FMLPaths.MODSDIR.get();
-    private final Path selfPath;
+    private static final Path MOD_FOLDER = FMLPaths.MODSDIR.get();
+    private static final Path SELF_PATH = uncheck(() -> {
+        URL jarLocation = ConnectorLocator.class.getProtectionDomain().getCodeSource().getLocation();
+        return Path.of(jarLocation.toURI());
+    });
     private final Attributes attributes;
 
     public ConnectorLocator() {
-        URL jarLocation = getClass().getProtectionDomain().getCodeSource().getLocation();
-        this.selfPath = uncheck(() -> Path.of(jarLocation.toURI()));
         Manifest manifest = new Manifest();
-        Path manifestPath = this.selfPath.resolve("META-INF/MANIFEST.MF");
+        Path manifestPath = SELF_PATH.resolve("META-INF/MANIFEST.MF");
         uncheck(() -> manifest.read(Files.newInputStream(manifestPath)));
         this.attributes = manifest.getMainAttributes();
     }
 
     @Override
     public List<IModLocator.ModFileOrException> scanMods() {
-        LOGGER.debug(LogMarkers.SCAN, "Scanning mods dir {} for mods", this.modFolder);
+        LOGGER.debug(LogMarkers.SCAN, "Scanning mods dir {} for mods", MOD_FOLDER);
         List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
 
-        Stream<IModLocator.ModFileOrException> fabricMods = uncheck(() -> Files.list(this.modFolder))
+        Stream<IModLocator.ModFileOrException> fabricMods = uncheck(() -> Files.list(MOD_FOLDER))
             .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
             .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
             .map(this::createConnectorMod);
@@ -96,63 +95,60 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
         if (secureJar.moduleDataProvider().findFile(FABRIC_MOD_JSON).isPresent()) {
             LOGGER.debug(LogMarkers.SCAN, "Found {} mod: {}", FABRIC_MOD_JSON, path);
 
-            Path remapped = uncheck(() -> remapJar(path.toFile()));
-            // TODO Method Handle
-            ModJarMetadata mjm = uncheck(() -> {
-                Constructor<ModJarMetadata> cst = ModJarMetadata.class.getDeclaredConstructor();
-                cst.setAccessible(true);
-                return cst.newInstance();
-            });
-            SecureJar modJar = SecureJar.from(
-                Manifest::new,
-                jar -> jar.moduleDataProvider().findFile(FABRIC_MOD_JSON).isPresent() ? mjm : JarMetadata.from(jar, remapped),
-                (root, p) -> true,
-                remapped
-            );
-            IModFile mod = new ModFile(modJar, this, ConnectorModMetadataParser::fabricModJsonParser);
-            mjm.setModFile(mod);
-            return new IModLocator.ModFileOrException(mod, null);
+            IModFile modFile = createConnectorModFile(path, this);
+            return new ModFileOrException(modFile, null);
         } else {
             return new IModLocator.ModFileOrException(null, new ModFileLoadingException("Invalid mod file found " + path));
         }
     }
 
-    private Path remapJar(File input) throws IOException {
-        Path remappedDir = this.modFolder.resolve("connector");
+    public static IModFile createConnectorModFile(Path path, IModProvider provider) {
+        Path remapped = uncheck(() -> cacheRemapJar(path.toFile()));
+        // TODO Method Handle
+        ModJarMetadata mjm = uncheck(() -> {
+            Constructor<ModJarMetadata> cst = ModJarMetadata.class.getDeclaredConstructor();
+            cst.setAccessible(true);
+            return cst.newInstance();
+        });
+        SecureJar modJar = SecureJar.from(
+            Manifest::new,
+            jar -> jar.moduleDataProvider().findFile(FABRIC_MOD_JSON).isPresent() ? mjm : JarMetadata.from(jar, remapped),
+            (root, p) -> true,
+            remapped
+        );
+        IModFile mod = new ModFile(modJar, provider, ConnectorModMetadataParser::fabricModJsonParser);
+        mjm.setModFile(mod);
+        return mod;
+    }
+
+    private static Path cacheRemapJar(File input) throws IOException {
+        Path remappedDir = MOD_FOLDER.resolve("connector");
         Files.createDirectories(remappedDir);
         String suffix = "_mapped_official_1.19.4";
 
-        String name = input.getName().split("\\.")[0];
+        String name = input.getName().split("\\.(?!.*\\.)")[0];
         Path output = remappedDir.resolve(name + suffix + ".jar");
-        Path inputCache = remappedDir.resolve(name + suffix + ".jar.input");
 
-        String checksum;
-        try (InputStream is = new FileInputStream(input)) {
-            checksum = CACHE_VERSION + "," + DigestUtils.sha256Hex(is);
-        }
+        ConnectorUtil.cache(String.valueOf(CACHE_VERSION), input.toPath(), output, () -> remapJar(input, remappedDir, output));
 
-        if (Files.exists(inputCache) && Files.exists(output)) {
-            String cached = Files.readString(inputCache);
-            if (cached.equals(checksum)) {
-                return output;
-            }
-        }
+        return output;
+    }
 
-        // TODO Cache mapping
-        Path mappingsFile = remappedDir.resolve("mappings.tsrg");
-        if (Files.notExists(mappingsFile)) {
-            Path mappingsResource = this.selfPath.resolve(mappingsFile.getFileName().toString());
-            Files.copy(mappingsResource, mappingsFile);
-        }
-        
+    private static void remapJar(File input, Path remappedDir, Path output) throws IOException {
+        Path mappingInput = SELF_PATH.resolve("mappings.tsrg");
+        Path mappingsOutput = remappedDir.resolve(mappingInput.getFileName().toString());
+        ConnectorUtil.cache(String.valueOf(CACHE_VERSION), mappingInput, mappingsOutput, () -> Files.copy(mappingInput, mappingsOutput));
+
         Set<String> configs = new HashSet<>();
         Set<String> refmaps = new HashSet<>();
         try (ZipFile zipFile = new ZipFile(input)) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(zipFile.getInputStream(zipFile.getEntry(FABRIC_MOD_JSON))))) {
                 JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                 JsonArray mixins = json.getAsJsonArray("mixins");
-                for (JsonElement element : mixins) {
-                    configs.add(element.getAsString());
+                if (mixins != null) {
+                    for (JsonElement element : mixins) {
+                        configs.add(element.getAsString());
+                    }
                 }
             }
 
@@ -172,7 +168,7 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
                 });
         }
 
-        INamedMappingFile namedMapping = INamedMappingFile.load(mappingsFile.toFile());
+        INamedMappingFile namedMapping = INamedMappingFile.load(mappingsOutput.toFile());
         IMappingFile yarnToOfficial = namedMapping.getMap("yarn", "official");
         IMappingFile intermediaryToSrg = namedMapping.getMap("intermediary", "srg");
         SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(intermediaryToSrg);
@@ -183,13 +179,9 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
             .add(new AccessWidenerTransformer(namedMapping))
             .logger(s -> LOGGER.trace(FART_MARKER, s))
             .debug(s -> LOGGER.trace(FART_MARKER, s))
-            .build())
-        {
+            .build()) {
             renamer.run(input, output.toFile());
-            Files.writeString(inputCache, checksum);
         }
-
-        return output;
     }
 
     private Stream<Path> getAdditionalDependencies() {
@@ -206,7 +198,7 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
         if (depName == null) {
             throw new IllegalArgumentException("Required " + name + " embedded jar not found");
         }
-        return this.selfPath.resolve(depName);
+        return SELF_PATH.resolve(depName);
     }
 
     @Override

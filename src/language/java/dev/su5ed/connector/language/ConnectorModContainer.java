@@ -6,7 +6,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.impl.metadata.EntrypointMetadata;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.ModContainer;
 import net.minecraftforge.fml.ModLoadingException;
@@ -49,10 +48,6 @@ public class ConnectorModContainer extends ModContainer {
                 activeEntryPoints.put(key, value);
             }
         });
-
-        if (activeEntryPoints.isEmpty()) {
-            throw new RuntimeException("No available entrypoints for mod " + getModId());
-        }
 
         Module module = gameLayer.findModule(info.getOwningFile().moduleName()).orElseThrow();
         this.modClasses = activeEntryPoints.entrySet().stream()
@@ -109,6 +104,6 @@ public class ConnectorModContainer extends ModContainer {
 
     @Override
     public Object getMod() {
-        return this.modInstances.get(0);
+        return !this.modInstances.isEmpty() ? this.modInstances.get(0) : null;
     }
 }

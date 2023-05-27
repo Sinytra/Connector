@@ -70,7 +70,7 @@ public class ConnectorLanguageProvider implements IModLanguageProvider {
                 .flatMap(fi -> fi.getMods().stream())
                 .map(modInfo -> {
                     Map<String, List<EntrypointMetadata>> entryPoints = (Map<String, List<EntrypointMetadata>>) modInfo.getModProperties().get("entrypoints");
-                    return new ConnectorModTarget(modInfo.getModId(), entryPoints);
+                    return new ConnectorModTarget(modInfo.getModId(), entryPoints == null ? Map.of() : entryPoints);
                 })
                 .collect(Collectors.toMap(ConnectorModTarget::modId, Function.identity(), (a, b) -> a));
             scanResult.addLanguageLoader(modTargetMap);

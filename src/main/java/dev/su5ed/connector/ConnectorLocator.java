@@ -180,6 +180,7 @@ public class ConnectorLocator extends AbstractModProvider implements IModLocator
         try (Renamer renamer = Renamer.builder()
             .add(Transformer.renamerFactory(yarnToOfficial, false))
             .add(new RefmapTransformer(configs, refmaps, remapper))
+            .add(new AccessWidenerTransformer(namedMapping))
             .logger(s -> LOGGER.trace(FART_MARKER, s))
             .debug(s -> LOGGER.trace(FART_MARKER, s))
             .build())

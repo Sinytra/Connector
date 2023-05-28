@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
 import org.slf4j.Logger;
 
+import javax.swing.ListModel;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,6 +19,15 @@ import java.util.stream.Stream;
 
 public class SplitPackageMerger {
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    // TODO Handle cases where the owner should have some packages excluded, too
+    /*
+    net.fabricmc.fabric.api.registry - fabric.commands.v0
+    net.fabricmc.fabric.api.registry - fabric.content.registries.v0
+    
+    net.fabricmc.fabric.api.util     - fabric.content.registries.v0
+    net.fabricmc.fabric.api.util     - fabric.api.base
+     */
 
     public static List<Path> handleSplitPackages(List<Path> paths) {
         List<Path> singlePaths = new ArrayList<>(paths);
@@ -63,6 +73,11 @@ public class SplitPackageMerger {
             SecureJar filteredJar = SecureJar.from(new PackageTracker(Set.copyOf(excludedPackages)), sj.getPrimaryPath());
             singlePaths.add(filteredJar.getRootPath());
         });
+
+        if (paths.size() != singlePaths.size()) {
+            LOGGER.error("Expected {} paths, got {}", paths.size(), singlePaths.size());
+            throw new IllegalStateException("Path size disprenancy detected!");
+        }
 
         return singlePaths;
     }

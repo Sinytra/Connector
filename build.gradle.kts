@@ -11,13 +11,13 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.tree.ClassNode
 import java.time.LocalDateTime
 
-
 plugins {
     java
     `maven-publish`
     id("net.minecraftforge.gradle") version "5.1.+"
-    id("com.github.johnrengelman.shadow") version "8.1.+" apply false
+    id("com.github.johnrengelman.shadow") version "7.1.2" apply false
     id("org.spongepowered.mixin") version "0.7.+"
+    id("dev.su5ed.connector.yarn-remapper")
 }
 
 version = "1.0"
@@ -28,19 +28,27 @@ val versionFabricLoader: String by project
 val versionAccessWidener: String by project
 
 val language by sourceSets.registering
-val shadow: Configuration by configurations.creating
+val mod by sourceSets.registering
+
+val shade: Configuration by configurations.creating
+val shadeRuntimeOnly: Configuration by configurations.creating
 val yarnMappings: Configuration by configurations.creating
+val commonMods: Configuration by configurations.creating
+
 val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
-    configurations = listOf(shadow)
+    configurations = listOf(shade, shadeRuntimeOnly)
 
     exclude("assets/fabricloader/**")
     exclude("META-INF/**")
     exclude("ui/**")
     exclude("*.json")
+    exclude("module-info.class")
 
     dependencies {
         exclude(dependency("org.ow2.asm:"))
         exclude(dependency("net.sf.jopt-simple:"))
+        exclude(dependency("com.google.guava:guava"))
+        exclude(dependency("com.google.code.gson:gson"))
     }
 
     archiveClassifier.set("deps")
@@ -53,6 +61,26 @@ val languageJar: Jar by tasks.creating(Jar::class) {
 
     archiveClassifier.set("language")
 }
+val modJar: Jar by tasks.creating(Jar::class) {
+    dependsOn("modClasses")
+
+    from(mod.get().output)
+
+    archiveClassifier.set("mod")
+}
+val remappedDepsJar: Jar by tasks.creating(ShadowJar::class) {
+    dependsOn(depsJar)
+
+    from(tasks.jar.flatMap { it.archiveFile })
+    from(depsJar.archiveFile)
+    mergeServiceFiles() // Relocate services
+    relocate("org.spongepowered.asm", "org.spongepowered.reloc.asm")
+    relocate("org.spongepowered.include", "org.spongepowered.reloc.include")
+    relocate("org.spongepowered.tools", "org.spongepowered.reloc.tools")
+    relocate("net.minecraftforge.fart", "net.minecraftforge.reloc.fart")
+    relocate("net.minecraftforge.srgutils", "net.minecraftforge.reloc.srgutils")
+    archiveClassifier.set("deps-reloc")
+}
 val createObfToMcp by tasks.registering(GenerateSRG::class) {
     notch = true
     srg.set(tasks.extractSrg.flatMap { it.output })
@@ -61,16 +89,17 @@ val createObfToMcp by tasks.registering(GenerateSRG::class) {
 }
 // TODO Create intermediate only for prod
 val createMappings by tasks.registering(ConvertSRGTask::class) {
-    inputYarnMappings.set(yarnMappings.singleFile)
+    inputYarnMappings.set { yarnMappings.singleFile }
     inputSrgMappings.set(tasks.extractSrg.flatMap { it.output })
     inputMcpMappings.set(createObfToMcp.flatMap { it.output })
 }
 val fullJar: Jar by tasks.creating(Jar::class) {
-    from(zipTree(tasks.jar.flatMap { it.archiveFile }))
-    from(zipTree(depsJar.archiveFile))
+    from(zipTree(remappedDepsJar.archiveFile))
     from(languageJar)
+    from(modJar)
     from(createMappings.flatMap { it.outputFile }) { rename { "mappings.tsrg" } }
     manifest.attributes("Additional-Dependencies-Language" to languageJar.archiveFile.get().asFile.name)
+    manifest.attributes("Additional-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
 
     archiveClassifier.set("full")
 }
@@ -82,11 +111,21 @@ java {
 
 configurations {
     compileOnly {
-        extendsFrom(shadow)
+        extendsFrom(shade, commonMods)
     }
 
     "languageImplementation" {
-        extendsFrom(configurations.minecraft.get(), shadow)
+        extendsFrom(configurations.minecraft.get(), shade)
+    }
+
+    "modImplementation" {
+        extendsFrom(configurations.minecraft.get(), shade, commonMods)
+    }
+}
+
+sourceSets {
+    main {
+        runtimeClasspath = runtimeClasspath.minus(output).plus(files(fullJar))
     }
 }
 
@@ -99,7 +138,8 @@ minecraft {
     runs {
         val config = Action<RunConfig> {
             property("forge.logging.console.level", "debug")
-            property("forge.logging.markers", "REGISTRIES")
+            property("forge.logging.markers", "REGISTRIES,SCAN")
+            property("mixin.debug", "true")
 //            property("connector.cache.enabled", "false")
             workingDirectory = project.file("run").canonicalPath
             // Don't exit the daemon when the game closes
@@ -151,12 +191,21 @@ repositories {
 dependencies {
     minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-45.0.64")
 
-    shadow(group = "net.fabricmc", name = "fabric-loader", version = versionFabricLoader)
-    shadow(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
+    shade(group = "net.fabricmc", name = "fabric-loader", version = versionFabricLoader)
+    shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
     // TODO Currently uses a local version with NPE fix on this line
     // https://github.com/MinecraftForge/ForgeAutoRenamingTool/blob/140befc9bf3e0ca5c8280c6d8e455ec01a916268/src/main/java/net/minecraftforge/fart/internal/EnhancedRemapper.java#L385
-    shadow(group = "net.minecraftforge", name = "ForgeAutoRenamingTool", version = "1.0.2")
+    shade(group = "net.minecraftforge", name = "ForgeAutoRenamingTool", version = "1.0.2")
     yarnMappings(group = "net.fabricmc", name = "yarn", version = "1.19.4+build.2")
+
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-api-base:0.4.9+e62f51a3ff"))
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-entity-events-v1:1.5.9+a1ccd7bfa5"))
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-content-registries-v0:3.5.9+ae0966baf4"))
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-lifecycle-events-v1:2.2.17+1e9487d2f4"))
+
+    shadeRuntimeOnly("net.fabricmc:sponge-mixin:0.12.5+mixin.0.8.5") {
+        isTransitive = false
+    }
 }
 
 tasks {
@@ -209,7 +258,7 @@ open class ConvertSRGTask : DefaultTask() {
 
     @get:OutputFile
     val outputFile: RegularFileProperty = project.objects.fileProperty().convention(project.layout.buildDirectory.file("$name/output.tsrg"))
-    
+
     private val parentCache: MutableMap<String, Iterable<String>> = mutableMapOf()
 
     @TaskAction

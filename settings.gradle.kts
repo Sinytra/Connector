@@ -13,3 +13,5 @@ pluginManagement {
 }
 
 rootProject.name = "Connector"
+
+includeBuild("yarnDeobf")

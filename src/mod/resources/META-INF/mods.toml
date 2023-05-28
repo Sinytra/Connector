@@ -1,0 +1,25 @@
+modLoader="javafml"
+loaderVersion="[44,)"
+license="MIT"
+[[mods]]
+modId="connectormod"
+version="${file.jarVersion}"
+displayName="Connector"
+#logoFile="examplemod.png"
+#credits="Thanks for this example mod goes to Java"
+authors="Su5eD"
+description='''
+Connector.
+'''
+[[dependencies.connectormod]]
+    modId="forge"
+    mandatory=true
+    versionRange="[45,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.connectormod]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.19.4,1.20)"
+    ordering="NONE"
+    side="BOTH"

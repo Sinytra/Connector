@@ -1,8 +1,8 @@
 package dev.su5ed.connector.fart;
 
 import com.google.gson.Gson;
+import dev.su5ed.connector.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
-import org.spongepowered.asm.util.Constants;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -47,7 +47,7 @@ public class RefmapTransformer implements Transformer {
         try (InputStream is = new ByteArrayInputStream(entry.getData())) {
             manifest.read(is);
 
-            manifest.getMainAttributes().putValue(Constants.ManifestAttributes.MIXINCONFIGS, String.join(",", this.configs));
+            manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs));
 
             try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
                 manifest.write(byteStream);

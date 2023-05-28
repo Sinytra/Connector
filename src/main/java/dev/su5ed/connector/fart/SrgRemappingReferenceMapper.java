@@ -17,7 +17,12 @@ import java.util.stream.Collectors;
 public class SrgRemappingReferenceMapper {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private static final Pattern METHOD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-z0-9_]+)(?<desc>\\((?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$");
+    private static final Map<String, String> SUBSTITUTIONS = Map.of(
+        "Lnet/minecraft/class_1309;method_18405(Lnet/minecraft/class_2338;)Ljava/lang/Boolean;", "Lnet/minecraft/world/entity/LivingEntity;lambda$checkBedExists$9(Lnet/minecraft/core/BlockPos;)Ljava/lang/Boolean;",
+        "Lnet/minecraft/class_1309;method_18404(Lnet/minecraft/class_2338;)V", "Lnet/minecraft/world/entity/LivingEntity;lambda$stopSleeping$11(Lnet/minecraft/core/BlockPos;)V"
+    );
+
+    private static final Pattern METHOD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-z0-9_]+|<[a-z0-9_]+>)(?<desc>\\((?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$");
     private static final Pattern FIELD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-z0-9_]+):(?<desc>[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)$");
 
     private final IMappingFile mappingFile;
@@ -58,25 +63,29 @@ public class SrgRemappingReferenceMapper {
     }
 
     private String remapRef(String reference) {
+        String sub = SUBSTITUTIONS.get(reference);
+        if (sub != null) {
+            return sub;
+        }
         Matcher methodMatcher = METHOD_REF_PATTERN.matcher(reference);
         if (methodMatcher.matches()) {
-            return remapRefMapEntry(methodMatcher, "", (name, desc) -> this.methods.get(name + desc), IMappingFile.IMethod::getMappedDescriptor);
+            return remapRefMapEntry(methodMatcher, "", (name, desc) -> this.methods.get(name + desc));
         }
         Matcher fieldMatcher = FIELD_REF_PATTERN.matcher(reference);
         if (fieldMatcher.matches()) {
-            return remapRefMapEntry(fieldMatcher, ":", (name, desc) -> this.fields.get(name), IMappingFile.IField::getMappedDescriptor);
+            return remapRefMapEntry(fieldMatcher, ":", (name, desc) -> this.fields.get(name));
         }
-        return reference;
+        return this.mappingFile.remapClass(reference);
     }
 
-    private <T extends IMappingFile.INode> String remapRefMapEntry(Matcher matcher, String separator, BiFunction<String, String, T> nodeFunction, Function<T, String> descGetter) {
+    private <T extends IMappingFile.INode> String remapRefMapEntry(Matcher matcher, String separator, BiFunction<String, String, T> nodeFunction) {
         String owner = matcher.group("owner");
         String name = matcher.group("name");
         String desc = matcher.group("desc");
         T node = nodeFunction.apply(name, desc);
 
         String mappedOwner = owner != null ? this.mappingFile.remapDescriptor(owner) : "";
-        return mappedOwner + node.getMapped() + separator + descGetter.apply(node);
+        return mappedOwner + node.getMapped() + separator + this.mappingFile.remapDescriptor(desc);
     }
 
     public static class SimpleRefmap {

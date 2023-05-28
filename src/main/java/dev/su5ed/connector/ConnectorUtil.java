@@ -8,16 +8,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public final class ConnectorUtil {
-    public static final boolean ENABLED;
+    public static final String MIXIN_CONFIGS_ATTRIBUTE = "ConnectorMixinConfigs";
+    private static final boolean CACHE_ENABLED;
 
     static {
         String prop = System.getProperty("connector.cache.enabled");
-        ENABLED = prop == null || prop.equals("true");
+        CACHE_ENABLED = prop == null || prop.equals("true");
     }
 
     public static void cache(String version, Path input, Path output, ServiceRunner action) {
         try {
-            if (!ENABLED) {
+            if (!CACHE_ENABLED) {
                 Files.deleteIfExists(output);
                 action.run();
                 return;

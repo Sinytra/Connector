@@ -23,7 +23,8 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
     @Override
     public List<IModFile> scanMods(Iterable<IModFile> loadedMods) {
         Path tempDir = FMLPaths.MODSDIR.get().resolve("connector").resolve("temp");
-        return StreamSupport.stream(loadedMods.spliterator(), false)
+
+        List<Path> discoveredRemapped = StreamSupport.stream(loadedMods.spliterator(), false)
             .filter(modFile -> {
                 IModFileInfo modFileInfo = modFile.getModFileInfo();
                 return modFileInfo != null && modFileInfo.requiredLanguageLoaders().stream().anyMatch(l -> l.languageName().equals("connector"));
@@ -34,12 +35,16 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
                 return jars.stream()
                     .map(entry -> secureJar.getPath(entry.getFile()))
                     .filter(Files::exists)
-                    .map(path -> uncheck(() -> createJijModFile(tempDir, secureJar.name(), path)));
+                    .map(path -> uncheck(() -> prepareJijModFile(tempDir, secureJar.name(), path)));
             })
+            .toList();
+        List<Path> moduleSafeJars = SplitPackageMerger.handleSplitPackages(discoveredRemapped);
+        return moduleSafeJars.stream()
+            .map(path -> ConnectorLocator.createConnectorModFile(path, this))
             .toList();
     }
 
-    private IModFile createJijModFile(Path tempDir, String parentName, Path path) throws IOException {
+    private Path prepareJijModFile(Path tempDir, String parentName, Path path) throws IOException {
         Files.createDirectories(tempDir);
 
         // TODO Remap nested jars along with the main jar?
@@ -48,7 +53,7 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
         Path extracted = tempDir.resolve(parentNameWithoutExt + "$" + path.getFileName().toString());
         ConnectorUtil.cache("1", path, extracted, () -> Files.copy(path, extracted));
 
-        return ConnectorLocator.createConnectorModFile(extracted, this);
+        return uncheck(() -> ConnectorLocator.cacheRemapJar(extracted.toFile()));
     }
 
     @Override

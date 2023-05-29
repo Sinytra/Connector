@@ -16,5 +16,8 @@ public class ConnectorMod {
         if (modList.isLoaded("fabric_content_registries_v0")) {
             MinecraftForge.EVENT_BUS.register(ContentRegistriesApiEvents.class);
         }
+        if (modList.isLoaded("fabric_registry_sync_v0")) {
+            MinecraftForge.EVENT_BUS.register(RegistrySyncApiEvents.class);
+        }
     }
 }

@@ -1,18 +1,42 @@
 package dev.su5ed.connector.fart;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.fart.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
+import org.objectweb.asm.tree.VarInsnNode;
 import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,14 +46,15 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 
 public class MixinReplacementTransformer implements Transformer {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String INJECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Inject;";
+    private static final String MIXIN_ANN = "Lorg/spongepowered/asm/mixin/Mixin;";
     private static final String REDIRECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Redirect;";
+    private static final String ACCESSOR_ANN = "Lorg/spongepowered/asm/mixin/gen/Accessor;";
 
     private static final List<Replacement> REPLACEMENTS = List.of(
         Replacement.replaceMixinMethod(
             "net/fabricmc/fabric/mixin/entity/event/LivingEntityMixin",
-            "dev.su5ed.connector.replacement.EntityApiReplacements",
-            "setOccupiedState"
+            "setOccupiedState",
+            "dev.su5ed.connector.replacement.EntityApiReplacements"
         ),
         Replacement.removeMixinMethod(
             "net/fabricmc/fabric/mixin/entity/event/PlayerEntityMixin",
@@ -41,8 +66,8 @@ public class MixinReplacementTransformer implements Transformer {
         ),
         Replacement.replaceMixinMethod(
             "net/fabricmc/fabric/mixin/entity/event/ServerPlayerEntityMixin",
-            "dev.su5ed.connector.replacement.EntityApiReplacements",
-            "onTrySleepDirectionCheck"
+            "onTrySleepDirectionCheck",
+            "dev.su5ed.connector.replacement.EntityApiReplacements"
         ),
         Replacement.redirectMixinTarget(
             "net/fabricmc/fabric/mixin/dimension/EntityMixin",
@@ -66,18 +91,100 @@ public class MixinReplacementTransformer implements Transformer {
             "net/fabricmc/fabric/mixin/content/registry/AbstractFurnaceBlockEntityMixin",
             "getFuelTimeRedirect"
         ),
+        Replacement.removeMixinMethod(
+            "net/fabricmc/fabric/mixin/registry/sync/StructuresToConfiguredStructuresFixMixin",
+            "findUpdatedStructureType"
+        ),
+        Replacement.replaceMixinMethod(
+            "net/fabricmc/fabric/mixin/client/rendering/ScreenMixin",
+            "injectRenderTooltipLambda",
+            "dev/su5ed/connector/replacement/RenderingApiReplacements"
+        ),
+        Replacement.removeMixinMethod(
+            "net/fabricmc/fabric/mixin/client/rendering/shader/ShaderProgramMixin",
+            "modifyProgramId"
+        ),
         // TODO Server mixin, too
         Replacement.replaceMixinMethod(
             "net/fabricmc/fabric/mixin/event/lifecycle/client/WorldChunkMixin",
             "onRemoveBlockEntity(Ljava/util/Map;Ljava/lang/Object;)Ljava/lang/Object;",
             "dev/su5ed/connector/replacement/LifecycleApiReplacements",
             "onRemoveBlockEntity"
+        ),
+        Replacement.shadowFieldTypeReplacement(
+            "net/minecraft/world/level/storage/loot/LootTable",
+            "pools", // TODO Use SRG names
+            "[Lnet/minecraft/world/level/storage/loot/LootPool;",
+            "Ljava/util/List;",
+            patch -> {
+                InsnList list = patch.loadShadowValue();
+                list.add(new InsnNode(Opcodes.ICONST_0));
+                list.add(new TypeInsnNode(Opcodes.ANEWARRAY, "net/minecraft/world/level/storage/loot/LootPool"));
+                list.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/util/List", "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", true));
+                list.add(new TypeInsnNode(Opcodes.CHECKCAST, "[Lnet/minecraft/world/level/storage/loot/LootPool;"));
+                return list;
+            }
+        ),
+        Replacement.shadowFieldTypeReplacement(
+            "net/minecraft/client/particle/ParticleEngine",
+            "factories",
+            "Lit/unimi/dsi/fastutil/ints/Int2ObjectMap;",
+            "Ljava/util/Map;",
+            patch -> {
+                InsnList list = new InsnList();
+                list.add(new TypeInsnNode(Opcodes.NEW, "dev/su5ed/connector/mod/DelegatingInt2ObjectMap"));
+                list.add(new InsnNode(Opcodes.DUP));
+                list.add(patch.loadShadowValue());
+                list.add(new FieldInsnNode(Opcodes.GETSTATIC, "net/minecraft/core/registries/BuiltInRegistries", "PARTICLE_TYPE", "Lnet/minecraft/core/Registry;"));
+                list.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "dev/su5ed/connector/mod/DelegatingInt2ObjectMap", "<init>", "(Ljava/util/Map;Lnet/minecraft/core/Registry;)V"));
+                return list;
+            }
+        ),
+        Replacement.shadowFieldTypeReplacement(
+            "net/minecraft/client/color/block/BlockColors",
+            "blockColors",
+            "Lnet/minecraft/core/IdMapper;",
+            "Ljava/util/Map;",
+            patch -> {
+                InsnList list = new InsnList();
+                list.add(new TypeInsnNode(Opcodes.NEW, "dev/su5ed/connector/mod/DelegatingIdMapper"));
+                list.add(new InsnNode(Opcodes.DUP));
+                list.add(patch.loadShadowValue());
+                list.add(new FieldInsnNode(Opcodes.GETSTATIC, "net/minecraft/core/registries/BuiltInRegistries", "BLOCK", "Lnet/minecraft/core/Registry;"));
+                list.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "dev/su5ed/connector/mod/DelegatingIdMapper", "<init>", "(Ljava/util/Map;Lnet/minecraft/core/Registry;)V"));
+                return list;
+            }
+        ),
+        Replacement.shadowFieldTypeReplacement(
+            "net/minecraft/client/color/item/ItemColors",
+            "itemColors",
+            "Lnet/minecraft/core/IdMapper;",
+            "Ljava/util/Map;",
+            patch -> {
+                InsnList list = new InsnList();
+                list.add(new TypeInsnNode(Opcodes.NEW, "dev/su5ed/connector/mod/DelegatingIdMapper"));
+                list.add(new InsnNode(Opcodes.DUP));
+                list.add(patch.loadShadowValue());
+                list.add(new FieldInsnNode(Opcodes.GETSTATIC, "net/minecraft/core/registries/BuiltInRegistries", "ITEM", "Lnet/minecraft/core/Registry;"));
+                list.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "dev/su5ed/connector/mod/DelegatingIdMapper", "<init>", "(Ljava/util/Map;Lnet/minecraft/core/Registry;)V"));
+                return list;
+            }
         )
     );
+    private static final List<String> REMOVALS = List.of(
+        // TODO All of these reply on ID maps that have been replaced by forge, find a way to proxy them
+        "net/fabricmc/fabric/mixin/registry/sync/client/BlockColorsMixin",
+        "net/fabricmc/fabric/mixin/registry/sync/client/ItemColorsMixin",
+        "net/fabricmc/fabric/mixin/registry/sync/client/ParticleManagerMixin",
+        "net/fabricmc/fabric/mixin/client/rendering/shader/ShaderProgramMixin",
+        "net/fabricmc/fabric/mixin/client/rendering/shader/ShaderProgramImportProcessorMixin"
+    );
 
+    private final Set<String> configs;
     private final Set<String> mixins;
 
-    public MixinReplacementTransformer(Set<String> mixins) {
+    public MixinReplacementTransformer(Set<String> configs, Set<String> mixins) {
+        this.configs = configs;
         this.mixins = mixins;
     }
 
@@ -90,12 +197,9 @@ public class MixinReplacementTransformer implements Transformer {
             reader.accept(node, 0);
 
             List<Replacement> replacements = REPLACEMENTS.stream()
-                .filter(r -> className.equals(r.mixinClass()))
+                .filter(r -> r.handles(node))
                 .toList();
-            boolean replaced = applyReplacements(node, replacements);
-            boolean enhanced = applyEnhancements(node);
-
-            if (replaced || enhanced) {
+            if (applyReplacements(node, replacements)) {
                 ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
                 node.accept(writer);
                 return ClassEntry.create(entry.getName(), entry.getTime(), writer.toByteArray());
@@ -104,28 +208,37 @@ public class MixinReplacementTransformer implements Transformer {
         return entry;
     }
 
-    private boolean applyEnhancements(ClassNode node) {
-        boolean modified = false;
-        for (MethodNode method : node.methods) {
-            if (method.visibleAnnotations != null) {
-                for (AnnotationNode annotation : method.visibleAnnotations) {
-                    if (annotation.desc.equals(INJECT_ANN)) {
-                        List<String> targetMethods = MixinReplacementTransformer.findAnnotationValue(annotation.values, "method", Function.identity());
-                        String injectionPoint = MixinReplacementTransformer.<List<AnnotationNode>, String>findAnnotationValue(annotation.values, "at", val -> {
-                            AnnotationNode atNode = val.get(0);
-                            return findAnnotationValue(atNode.values, "value", Function.identity());
-                        });
-
-                        if (targetMethods.contains("<init>") && injectionPoint.equals("INVOKE")) {
-                            LOGGER.info("Enhancing injection for mixin {}.{}", node.name, method.name);
-                            annotation.desc = "Ldev/su5ed/connector/mod/plugin/injector/EnhancedInject;";
-                            modified = true;
+    @Override
+    public ResourceEntry process(ResourceEntry entry) {
+        if (this.configs.contains(entry.getName())) {
+            try (Reader reader = new InputStreamReader(new ByteArrayInputStream(entry.getData()))) {
+                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+                String pkg = json.get("package").getAsString();
+                String pkgPath = pkg.replace('.', '/') + '/';
+                Set.of("mixins", "client", "server").stream()
+                    .filter(json::has)
+                    .forEach(str -> {
+                        JsonArray array = json.getAsJsonArray(str);
+                        for (Iterator<JsonElement> it = array.iterator(); it.hasNext(); ) {
+                            JsonElement element = it.next();
+                            if (REMOVALS.contains(pkgPath + element.getAsString().replace('.', '/'))) {
+                                it.remove();
+                            }
                         }
+                    });
+                try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
+                    try (Writer writer = new OutputStreamWriter(byteStream)) {
+                        new Gson().toJson(json, writer);
+                        writer.flush();
                     }
+                    byte[] data = byteStream.toByteArray();
+                    return ResourceEntry.create(entry.getName(), entry.getTime(), data);
                 }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
-        return modified;
+        return entry;
     }
 
     @SuppressWarnings("unchecked")
@@ -143,39 +256,18 @@ public class MixinReplacementTransformer implements Transformer {
 
     private boolean applyReplacements(ClassNode node, List<Replacement> replacements) {
         if (!replacements.isEmpty()) {
-            List<MethodNode> toRemove = new ArrayList<>();
             for (Replacement replacement : replacements) {
-                String mixinMethod = replacement.mixinMethod();
-                int descIndex = replacement.mixinMethod().indexOf('(');
-                String methodName = descIndex == -1 ? mixinMethod : mixinMethod.substring(0, descIndex);
-                String methodDesc = descIndex == -1 ? null : mixinMethod.substring(descIndex);
-
-                for (int i = 0; i < node.methods.size(); i++) {
-                    MethodNode method = node.methods.get(i);
-                    if (method.name.equals(methodName) && (methodDesc == null || method.desc.equals(methodDesc))) {
-                        Pair<Replacement.Action, MethodNode> pair = replacement.apply(node, method);
-                        Replacement.Action action = pair.getFirst();
-
-                        if (action == Replacement.Action.REMOVE) {
-                            toRemove.add(method);
-                        } else if (action == Replacement.Action.REPLACE) {
-                            node.methods.set(i, pair.getSecond());
-                        }
-                    }
-                }
+                replacement.apply(node);
             }
-            node.methods.removeAll(toRemove);
             return true;
         }
         return false;
     }
 
     interface Replacement {
-        String mixinClass();
+        boolean handles(ClassNode classNode);
 
-        String mixinMethod();
-
-        Pair<Action, MethodNode> apply(ClassNode classNode, MethodNode methodNode);
+        void apply(ClassNode classNode);
 
         static Replacement replaceMixinMethod(String mixinClass, String mixinMethod, String replacementClass) {
             return replaceMixinMethod(mixinClass, mixinMethod, replacementClass, mixinMethod);
@@ -193,30 +285,71 @@ public class MixinReplacementTransformer implements Transformer {
             return new RedirectMixin(mixinClass, mixinMethod, replacementMethods);
         }
 
-        enum Action {
+        static Replacement shadowFieldTypeReplacement(String ownerClass, String name, String type, String replacementType, Function<ShadowFieldTypeReplacement.PatcherCallback, InsnList> patcher) {
+            return new ShadowFieldTypeReplacement(ownerClass, name, type, replacementType, patcher);
+        }
+    }
+
+    public interface MethodReplement extends Replacement {
+        String mixinClass();
+
+        String mixinMethod();
+
+        Pair<MethodAction, MethodNode> apply(ClassNode node, MethodNode methodNode);
+
+        @Override
+        default boolean handles(ClassNode classNode) {
+            return classNode.name.equals(mixinClass());
+        }
+
+        @Override
+        default void apply(ClassNode node) {
+            String mixinMethod = mixinMethod();
+            int descIndex = mixinMethod().indexOf('(');
+            String methodName = descIndex == -1 ? mixinMethod : mixinMethod.substring(0, descIndex);
+            String methodDesc = descIndex == -1 ? null : mixinMethod.substring(descIndex);
+
+            List<MethodNode> toRemove = new ArrayList<>();
+            for (int i = 0; i < node.methods.size(); i++) {
+                MethodNode method = node.methods.get(i);
+                if (method.name.equals(methodName) && (methodDesc == null || method.desc.equals(methodDesc))) {
+                    Pair<MethodAction, MethodNode> pair = apply(node, method);
+                    MethodAction action = pair.getFirst();
+
+                    if (action == MethodAction.REMOVE) {
+                        toRemove.add(method);
+                    } else if (action == MethodAction.REPLACE) {
+                        node.methods.set(i, pair.getSecond());
+                    }
+                }
+            }
+            node.methods.removeAll(toRemove);
+        }
+
+        enum MethodAction {
             KEEP,
             REPLACE,
             REMOVE;
 
-            static Pair<Action, MethodNode> keep() {
+            static Pair<MethodAction, MethodNode> keep() {
                 return Pair.of(KEEP, null);
             }
 
-            static Pair<Action, MethodNode> replace(MethodNode replacement) {
+            static Pair<MethodAction, MethodNode> replace(MethodNode replacement) {
                 return Pair.of(REPLACE, replacement);
             }
 
-            static Pair<Action, MethodNode> remove() {
+            static Pair<MethodAction, MethodNode> remove() {
                 return Pair.of(REMOVE, null);
             }
         }
     }
 
-    record ReplaceMixin(String mixinClass, String mixinMethod, String replacementClass, String replacementMethod) implements Replacement {
+    record ReplaceMixin(String mixinClass, String mixinMethod, String replacementClass, String replacementMethod) implements MethodReplement {
         private static final Map<String, ClassNode> CLASS_CACHE = new ConcurrentHashMap<>();
 
         @Override
-        public Pair<Action, MethodNode> apply(ClassNode classNode, MethodNode methodNode) {
+        public Pair<MethodAction, MethodNode> apply(ClassNode classNode, MethodNode methodNode) {
             LOGGER.info("Replacing mixin {}.{}", classNode.name, methodNode.name);
             ClassNode replNode = CLASS_CACHE.computeIfAbsent(this.replacementClass, rethrowFunction(c -> {
                 ClassReader replReader = new ClassReader(this.replacementClass);
@@ -226,21 +359,21 @@ public class MixinReplacementTransformer implements Transformer {
             }));
 
             MethodNode replMethod = replNode.methods.stream().filter(m -> m.name.equals(this.replacementMethod)).findFirst().orElseThrow();
-            return Action.replace(replMethod);
+            return MethodAction.replace(replMethod);
         }
     }
 
-    record RemoveMixin(String mixinClass, String mixinMethod) implements Replacement {
+    record RemoveMixin(String mixinClass, String mixinMethod) implements MethodReplement {
         @Override
-        public Pair<Action, MethodNode> apply(ClassNode classNode, MethodNode methodNode) {
+        public Pair<MethodAction, MethodNode> apply(ClassNode classNode, MethodNode methodNode) {
             LOGGER.info("Removing mixin {}.{}", classNode.name, methodNode.name);
-            return Action.remove();
+            return MethodAction.remove();
         }
     }
 
-    record RedirectMixin(String mixinClass, String mixinMethod, List<String> replacementMethods) implements Replacement {
+    record RedirectMixin(String mixinClass, String mixinMethod, List<String> replacementMethods) implements MethodReplement {
         @Override
-        public Pair<Action, MethodNode> apply(ClassNode node, MethodNode method) {
+        public Pair<MethodAction, MethodNode> apply(ClassNode node, MethodNode method) {
             if (method.visibleAnnotations != null) {
                 for (AnnotationNode annotation : method.visibleAnnotations) {
                     if (annotation.desc.equals(REDIRECT_ANN)) {
@@ -254,7 +387,104 @@ public class MixinReplacementTransformer implements Transformer {
                     }
                 }
             }
-            return Action.keep();
+            return MethodAction.keep();
+        }
+    }
+
+    public record ShadowFieldTypeReplacement(String ownerClass, String name, String type, String replacementType, Function<PatcherCallback, InsnList> patcher) implements Replacement {
+        interface PatcherCallback {
+            InsnList loadShadowValue();
+        }
+
+        @Override
+        public boolean handles(ClassNode classNode) {
+            if (classNode.invisibleAnnotations != null) {
+                for (AnnotationNode annotation : classNode.invisibleAnnotations) {
+                    if (annotation.desc.equals(MIXIN_ANN)) {
+                        Boolean value = MixinReplacementTransformer.<List<Type>, Boolean>findAnnotationValue(annotation.values, "value", val -> {
+                            for (Type targetType : val) {
+                                if (this.ownerClass.equals(targetType.getInternalName())) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        });
+                        return value != null && value == true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public void apply(ClassNode classNode) {
+            for (FieldNode field : classNode.fields) {
+                if (field.name.equals(this.name)) {
+                    if (!field.desc.equals(this.type)) {
+                        throw new RuntimeException("Invalid replacement origin descriptor, expected " + this.type + ", found " + field.desc);
+                    }
+                    LOGGER.info("Changing type of field {}.{} to {}", classNode.name, field.name, this.replacementType);
+                    field.desc = this.replacementType;
+                }
+            }
+
+            List<MethodNode> methodNodes = List.copyOf(classNode.methods);
+            for (MethodNode method : methodNodes) {
+                if (method.visibleAnnotations != null) {
+                    for (AnnotationNode annotation : method.visibleAnnotations) {
+                        if (annotation.desc.equals(ACCESSOR_ANN)) {
+                            String value = findAnnotationValue(annotation.values, "value", Function.identity());
+                            String fieldName = value != null ? value : method.name;
+                            if (fieldName.equals(this.name)) {
+                                LOGGER.info("Found accessor {} for field {}", method.name, fieldName);
+                                if (!Type.getReturnType(method.desc).getDescriptor().equals(this.type)) {
+                                    throw new RuntimeException("Unexpected return type for method " + method.name + ", expected " + this.type);
+                                }
+
+                                String oldName = method.name;
+                                String newName = oldName + "$internal";
+                                String oldDesc = method.desc;
+                                String newDesc = Type.getMethodDescriptor(Type.getType(this.replacementType));
+                                method.name = newName;
+                                method.desc = newDesc;
+
+                                MethodNode wrapper = new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_SYNTHETIC, oldName, oldDesc, null, new String[0]);
+                                wrapper.visitCode();
+                                wrapper.instructions.add(this.patcher.apply(() -> {
+                                    InsnList shadowList = new InsnList();
+                                    shadowList.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                                    shadowList.add(new TypeInsnNode(Opcodes.CHECKCAST, this.ownerClass));
+                                    shadowList.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, this.ownerClass, newName, method.desc, false));
+                                    return shadowList;
+                                }));
+                                wrapper.visitInsn(Opcodes.ARETURN);
+                                wrapper.visitEnd();
+                                classNode.methods.add(wrapper);
+
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                for (ListIterator<AbstractInsnNode> iterator = method.instructions.iterator(); iterator.hasNext(); ) {
+                    AbstractInsnNode insn = iterator.next();
+
+                    if (insn.getOpcode() == Opcodes.GETFIELD && insn instanceof FieldInsnNode fieldInsn && fieldInsn.name.equals(this.name)) {
+                        LOGGER.info("Converting field {} reference type in method {}.{}{}", this.name, classNode.name, method.name, method.desc);
+
+                        fieldInsn.desc = this.replacementType;
+                        method.instructions.insert(fieldInsn, this.patcher.apply(() -> {
+                            InsnList list = new InsnList();
+                            list.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                            list.add(new FieldInsnNode(fieldInsn.getOpcode(), fieldInsn.owner, fieldInsn.name, fieldInsn.desc));
+                            return list;
+                        }));
+                        method.instructions.remove(insn.getPrevious());
+                        method.instructions.remove(insn);
+                    }
+                }
+            }
         }
     }
 }

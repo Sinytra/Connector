@@ -19,11 +19,21 @@ public class SrgRemappingReferenceMapper {
 
     private static final Map<String, String> SUBSTITUTIONS = Map.of(
         "Lnet/minecraft/class_1309;method_18405(Lnet/minecraft/class_2338;)Ljava/lang/Boolean;", "Lnet/minecraft/world/entity/LivingEntity;lambda$checkBedExists$9(Lnet/minecraft/core/BlockPos;)Ljava/lang/Boolean;",
-        "Lnet/minecraft/class_1309;method_18404(Lnet/minecraft/class_2338;)V", "Lnet/minecraft/world/entity/LivingEntity;lambda$stopSleeping$11(Lnet/minecraft/core/BlockPos;)V"
+        
+        "Lnet/minecraft/class_1309;method_18404(Lnet/minecraft/class_2338;)V", "Lnet/minecraft/world/entity/LivingEntity;lambda$stopSleeping$11(Lnet/minecraft/core/BlockPos;)V", 
+        
+        "Lnet/minecraft/class_5619;method_32174(Lcom/google/common/collect/ImmutableMap$Builder;Lnet/minecraft/class_5617$class_5618;Lnet/minecraft/class_1299;Lnet/minecraft/class_5617;)V",
+        "Lnet/minecraft/client/renderer/entity/EntityRenderers;lambda$createEntityRenderers$2(Lcom/google/common/collect/ImmutableMap$Builder;Lnet/minecraft/client/renderer/entity/EntityRendererProvider$Context;Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/client/renderer/entity/EntityRendererProvider;)V",
+        
+        "Lnet/minecraft/class_5619;method_32175(Lcom/google/common/collect/ImmutableMap$Builder;Lnet/minecraft/class_5617$class_5618;Ljava/lang/String;Lnet/minecraft/class_5617;)V",
+        "Lnet/minecraft/client/renderer/entity/EntityRenderers;lambda$createPlayerRenderers$3(Lcom/google/common/collect/ImmutableMap$Builder;Lnet/minecraft/client/renderer/entity/EntityRendererProvider$Context;Ljava/lang/String;Lnet/minecraft/client/renderer/entity/EntityRendererProvider;)V",
+        
+        "Lnet/minecraft/class_702;method_3049(Lnet/minecraft/class_4587;Lnet/minecraft/class_4597$class_4598;Lnet/minecraft/class_765;Lnet/minecraft/class_4184;F)V",
+        "Lnet/minecraft/client/particle/ParticleEngine;render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V"
     );
 
-    private static final Pattern METHOD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-z0-9_]+|<[a-z0-9_]+>)(?<desc>\\((?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$");
-    private static final Pattern FIELD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-z0-9_]+):(?<desc>[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)$");
+    private static final Pattern METHOD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-zA-Z0-9_]+|<[a-z0-9_]+>)(?<desc>\\((?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$");
+    private static final Pattern FIELD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-zA-Z0-9_]+):(?<desc>[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)$");
 
     private final IMappingFile mappingFile;
     private final Map<String, IMappingFile.IMethod> methods;

@@ -1,6 +1,9 @@
 package dev.su5ed.connector;
 
 import cpw.mods.modlauncher.api.ServiceRunner;
+import net.fabricmc.api.EnvType;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.InputStream;
@@ -42,6 +45,10 @@ public final class ConnectorUtil {
         } catch (Throwable t) {
             throw new RuntimeException(t);
         }
+    }
+
+    public static EnvType getEnvType() {
+        return FMLEnvironment.dist == Dist.CLIENT ? EnvType.CLIENT : EnvType.SERVER;
     }
 
     private ConnectorUtil() {}

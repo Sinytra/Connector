@@ -14,16 +14,14 @@ import dev.su5ed.connector.fart.PackMetadataGenerator;
 import dev.su5ed.connector.fart.RefmapTransformer;
 import dev.su5ed.connector.fart.SimpleRenamingTransformer;
 import dev.su5ed.connector.fart.SrgRemappingReferenceMapper;
-import net.fabricmc.api.EnvType;
+import dev.su5ed.connector.mock.ConnectorFabricLauncher;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.metadata.DependencyOverrides;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.fabricmc.loader.impl.metadata.ModMetadataParser;
 import net.fabricmc.loader.impl.metadata.ParseMetadataException;
 import net.fabricmc.loader.impl.metadata.VersionOverrides;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fart.api.Renamer;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.fml.loading.LogMarkers;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
@@ -97,6 +95,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
         this.attributes = manifest.getMainAttributes();
 
         FabricLoaderImpl.INSTANCE.setGameProvider(new ConnectorGameProvider());
+        new ConnectorFabricLauncher();
     }
 
     @Override
@@ -178,7 +177,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
                 LoaderModMetadata metadata = ModMetadataParser.parseMetadata(ins, "", Collections.emptyList(), new VersionOverrides(), new DependencyOverrides(Paths.get("randomMissing")), false);
 
                 modid = metadata.getId();
-                configs = new HashSet<>(metadata.getMixinConfigs(getEnvType()));
+                configs = new HashSet<>(metadata.getMixinConfigs(ConnectorUtil.getEnvType()));
             } catch (ParseMetadataException e) {
                 throw new RuntimeException(e);
             }
@@ -229,7 +228,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
 
         try (Renamer renamer = Renamer.builder()
             .add(new SimpleRenamingTransformer(modToOfficial))
-            .add(new MixinReplacementTransformer(metadata.mixinClasses))
+            .add(new MixinReplacementTransformer(metadata.mixinConfigs, metadata.mixinClasses))
             .add(new RefmapTransformer(metadata.mixinConfigs, metadata.refmaps, remapper))
             .add(new AccessWidenerTransformer(namedMapping))
             .add(new PackMetadataGenerator(metadata.modid))
@@ -261,10 +260,6 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
         Map<String, ?> outerFsArgs = ImmutableMap.of("packagePath", pathInModFile);
         FileSystem zipFS = FileSystems.newFileSystem(filePathUri, outerFsArgs);
         return zipFS.getPath("/");
-    }
-
-    private static EnvType getEnvType() {
-        return FMLEnvironment.dist == Dist.CLIENT ? EnvType.CLIENT : EnvType.SERVER;
     }
 
     @Override

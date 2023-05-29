@@ -133,7 +133,7 @@ println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty(
 minecraft {
     mappings("official", versionMc)
 
-    // accessTransformer(file("src/main/resources/META-INF/accesstransformer.cfg"))
+     accessTransformer(file("src/mod/resources/META-INF/accesstransformer.cfg"))
 
     runs {
         val config = Action<RunConfig> {
@@ -202,6 +202,8 @@ dependencies {
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-entity-events-v1:1.5.9+a1ccd7bfa5"))
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-content-registries-v0:3.5.9+ae0966baf4"))
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-lifecycle-events-v1:2.2.17+1e9487d2f4"))
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-registry-sync-v0:2.2.2+504944c8f4"))
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-rendering-v1:2.1.3+504944c8f4"))
 
     shadeRuntimeOnly("net.fabricmc:sponge-mixin:0.12.5+mixin.0.8.5") {
         isTransitive = false

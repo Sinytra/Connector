@@ -6,7 +6,9 @@
   "mixins": [
     "ServerPlayerGameModeMixin",
     "BootstrapMixin",
-    "IForgeItemStackMixin"
+    "IForgeItemStackMixin",
+    "FabricItemGroupBuilderImplMixin",
+    "CreativeModeTabMixin"
   ],
   "client": [
     "MinecraftMixin"

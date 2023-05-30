@@ -213,11 +213,14 @@ public class MixinReplacementTransformer implements Transformer {
         "net/fabricmc/fabric/mixin/registry/sync/client/BlockColorsMixin",
         "net/fabricmc/fabric/mixin/registry/sync/client/ItemColorsMixin",
         "net/fabricmc/fabric/mixin/registry/sync/client/ParticleManagerMixin",
+        
         "net/fabricmc/fabric/mixin/client/rendering/shader/ShaderProgramMixin",
         "net/fabricmc/fabric/mixin/client/rendering/shader/ShaderProgramImportProcessorMixin",
         "net/fabricmc/fabric/mixin/item/AbstractFurnaceBlockEntityMixin",
         "net/fabricmc/fabric/mixin/item/BrewingStandBlockEntityMixin",
-        "net/fabricmc/fabric/mixin/item/RecipeMixin"
+        "net/fabricmc/fabric/mixin/item/RecipeMixin",
+        "net/fabricmc/fabric/mixin/itemgroup/ItemGroupsMixin",
+        "net/fabricmc/fabric/mixin/itemgroup/client/CreativeInventoryScreenMixin"
     );
 
     private final Set<String> configs;

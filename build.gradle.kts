@@ -214,6 +214,7 @@ dependencies {
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-networking-api-v1:1.3.3+504944c8f4"))
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-events-interaction-v0:0.5.1+76ba65ebf4"))
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-item-api-v1:2.1.19+504944c8f4"))
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-item-group-api-v1:3.0.7+043f9acff4"))
     
     "languageCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"(sourceSets.main.get().output)

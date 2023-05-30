@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -42,19 +43,22 @@ public final class ConnectorModMetadataParser {
         try (InputStream ins = Files.newInputStream(path)) {
             String modPath = jar.getPrimaryPath().toAbsolutePath().normalize().toString();
             LoaderModMetadata metadata = ModMetadataParser.parseMetadata(ins, modPath, Collections.emptyList(), new VersionOverrides(), new DependencyOverrides(Paths.get("randomMissing")), false);
-            LOGGER.info("Found mod " + metadata.getId() + " " + metadata.getName() + " from authors " + metadata.getAuthors());
+            String modid = normalizeModid(metadata.getId());
+            LOGGER.info("Found mod " + modid + " " + metadata.getName());
 
             Config config = Config.inMemory();
             config.add("modLoader", ConnectorLocator.CONNECTOR_LANGUAGE);
             config.add("loaderVersion", "[0, )");
-            config.add("license", String.join(", ", metadata.getLicense()));
+            Collection<String> licenses = metadata.getLicense();
+            config.add("license", licenses.isEmpty() ? "Unknown" : String.join(", ", metadata.getLicense()));
             Map<String, List<EntrypointMetadata>> entryPoints = metadata.getEntrypointKeys().stream()
                 .collect(Collectors.toMap(Function.identity(), metadata::getEntrypoints, (a, b) -> a));
-            config.add(List.of("modproperties", metadata.getId()), Map.of("entrypoints", entryPoints));
+            config.add(List.of("modproperties", modid), Map.of("entrypoints", entryPoints));
             config.add("properties", Map.of("jars", metadata.getJars()));
 
             Config modListConfig = config.createSubConfig();
-            modListConfig.add("modId", normalizeModid(metadata.getId()));
+            modListConfig.add("modId", modid);
+            // TODO Normalize version (+)
             modListConfig.add("version", metadata.getVersion().getFriendlyString());
             modListConfig.add("displayName", metadata.getName());
             modListConfig.add("description", metadata.getDescription());

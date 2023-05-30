@@ -1,7 +1,6 @@
 package dev.su5ed.connector.language;
 
 import com.mojang.logging.LogUtils;
-import net.fabricmc.loader.impl.metadata.EntrypointMetadata;
 import net.minecraftforge.fml.ModLoadingException;
 import net.minecraftforge.fml.ModLoadingStage;
 import net.minecraftforge.forgespi.language.ILifecycleEvent;
@@ -12,7 +11,6 @@ import org.slf4j.Logger;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -26,7 +24,7 @@ public class ConnectorLanguageProvider implements IModLanguageProvider {
     // TODO Read from locator
     public static final String CONNECTOR_LANGUAGE = "connector";
 
-    private record ConnectorModTarget(String modId, Map<String, List<EntrypointMetadata>> entryPoints) implements IModLanguageProvider.IModLanguageLoader {
+    private record ConnectorModTarget(String modId) implements IModLanguageProvider.IModLanguageLoader {
         private static final Logger LOGGER = LogUtils.getLogger();
 
         @SuppressWarnings("unchecked")
@@ -39,8 +37,8 @@ public class ConnectorLanguageProvider implements IModLanguageProvider {
             try {
                 Class<?> modContainer = Class.forName("dev.su5ed.connector.language.ConnectorModContainer", true, classLoader);
                 LOGGER.debug(LOADING, "Loading ConnectorModContainer from classloader {} - got {}", classLoader, modContainer.getClassLoader());
-                Constructor<?> constructor = modContainer.getConstructor(IModInfo.class, Map.class, ModFileScanData.class, ModuleLayer.class);
-                return (T) constructor.newInstance(info, this.entryPoints, modFileScanResults, gameLayer);
+                Constructor<?> constructor = modContainer.getConstructor(IModInfo.class);
+                return (T) constructor.newInstance(info);
             } catch (InvocationTargetException e) {
                 LOGGER.error(LOADING, "Failed to build mod", e);
                 if (e.getTargetException() instanceof ModLoadingException mle) {
@@ -62,16 +60,12 @@ public class ConnectorLanguageProvider implements IModLanguageProvider {
         return CONNECTOR_LANGUAGE;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public Consumer<ModFileScanData> getFileVisitor() {
         return scanResult -> {
             Map<String, ConnectorModTarget> modTargetMap = scanResult.getIModInfoData().stream()
                 .flatMap(fi -> fi.getMods().stream())
-                .map(modInfo -> {
-                    Map<String, List<EntrypointMetadata>> entryPoints = (Map<String, List<EntrypointMetadata>>) modInfo.getModProperties().get("entrypoints");
-                    return new ConnectorModTarget(modInfo.getModId(), entryPoints == null ? Map.of() : entryPoints);
-                })
+                .map(modInfo -> new ConnectorModTarget(modInfo.getModId()))
                 .collect(Collectors.toMap(ConnectorModTarget::modId, Function.identity(), (a, b) -> a));
             scanResult.addLanguageLoader(modTargetMap);
         };

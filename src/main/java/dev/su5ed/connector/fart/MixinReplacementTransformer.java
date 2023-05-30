@@ -7,6 +7,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraftforge.fart.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -19,8 +21,11 @@ import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.LocalVariableAnnotationNode;
+import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.ParameterNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.slf4j.Logger;
@@ -104,12 +109,44 @@ public class MixinReplacementTransformer implements Transformer {
             "net/fabricmc/fabric/mixin/client/rendering/shader/ShaderProgramMixin",
             "modifyProgramId"
         ),
+        Replacement.removeMixinMethod(
+            "net/fabricmc/fabric/mixin/event/interaction/ServerPlayerInteractionManagerMixin",
+            "breakBlock"
+        ),
+        Replacement.removeMixinMethod(
+            "net/fabricmc/fabric/mixin/event/interaction/ServerPlayerInteractionManagerMixin",
+            "onBlockBroken"
+        ),
         // TODO Server mixin, too
         Replacement.replaceMixinMethod(
             "net/fabricmc/fabric/mixin/event/lifecycle/client/WorldChunkMixin",
             "onRemoveBlockEntity(Ljava/util/Map;Ljava/lang/Object;)Ljava/lang/Object;",
             "dev/su5ed/connector/replacement/LifecycleApiReplacements",
             "onRemoveBlockEntity"
+        ),
+        Replacement.replaceMixinMethod(
+            "net/fabricmc/fabric/mixin/networking/client/ClientLoginNetworkHandlerMixin",
+            "handleQueryRequest",
+            "dev/su5ed/connector/replacement/NetworkingApiReplacements"
+        ),
+        Replacement.patchCapturedLVT(
+            "net/fabricmc/fabric/mixin/event/interaction/client/MinecraftClientMixin",
+            "injectUseEntityCallback",
+            "(Lorg/spongepowered/reloc/asm/mixin/injection/callback/CallbackInfo;[Lnet/minecraft/world/InteractionHand;IILnet/minecraft/world/InteractionHand;Lnet/minecraftforge/client/event/InputEvent$InteractionKeyMappingTriggered;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/phys/EntityHitResult;Lnet/minecraft/world/entity/Entity;)V"
+        ),
+        Replacement.renameField(
+            "net/minecraft/server/network/ServerPlayNetworkHandler$1",
+            "val$target",
+            "val$entity"
+        ),
+        Replacement.removeMixinMethod(
+            "net/fabricmc/fabric/mixin/item/ItemStackMixin",
+            "hookGetAttributeModifiers"
+        ),
+        Replacement.replaceMixinMethod(
+            "net/fabricmc/fabric/mixin/item/ItemStackMixin",
+            "hookIsSuitableFor",
+            "dev/su5ed/connector/replacement/ItemApiReplacements"
         ),
         Replacement.shadowFieldTypeReplacement(
             "net/minecraft/world/level/storage/loot/LootTable",
@@ -177,7 +214,10 @@ public class MixinReplacementTransformer implements Transformer {
         "net/fabricmc/fabric/mixin/registry/sync/client/ItemColorsMixin",
         "net/fabricmc/fabric/mixin/registry/sync/client/ParticleManagerMixin",
         "net/fabricmc/fabric/mixin/client/rendering/shader/ShaderProgramMixin",
-        "net/fabricmc/fabric/mixin/client/rendering/shader/ShaderProgramImportProcessorMixin"
+        "net/fabricmc/fabric/mixin/client/rendering/shader/ShaderProgramImportProcessorMixin",
+        "net/fabricmc/fabric/mixin/item/AbstractFurnaceBlockEntityMixin",
+        "net/fabricmc/fabric/mixin/item/BrewingStandBlockEntityMixin",
+        "net/fabricmc/fabric/mixin/item/RecipeMixin"
     );
 
     private final Set<String> configs;
@@ -254,12 +294,51 @@ public class MixinReplacementTransformer implements Transformer {
         return null;
     }
 
-    private boolean applyReplacements(ClassNode node, List<Replacement> replacements) {
+    @Nullable
+    private static void setAnnotationValue(List<Object> values, String key, Object value) {
+        for (int i = 0; i < values.size(); i += 2) {
+            String atKey = (String) values.get(i);
+            if (atKey.equals(key)) {
+                values.set(i + 1, value);
+            }
+        }
+    }
+
+    private static boolean applyReplacements(ClassNode node, List<Replacement> replacements) {
         if (!replacements.isEmpty()) {
             for (Replacement replacement : replacements) {
                 replacement.apply(node);
             }
             return true;
+        }
+        return false;
+    }
+
+    private static boolean targetsType(ClassNode classNode, String type) {
+        if (classNode.invisibleAnnotations != null) {
+            for (AnnotationNode annotation : classNode.invisibleAnnotations) {
+                if (annotation.desc.equals(MIXIN_ANN)) {
+                    Boolean value = MixinReplacementTransformer.<List<Type>, Boolean>findAnnotationValue(annotation.values, "value", val -> {
+                        for (Type targetType : val) {
+                            if (type.equals(targetType.getInternalName())) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                    if (value == null || !value) {
+                        value = MixinReplacementTransformer.<List<String>, Boolean>findAnnotationValue(annotation.values, "targets", val -> {
+                            for (String targetType : val) {
+                                if (type.equals(targetType)) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        });
+                    }
+                    return value != null && value;
+                }
+            }
         }
         return false;
     }
@@ -288,9 +367,95 @@ public class MixinReplacementTransformer implements Transformer {
         static Replacement shadowFieldTypeReplacement(String ownerClass, String name, String type, String replacementType, Function<ShadowFieldTypeReplacement.PatcherCallback, InsnList> patcher) {
             return new ShadowFieldTypeReplacement(ownerClass, name, type, replacementType, patcher);
         }
+
+        static Replacement patchCapturedLVT(String mixinClass, String mixinMethod, String newDesc) {
+            return new LVTCaptureReplacement(mixinClass, mixinMethod, newDesc);
+        }
+
+        static Replacement renameField(String ownerClass, String fieldName, String newName) {
+            return new RenameField(ownerClass, fieldName, newName);
+        }
     }
 
-    public interface MethodReplement extends Replacement {
+    public record RenameField(String ownerClass, String fieldName, String newName) implements Replacement {
+        @Override
+        public boolean handles(ClassNode classNode) {
+            return targetsType(classNode, this.ownerClass);
+        }
+
+        @Override
+        public void apply(ClassNode classNode) {
+            LOGGER.info("Renaming field {}.{} to {}", classNode.name, this.fieldName, this.newName);
+
+            for (FieldNode field : classNode.fields) {
+                if (field.name.equals(this.fieldName)) {
+                    field.name = this.newName;
+                    break;
+                }
+            }
+            for (MethodNode method : classNode.methods) {
+                for (AbstractInsnNode insn : method.instructions) {
+                    if (insn instanceof FieldInsnNode fieldInsnNode && fieldInsnNode.owner.equals(classNode.name) && fieldInsnNode.name.equals(this.fieldName)) {
+                        fieldInsnNode.name = this.newName;
+                    }
+                }
+            }
+        }
+    }
+
+    public record LVTCaptureReplacement(String mixinClass, String mixinMethod, String newDesc) implements MethodReplacement {
+        @Override
+        public Pair<MethodAction, MethodNode> apply(ClassNode node, MethodNode methodNode) {
+            LOGGER.info("Changing descriptor of method {}.{}{} to {}", node.name, methodNode.name, methodNode.desc, this.newDesc);
+            Type[] parameterTypes = Type.getArgumentTypes(methodNode.desc);
+            Type[] newParameterTypes = Type.getArgumentTypes(this.newDesc);
+            Int2ObjectMap<Type> insertionIndices = new Int2ObjectOpenHashMap<>();
+            int offset = (methodNode.access & Opcodes.ACC_STATIC) == 0 ? 1 : 0;
+
+            int i = 0;
+            for (int j = 0; j < newParameterTypes.length && i < methodNode.parameters.size(); j++) {
+                Type type = newParameterTypes[j];
+                if (!parameterTypes[i].equals(type)) {
+                    insertionIndices.put(j + offset, type);
+                    continue;
+                }
+                i++;
+            }
+            if (i != methodNode.parameters.size()) {
+                throw new RuntimeException("Unable to patch LVT capture, incompatible parameters");
+            }
+            insertionIndices.forEach((index, type) -> {
+                ParameterNode newParameter = new ParameterNode(null, 0);
+                methodNode.parameters.add(index, newParameter);
+                for (LocalVariableNode localVariable : methodNode.localVariables) {
+                    if (localVariable.index >= index) {
+                        localVariable.index++;
+                    }
+                }
+                // TODO Invisible annotations
+                if (methodNode.visibleLocalVariableAnnotations != null) {
+                    for (LocalVariableAnnotationNode localVariableAnnotation : methodNode.visibleLocalVariableAnnotations) {
+                        List<Integer> annotationIndices = localVariableAnnotation.index;
+                        for (int j = 0; j < annotationIndices.size(); j++) {
+                            Integer annoIndex = annotationIndices.get(j);
+                            if (annoIndex >= index) {
+                                annotationIndices.set(j, annoIndex + 1);
+                            }
+                        }
+                    }
+                }
+                for (AbstractInsnNode insn : methodNode.instructions) {
+                    if (insn instanceof VarInsnNode varInsnNode && varInsnNode.var >= index) {
+                        varInsnNode.var++;
+                    }
+                }
+            });
+            methodNode.desc = this.newDesc;
+            return MethodAction.keep();
+        }
+    }
+
+    public interface MethodReplacement extends Replacement {
         String mixinClass();
 
         String mixinMethod();
@@ -345,7 +510,7 @@ public class MixinReplacementTransformer implements Transformer {
         }
     }
 
-    record ReplaceMixin(String mixinClass, String mixinMethod, String replacementClass, String replacementMethod) implements MethodReplement {
+    record ReplaceMixin(String mixinClass, String mixinMethod, String replacementClass, String replacementMethod) implements MethodReplacement {
         private static final Map<String, ClassNode> CLASS_CACHE = new ConcurrentHashMap<>();
 
         @Override
@@ -363,7 +528,7 @@ public class MixinReplacementTransformer implements Transformer {
         }
     }
 
-    record RemoveMixin(String mixinClass, String mixinMethod) implements MethodReplement {
+    record RemoveMixin(String mixinClass, String mixinMethod) implements MethodReplacement {
         @Override
         public Pair<MethodAction, MethodNode> apply(ClassNode classNode, MethodNode methodNode) {
             LOGGER.info("Removing mixin {}.{}", classNode.name, methodNode.name);
@@ -371,7 +536,7 @@ public class MixinReplacementTransformer implements Transformer {
         }
     }
 
-    record RedirectMixin(String mixinClass, String mixinMethod, List<String> replacementMethods) implements MethodReplement {
+    record RedirectMixin(String mixinClass, String mixinMethod, List<String> replacementMethods) implements MethodReplacement {
         @Override
         public Pair<MethodAction, MethodNode> apply(ClassNode node, MethodNode method) {
             if (method.visibleAnnotations != null) {
@@ -398,22 +563,7 @@ public class MixinReplacementTransformer implements Transformer {
 
         @Override
         public boolean handles(ClassNode classNode) {
-            if (classNode.invisibleAnnotations != null) {
-                for (AnnotationNode annotation : classNode.invisibleAnnotations) {
-                    if (annotation.desc.equals(MIXIN_ANN)) {
-                        Boolean value = MixinReplacementTransformer.<List<Type>, Boolean>findAnnotationValue(annotation.values, "value", val -> {
-                            for (Type targetType : val) {
-                                if (this.ownerClass.equals(targetType.getInternalName())) {
-                                    return true;
-                                }
-                            }
-                            return false;
-                        });
-                        return value != null && value == true;
-                    }
-                }
-            }
-            return false;
+            return targetsType(classNode, this.ownerClass);
         }
 
         @Override

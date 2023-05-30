@@ -13,11 +13,13 @@ import org.spongepowered.asm.launch.MixinBootstrap;
 import org.spongepowered.asm.launch.MixinInitialisationError;
 import org.spongepowered.asm.launch.MixinLaunchPluginLegacy;
 import org.spongepowered.asm.mixin.MixinEnvironment;
+import org.spongepowered.asm.util.Constants;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

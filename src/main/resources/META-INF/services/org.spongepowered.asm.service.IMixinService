@@ -1,1 +1,1 @@
-dev.su5ed.connector.service.ConnectorMixinService
+org.spongepowered.asm.service.modlauncher.MixinServiceModLauncher

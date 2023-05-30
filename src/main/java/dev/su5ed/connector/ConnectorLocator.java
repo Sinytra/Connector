@@ -221,7 +221,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
 
         INamedMappingFile namedMapping = INamedMappingFile.load(mappingsOutput.toFile());
         // TODO Get current env mapping other than official
-        String fromMapping = Optional.ofNullable(metadata.manifestAttributes.getValue(FABRIC_MAPPING_NAMESPACE)).filter(str -> !str.equals("named")).orElse("yarn");
+        String fromMapping = Optional.ofNullable(metadata.manifestAttributes.getValue(FABRIC_MAPPING_NAMESPACE)).filter(str -> !str.equals("named")).orElse("intermediary");
         IMappingFile modToOfficial = namedMapping.getMap(fromMapping, "official");
         IMappingFile intermediaryToSrg = namedMapping.getMap("intermediary", "srg");
         SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(intermediaryToSrg);

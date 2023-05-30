@@ -49,7 +49,7 @@ public class ConnectorFabricLauncher extends FabricLauncherBase {
 
     @Override
     public ClassLoader getTargetClassLoader() {
-        return null;
+        return Thread.currentThread().getContextClassLoader();
     }
 
     @Override

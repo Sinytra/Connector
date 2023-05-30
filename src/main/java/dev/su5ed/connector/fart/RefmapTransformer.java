@@ -34,7 +34,7 @@ public class RefmapTransformer implements Transformer {
 
     @Override
     public ResourceEntry process(ResourceEntry entry) {
-        if (refmaps.contains(entry.getName())) {
+        if (this.refmaps.contains(entry.getName())) {
             byte[] data = remapRefmapInPlace(entry.getData());
             return ResourceEntry.create(entry.getName(), entry.getTime(), data);
         }

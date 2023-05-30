@@ -28,7 +28,7 @@ val versionFabricLoader: String by project
 val versionAccessWidener: String by project
 
 val language by sourceSets.registering
-val mod by sourceSets.registering
+val mod by sourceSets.creating
 
 val shade: Configuration by configurations.creating
 val shadeRuntimeOnly: Configuration by configurations.creating
@@ -61,10 +61,12 @@ val languageJar: Jar by tasks.creating(Jar::class) {
 
     archiveClassifier.set("language")
 }
-val modJar: Jar by tasks.creating(Jar::class) {
+val modJar: Jar by tasks.creating(ShadowJar::class) {
     dependsOn("modClasses")
 
-    from(mod.get().output)
+    from(mod.output)
+    relocate("org.spongepowered.asm", "org.spongepowered.reloc.asm")
+    manifest.attributes("ConnectorMixinConfigs" to "connectormod.mixins.json")
 
     archiveClassifier.set("mod")
 }
@@ -79,6 +81,7 @@ val remappedDepsJar: Jar by tasks.creating(ShadowJar::class) {
     relocate("org.spongepowered.tools", "org.spongepowered.reloc.tools")
     relocate("net.minecraftforge.fart", "net.minecraftforge.reloc.fart")
     relocate("net.minecraftforge.srgutils", "net.minecraftforge.reloc.srgutils")
+    relocate("MixinConfigs", "ConnectorMixinConfigs")
     archiveClassifier.set("deps-reloc")
 }
 val createObfToMcp by tasks.registering(GenerateSRG::class) {
@@ -107,6 +110,10 @@ val fullJar: Jar by tasks.creating(Jar::class) {
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(17))
     withSourcesJar()
+}
+
+mixin {
+    add(mod, "mixins.connectormod.refmap.json")
 }
 
 configurations {
@@ -138,7 +145,7 @@ minecraft {
     runs {
         val config = Action<RunConfig> {
             property("forge.logging.console.level", "debug")
-            property("forge.logging.markers", "REGISTRIES,SCAN")
+            property("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE")
             property("mixin.debug", "true")
 //            property("connector.cache.enabled", "false")
             workingDirectory = project.file("run").canonicalPath
@@ -204,6 +211,12 @@ dependencies {
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-lifecycle-events-v1:2.2.17+1e9487d2f4"))
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-registry-sync-v0:2.2.2+504944c8f4"))
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-rendering-v1:2.1.3+504944c8f4"))
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-networking-api-v1:1.3.3+504944c8f4"))
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-events-interaction-v0:0.5.1+76ba65ebf4"))
+    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-item-api-v1:2.1.19+504944c8f4"))
+    
+    "languageCompileOnly"(sourceSets.main.get().output)
+    "modCompileOnly"(sourceSets.main.get().output)
 
     shadeRuntimeOnly("net.fabricmc:sponge-mixin:0.12.5+mixin.0.8.5") {
         isTransitive = false

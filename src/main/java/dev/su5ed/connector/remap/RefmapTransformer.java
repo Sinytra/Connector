@@ -1,4 +1,4 @@
-package dev.su5ed.connector.fart;
+package dev.su5ed.connector.remap;
 
 import com.google.gson.Gson;
 import dev.su5ed.connector.ConnectorUtil;
@@ -13,8 +13,8 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
 import java.util.jar.Manifest;
 
 public class RefmapTransformer implements Transformer {
@@ -22,11 +22,11 @@ public class RefmapTransformer implements Transformer {
     private static final String INTERMEDIARY_MAPPING_ENV = "named:intermediary";
     private static final String SRG_MAPPING_ENV = "searge";
 
-    private final Set<String> configs;
-    private final Set<String> refmaps;
+    private final Collection<String> configs;
+    private final Collection<String> refmaps;
     private final SrgRemappingReferenceMapper remapper;
 
-    public RefmapTransformer(Set<String> configs, Set<String> refmaps, SrgRemappingReferenceMapper remapper) {
+    public RefmapTransformer(Collection<String> configs, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) {
         this.configs = configs;
         this.refmaps = refmaps;
         this.remapper = remapper;

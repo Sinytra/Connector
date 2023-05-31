@@ -1,4 +1,4 @@
-package dev.su5ed.connector;
+package dev.su5ed.connector.mock;
 
 import net.fabricmc.loader.impl.game.GameProvider;
 import net.fabricmc.loader.impl.game.patch.GameTransformer;

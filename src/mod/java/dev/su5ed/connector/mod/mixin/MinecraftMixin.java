@@ -1,6 +1,6 @@
 package dev.su5ed.connector.mod.mixin;
 
-import dev.su5ed.connector.ConnectorEarlyLoader;
+import dev.su5ed.connector.loader.ConnectorEarlyLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.main.GameConfig;
 import net.minecraftforge.registries.GameData;

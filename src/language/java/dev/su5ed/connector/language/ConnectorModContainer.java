@@ -1,7 +1,7 @@
 package dev.su5ed.connector.language;
 
 import com.mojang.logging.LogUtils;
-import dev.su5ed.connector.ConnectorEarlyLoader;
+import dev.su5ed.connector.loader.ConnectorEarlyLoader;
 import net.minecraftforge.fml.ModContainer;
 import net.minecraftforge.forgespi.language.IModInfo;
 import org.slf4j.Logger;

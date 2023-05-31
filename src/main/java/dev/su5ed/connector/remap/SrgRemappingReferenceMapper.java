@@ -1,4 +1,4 @@
-package dev.su5ed.connector.fart;
+package dev.su5ed.connector.remap;
 
 import com.google.common.collect.Maps;
 import com.google.gson.GsonBuilder;

@@ -1,9 +1,7 @@
-package dev.su5ed.connector;
+package dev.su5ed.connector.loader;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.logging.LogUtils;
-import cpw.mods.modlauncher.Launcher;
-import cpw.mods.modlauncher.api.IModuleLayerManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
@@ -42,10 +40,10 @@ public class ConnectorEarlyLoader {
         "server", DedicatedServerModInitializer.class
     );
 
-    private static final Map<String, List<Object>> modInstances = new HashMap<>();
+    private static final Map<String, List<Object>> MOD_INSTANCES = new HashMap<>();
     
     public static List<Object> getModInstances(String modid) {
-        List<Object> instances = modInstances.get(modid);
+        List<Object> instances = MOD_INSTANCES.get(modid);
         if (instances == null) {
             throw new RuntimeException("Mod instances not found for mod " + modid);
         }
@@ -60,14 +58,12 @@ public class ConnectorEarlyLoader {
             .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals("connector")))
             .toList();
         LOGGER.debug("Found {} mods to load", mods.size());
-        // Step 2: Get GAME layer
-        ModuleLayer gameLayer = Launcher.INSTANCE.findLayerManager().flatMap(manager -> manager.getLayer(IModuleLayerManager.Layer.GAME)).orElseThrow();
         for (ModInfo modInfo : mods) {
             LOGGER.debug("Loading mod {}", modInfo.getModId());
             Map<String, List<EntrypointMetadata>> entryPoints = (Map<String, List<EntrypointMetadata>>) modInfo.getModProperties().get("entrypoints");
             Map<String, List<EntrypointMetadata>> activeEntryPoints = entryPoints == null ? Map.of() : findActiveEntryPoints(entryPoints);
-            List<Object> instances = constructMod(modInfo, activeEntryPoints, gameLayer);
-            modInstances.put(modInfo.getModId(), instances);
+            List<Object> instances = constructMod(modInfo, activeEntryPoints);
+            MOD_INSTANCES.put(modInfo.getModId(), instances);
         }
     }
 
@@ -81,7 +77,8 @@ public class ConnectorEarlyLoader {
         return activeEntryPoints;
     }
 
-    private static List<Object> constructMod(ModInfo modInfo, Map<String, List<EntrypointMetadata>> activeEntryPoints, ModuleLayer gameLayer) {
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static List<Object> constructMod(ModInfo modInfo, Map<String, List<EntrypointMetadata>> activeEntryPoints) {
         List<Object> instances = new ArrayList<>();
 
         for (Map.Entry<String, List<EntrypointMetadata>> entry : activeEntryPoints.entrySet()) {
@@ -94,7 +91,7 @@ public class ConnectorEarlyLoader {
 
                 try {
                     LOGGER.trace(LOADING, "Loading mod instance {} of type {}", modInfo.getModId(), type.getName());
-                    Object instance = create(metadata.getValue(), type, gameLayer, modInfo);
+                    Object instance = create(metadata.getValue(), type);
                     instances.add(instance);
                     initFunc.accept(instance);
                     LOGGER.trace(LOADING, "Loaded mod instance {} of type {}", modInfo.getModId(), type.getName());
@@ -109,7 +106,7 @@ public class ConnectorEarlyLoader {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> T create(String value, Class<T> type, ModuleLayer gameLayer, ModInfo modInfo) throws LanguageAdapterException {
+    private static <T> T create(String value, Class<T> type) throws LanguageAdapterException, ClassNotFoundException {
         String[] methodSplit = value.split("::");
 
         if (methodSplit.length >= 3) {
@@ -118,8 +115,7 @@ public class ConnectorEarlyLoader {
 
         Class<?> c;
 
-        Module module = gameLayer.findModule(modInfo.getOwningFile().moduleName()).orElseThrow();
-        c = Class.forName(module, methodSplit[0]);
+        c = Class.forName(methodSplit[0], true, Thread.currentThread().getContextClassLoader());
 
         // Hack
         ConnectorEarlyLoader.class.getModule().addReads(c.getModule());

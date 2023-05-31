@@ -8,7 +8,7 @@ import org.spongepowered.asm.launch.Phases;
 import java.util.EnumSet;
 
 public class ConnectorMixinLaunchPlugin extends MixinLaunchPlugin {
-    public static final String NAME = "connectormixinplugin";
+    public static final String NAME = "connector_mixin_plugin";
 
     @Override
     public String name() {

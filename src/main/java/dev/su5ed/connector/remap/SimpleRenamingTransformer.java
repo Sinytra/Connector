@@ -1,30 +1,18 @@
-package dev.su5ed.connector.fart;
+package dev.su5ed.connector.remap;
 
-import com.mojang.datafixers.util.Pair;
 import net.minecraftforge.fart.api.Transformer;
-import net.minecraftforge.srgutils.IMappingFile;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class SimpleRenamingTransformer implements Transformer {
     private final Remapper remapper;
 
-    public SimpleRenamingTransformer(IMappingFile mappingFile) {
-        Map<String, String> mapping = mappingFile.getClasses().stream()
-            .flatMap(cls -> {
-                Pair<String, String> clsRename = Pair.of(cls.getOriginal(), cls.getMapped());
-                Stream<Pair<String, String>> fieldRenames = cls.getFields().stream().map(field -> Pair.of(field.getOriginal(), field.getMapped()));
-                Stream<Pair<String, String>> methodRenames = cls.getMethods().stream().map(method -> Pair.of(method.getOriginal(), method.getMapped()));
-                return Stream.concat(Stream.of(clsRename), Stream.concat(fieldRenames, methodRenames));
-            })
-            .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond, (a, b) -> a));
-        this.remapper = new DeadSimpleRemapper(mapping, Map.of("org/spongepowered/", "org/spongepowered/reloc/"));
+    public SimpleRenamingTransformer(Map<String, String> mappings) {
+        this.remapper = new DeadSimpleRemapper(mappings, Map.of("org/spongepowered/", "org/spongepowered/reloc/"));
     }
 
     @Override

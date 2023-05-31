@@ -1,5 +1,7 @@
 package dev.su5ed.connector;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import cpw.mods.modlauncher.api.ServiceRunner;
 import net.fabricmc.api.EnvType;
 import net.minecraftforge.api.distmarker.Dist;
@@ -12,6 +14,9 @@ import java.nio.file.Path;
 
 public final class ConnectorUtil {
     public static final String MIXIN_CONFIGS_ATTRIBUTE = "ConnectorMixinConfigs";
+    public static final String FABRIC_MOD_JSON = "fabric.mod.json";
+    public static final String CONNECTOR_LANGUAGE = "connector";
+
     private static final boolean CACHE_ENABLED;
 
     static {
@@ -49,6 +54,23 @@ public final class ConnectorUtil {
 
     public static EnvType getEnvType() {
         return FMLEnvironment.dist == Dist.CLIENT ? EnvType.CLIENT : EnvType.SERVER;
+    }
+
+    public static Gson prettyGson() {
+        return new GsonBuilder().setPrettyPrinting().create();
+    }
+
+    public static <V> V uncheckThrowable(UncheckedSupplier<V> supplier) {
+        try {
+            return supplier.get();
+        } catch (Throwable t) {
+            throw new RuntimeException(t);
+        }
+    }
+
+    @FunctionalInterface
+    public interface UncheckedSupplier<V> {
+        V get() throws Throwable;
     }
 
     private ConnectorUtil() {}

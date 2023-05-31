@@ -1,4 +1,4 @@
-package dev.su5ed.connector.fart;
+package dev.su5ed.connector.remap;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -14,6 +14,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.TypeReference;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -26,9 +27,12 @@ import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.ParameterNode;
+import org.objectweb.asm.tree.TypeAnnotationNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.slf4j.Logger;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
@@ -39,6 +43,8 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -50,12 +56,14 @@ import java.util.function.Function;
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 
 public class MixinReplacementTransformer implements Transformer {
-    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String MIXIN_ANN = "Lorg/spongepowered/asm/mixin/Mixin;";
     private static final String REDIRECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Redirect;";
     private static final String ACCESSOR_ANN = "Lorg/spongepowered/asm/mixin/gen/Accessor;";
 
-    private static final List<Replacement> REPLACEMENTS = List.of(
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Marker ENHANCE = MarkerFactory.getMarker("MIXIN_ENHANCE");
+
+    private static final List<Replacement> ENHANCEMENTS = List.of(
         Replacement.replaceMixinMethod(
             "net/fabricmc/fabric/mixin/entity/event/LivingEntityMixin",
             "setOccupiedState",
@@ -68,11 +76,6 @@ public class MixinReplacementTransformer implements Transformer {
         Replacement.removeMixinMethod(
             "net/fabricmc/fabric/mixin/entity/event/ServerPlayerEntityMixin",
             "redirectDaySleepCheck"
-        ),
-        Replacement.replaceMixinMethod(
-            "net/fabricmc/fabric/mixin/entity/event/ServerPlayerEntityMixin",
-            "onTrySleepDirectionCheck",
-            "dev.su5ed.connector.replacement.EntityApiReplacements"
         ),
         Replacement.redirectMixinTarget(
             "net/fabricmc/fabric/mixin/dimension/EntityMixin",
@@ -133,6 +136,11 @@ public class MixinReplacementTransformer implements Transformer {
             "net/fabricmc/fabric/mixin/event/interaction/client/MinecraftClientMixin",
             "injectUseEntityCallback",
             "(Lorg/spongepowered/reloc/asm/mixin/injection/callback/CallbackInfo;[Lnet/minecraft/world/InteractionHand;IILnet/minecraft/world/InteractionHand;Lnet/minecraftforge/client/event/InputEvent$InteractionKeyMappingTriggered;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/phys/EntityHitResult;Lnet/minecraft/world/entity/Entity;)V"
+        ),
+        Replacement.patchCapturedLVT(
+            "net/fabricmc/fabric/mixin/entity/event/ServerPlayerEntityMixin",
+            "onTrySleepDirectionCheck",
+            "(Lnet/minecraft/core/BlockPos;Lorg/spongepowered/reloc/asm/mixin/injection/callback/CallbackInfoReturnable;Ljava/util/Optional;Lnet/minecraft/world/entity/player/Player$BedSleepingProblem;Lnet/minecraft/core/Direction;)V"
         ),
         Replacement.renameField(
             "net/minecraft/server/network/ServerPlayNetworkHandler$1",
@@ -206,7 +214,14 @@ public class MixinReplacementTransformer implements Transformer {
                 list.add(new MethodInsnNode(Opcodes.INVOKESPECIAL, "dev/su5ed/connector/mod/DelegatingIdMapper", "<init>", "(Ljava/util/Map;Lnet/minecraft/core/Registry;)V"));
                 return list;
             }
-        )
+        ),
+        Replacement.redirectMixinMethod(
+            "net/minecraft/client/renderer/entity/BoatRenderer",
+            "render",
+            "Ljava/util/Map;get(Ljava/lang/Object;)Ljava/lang/Object;",
+            "getModelWithLocation"
+        ),
+        Replacement.mappingReplacement()
     );
     private static final List<String> REMOVALS = List.of(
         // TODO All of these reply on ID maps that have been replaced by forge, find a way to proxy them
@@ -223,12 +238,14 @@ public class MixinReplacementTransformer implements Transformer {
         "net/fabricmc/fabric/mixin/itemgroup/client/CreativeInventoryScreenMixin"
     );
 
-    private final Set<String> configs;
+    private final Collection<String> configs;
     private final Set<String> mixins;
+    private final Map<String, String> mappings;
 
-    public MixinReplacementTransformer(Set<String> configs, Set<String> mixins) {
+    public MixinReplacementTransformer(Collection<String> configs, Set<String> mixins, Map<String, String> mappings) {
         this.configs = configs;
         this.mixins = mixins;
+        this.mappings = mappings;
     }
 
     @Override
@@ -239,7 +256,7 @@ public class MixinReplacementTransformer implements Transformer {
             ClassNode node = new ClassNode();
             reader.accept(node, 0);
 
-            List<Replacement> replacements = REPLACEMENTS.stream()
+            List<Replacement> replacements = ENHANCEMENTS.stream()
                 .filter(r -> r.handles(node))
                 .toList();
             if (applyReplacements(node, replacements)) {
@@ -307,10 +324,10 @@ public class MixinReplacementTransformer implements Transformer {
         }
     }
 
-    private static boolean applyReplacements(ClassNode node, List<Replacement> replacements) {
+    private boolean applyReplacements(ClassNode node, List<Replacement> replacements) {
         if (!replacements.isEmpty()) {
             for (Replacement replacement : replacements) {
-                replacement.apply(node);
+                replacement.apply(node, this);
             }
             return true;
         }
@@ -349,7 +366,7 @@ public class MixinReplacementTransformer implements Transformer {
     interface Replacement {
         boolean handles(ClassNode classNode);
 
-        void apply(ClassNode classNode);
+        void apply(ClassNode classNode, MixinReplacementTransformer instance);
 
         static Replacement replaceMixinMethod(String mixinClass, String mixinMethod, String replacementClass) {
             return replaceMixinMethod(mixinClass, mixinMethod, replacementClass, mixinMethod);
@@ -378,6 +395,67 @@ public class MixinReplacementTransformer implements Transformer {
         static Replacement renameField(String ownerClass, String fieldName, String newName) {
             return new RenameField(ownerClass, fieldName, newName);
         }
+        
+        static Replacement mappingReplacement() {
+            return new MapMixin();
+        }
+        
+        static Replacement redirectMixinMethod(String ownerClass, String methodName, String targetDesc, String newMethod) {
+            return new RedirectMixinMethod(ownerClass, methodName, targetDesc, newMethod);
+        }
+    }
+    
+    public record RedirectMixinMethod(String ownerClass, String methodName, String targetDesc, String newMethod) implements Replacement {
+        @Override
+        public boolean handles(ClassNode classNode) {
+            return targetsType(classNode, this.ownerClass);
+        }
+
+        @Override
+        public void apply(ClassNode classNode, MixinReplacementTransformer instance) {
+            for (MethodNode method : classNode.methods) {
+                if (method.visibleAnnotations != null) {
+                    for (AnnotationNode annotation : method.visibleAnnotations) {
+                        List<String> targetMethods = findAnnotationValue(annotation.values, "method", Function.identity());
+                        if (targetMethods.contains(this.methodName)) {
+                            AnnotationNode atAnnotation = findAnnotationValue(annotation.values, "at", Function.identity());
+                            String target = findAnnotationValue(atAnnotation.values, "target", Function.identity());
+                            if (target.equals(this.targetDesc)) {
+                                LOGGER.info(ENHANCE, "Redirecting mixin target method {}.{} to {}", classNode.name, method.name, this.newMethod);
+                                targetMethods.set(targetMethods.indexOf(this.methodName), this.newMethod);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    public record MapMixin() implements Replacement {
+        @Override
+        public boolean handles(ClassNode classNode) {
+            return true;
+        }
+
+        @Override
+        public void apply(ClassNode classNode, MixinReplacementTransformer instance) {
+            for (MethodNode method : classNode.methods) {
+                if (method.visibleAnnotations != null) {
+                    for (AnnotationNode annotation : method.visibleAnnotations) {
+                        if (annotation.values != null) {
+                            Boolean remap = MixinReplacementTransformer.findAnnotationValue(annotation.values, "remap", Function.identity());
+                            if (remap != null && !remap) {
+                                LOGGER.info(ENHANCE, "Renaming mixin {}.{}", classNode.name, method.name);
+                                List<String> targetMethods = MixinReplacementTransformer.findAnnotationValue(annotation.values, "method", Function.identity());
+                                List<String> remapped = targetMethods.stream().map(str -> instance.mappings.getOrDefault(str, str)).toList();
+                                MixinReplacementTransformer.setAnnotationValue(annotation.values, "method", remapped);
+                                LOGGER.info(ENHANCE, "Renamed {} -> {}", targetMethods, remapped);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public record RenameField(String ownerClass, String fieldName, String newName) implements Replacement {
@@ -387,8 +465,8 @@ public class MixinReplacementTransformer implements Transformer {
         }
 
         @Override
-        public void apply(ClassNode classNode) {
-            LOGGER.info("Renaming field {}.{} to {}", classNode.name, this.fieldName, this.newName);
+        public void apply(ClassNode classNode, MixinReplacementTransformer instance) {
+            LOGGER.info(ENHANCE, "Renaming field {}.{} to {}", classNode.name, this.fieldName, this.newName);
 
             for (FieldNode field : classNode.fields) {
                 if (field.name.equals(this.fieldName)) {
@@ -407,9 +485,10 @@ public class MixinReplacementTransformer implements Transformer {
     }
 
     public record LVTCaptureReplacement(String mixinClass, String mixinMethod, String newDesc) implements MethodReplacement {
+        @SuppressWarnings("unchecked")
         @Override
         public Pair<MethodAction, MethodNode> apply(ClassNode node, MethodNode methodNode) {
-            LOGGER.info("Changing descriptor of method {}.{}{} to {}", node.name, methodNode.name, methodNode.desc, this.newDesc);
+            LOGGER.info(ENHANCE, "Changing descriptor of method {}.{}{} to {}", node.name, methodNode.name, methodNode.desc, this.newDesc);
             Type[] parameterTypes = Type.getArgumentTypes(methodNode.desc);
             Type[] newParameterTypes = Type.getArgumentTypes(this.newDesc);
             Int2ObjectMap<Type> insertionIndices = new Int2ObjectOpenHashMap<>();
@@ -419,7 +498,7 @@ public class MixinReplacementTransformer implements Transformer {
             for (int j = 0; j < newParameterTypes.length && i < methodNode.parameters.size(); j++) {
                 Type type = newParameterTypes[j];
                 if (!parameterTypes[i].equals(type)) {
-                    insertionIndices.put(j + offset, type);
+                    insertionIndices.put(j, type);
                     continue;
                 }
                 i++;
@@ -428,27 +507,49 @@ public class MixinReplacementTransformer implements Transformer {
                 throw new RuntimeException("Unable to patch LVT capture, incompatible parameters");
             }
             insertionIndices.forEach((index, type) -> {
-                ParameterNode newParameter = new ParameterNode(null, 0);
-                methodNode.parameters.add(index, newParameter);
+                ParameterNode newParameter = new ParameterNode(null, Opcodes.ACC_SYNTHETIC);
+                if (index < methodNode.parameters.size()) methodNode.parameters.add(index, newParameter);
+                else methodNode.parameters.add(newParameter);
+                
+                int localIndex = offset + index;
                 for (LocalVariableNode localVariable : methodNode.localVariables) {
-                    if (localVariable.index >= index) {
+                    if (localVariable.index >= localIndex) {
                         localVariable.index++;
                     }
                 }
-                // TODO Invisible annotations
+                // TODO All visible/invisible annotations
+                if (methodNode.invisibleParameterAnnotations != null) {
+                    List<List<AnnotationNode>> annotations = new ArrayList<>(Arrays.asList(methodNode.invisibleParameterAnnotations));
+                    if (index < annotations.size()) {
+                        annotations.add(index, null);
+                        methodNode.invisibleParameterAnnotations = (List<AnnotationNode>[]) annotations.toArray(List[]::new);
+                        methodNode.invisibleAnnotableParameterCount = annotations.size();
+                    }
+                }
+                if (methodNode.invisibleTypeAnnotations != null) {
+                    List<TypeAnnotationNode> invisibleTypeAnnotations = methodNode.invisibleTypeAnnotations;
+                    for (int j = 0; j < invisibleTypeAnnotations.size(); j++) {
+                        TypeAnnotationNode typeAnnotation = invisibleTypeAnnotations.get(j);
+                        TypeReference ref = new TypeReference(typeAnnotation.typeRef);
+                        int typeIndex = ref.getFormalParameterIndex();
+                        if (ref.getSort() == TypeReference.METHOD_FORMAL_PARAMETER && typeIndex >= index) {
+                            invisibleTypeAnnotations.set(j, new TypeAnnotationNode(TypeReference.newFormalParameterReference(typeIndex + 1).getValue(), typeAnnotation.typePath, typeAnnotation.desc));
+                        }
+                    }
+                }
                 if (methodNode.visibleLocalVariableAnnotations != null) {
                     for (LocalVariableAnnotationNode localVariableAnnotation : methodNode.visibleLocalVariableAnnotations) {
                         List<Integer> annotationIndices = localVariableAnnotation.index;
                         for (int j = 0; j < annotationIndices.size(); j++) {
                             Integer annoIndex = annotationIndices.get(j);
-                            if (annoIndex >= index) {
+                            if (annoIndex >= localIndex) {
                                 annotationIndices.set(j, annoIndex + 1);
                             }
                         }
                     }
                 }
                 for (AbstractInsnNode insn : methodNode.instructions) {
-                    if (insn instanceof VarInsnNode varInsnNode && varInsnNode.var >= index) {
+                    if (insn instanceof VarInsnNode varInsnNode && varInsnNode.var >= localIndex) {
                         varInsnNode.var++;
                     }
                 }
@@ -471,7 +572,7 @@ public class MixinReplacementTransformer implements Transformer {
         }
 
         @Override
-        default void apply(ClassNode node) {
+        default void apply(ClassNode node, MixinReplacementTransformer instance) {
             String mixinMethod = mixinMethod();
             int descIndex = mixinMethod().indexOf('(');
             String methodName = descIndex == -1 ? mixinMethod : mixinMethod.substring(0, descIndex);
@@ -518,7 +619,7 @@ public class MixinReplacementTransformer implements Transformer {
 
         @Override
         public Pair<MethodAction, MethodNode> apply(ClassNode classNode, MethodNode methodNode) {
-            LOGGER.info("Replacing mixin {}.{}", classNode.name, methodNode.name);
+            LOGGER.info(ENHANCE, "Replacing mixin {}.{}", classNode.name, methodNode.name);
             ClassNode replNode = CLASS_CACHE.computeIfAbsent(this.replacementClass, rethrowFunction(c -> {
                 ClassReader replReader = new ClassReader(this.replacementClass);
                 ClassNode rNode = new ClassNode();
@@ -534,7 +635,7 @@ public class MixinReplacementTransformer implements Transformer {
     record RemoveMixin(String mixinClass, String mixinMethod) implements MethodReplacement {
         @Override
         public Pair<MethodAction, MethodNode> apply(ClassNode classNode, MethodNode methodNode) {
-            LOGGER.info("Removing mixin {}.{}", classNode.name, methodNode.name);
+            LOGGER.info(ENHANCE, "Removing mixin {}.{}", classNode.name, methodNode.name);
             return MethodAction.remove();
         }
     }
@@ -548,7 +649,7 @@ public class MixinReplacementTransformer implements Transformer {
                         List<String> targetMethods = MixinReplacementTransformer.findAnnotationValue(annotation.values, "method", Function.identity());
 
                         if (targetMethods.size() == 1) {
-                            LOGGER.info("Redirecting mixin {}.{} to {}", node.name, method.name, this.replacementMethods);
+                            LOGGER.info(ENHANCE, "Redirecting mixin {}.{} to {}", node.name, method.name, this.replacementMethods);
                             targetMethods.clear();
                             targetMethods.addAll(this.replacementMethods);
                         }
@@ -570,13 +671,13 @@ public class MixinReplacementTransformer implements Transformer {
         }
 
         @Override
-        public void apply(ClassNode classNode) {
+        public void apply(ClassNode classNode, MixinReplacementTransformer instance) {
             for (FieldNode field : classNode.fields) {
                 if (field.name.equals(this.name)) {
                     if (!field.desc.equals(this.type)) {
                         throw new RuntimeException("Invalid replacement origin descriptor, expected " + this.type + ", found " + field.desc);
                     }
-                    LOGGER.info("Changing type of field {}.{} to {}", classNode.name, field.name, this.replacementType);
+                    LOGGER.info(ENHANCE, "Changing type of field {}.{} to {}", classNode.name, field.name, this.replacementType);
                     field.desc = this.replacementType;
                 }
             }
@@ -589,7 +690,7 @@ public class MixinReplacementTransformer implements Transformer {
                             String value = findAnnotationValue(annotation.values, "value", Function.identity());
                             String fieldName = value != null ? value : method.name;
                             if (fieldName.equals(this.name)) {
-                                LOGGER.info("Found accessor {} for field {}", method.name, fieldName);
+                                LOGGER.info(ENHANCE, "Found accessor {} for field {}", method.name, fieldName);
                                 if (!Type.getReturnType(method.desc).getDescriptor().equals(this.type)) {
                                     throw new RuntimeException("Unexpected return type for method " + method.name + ", expected " + this.type);
                                 }
@@ -624,7 +725,7 @@ public class MixinReplacementTransformer implements Transformer {
                     AbstractInsnNode insn = iterator.next();
 
                     if (insn.getOpcode() == Opcodes.GETFIELD && insn instanceof FieldInsnNode fieldInsn && fieldInsn.name.equals(this.name)) {
-                        LOGGER.info("Converting field {} reference type in method {}.{}{}", this.name, classNode.name, method.name, method.desc);
+                        LOGGER.info(ENHANCE, "Converting field {} reference type in method {}.{}{}", this.name, classNode.name, method.name, method.desc);
 
                         fieldInsn.desc = this.replacementType;
                         method.instructions.insert(fieldInsn, this.patcher.apply(() -> {

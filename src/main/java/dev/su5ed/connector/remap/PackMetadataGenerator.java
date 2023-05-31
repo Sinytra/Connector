@@ -1,7 +1,7 @@
-package dev.su5ed.connector.fart;
+package dev.su5ed.connector.remap;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import dev.su5ed.connector.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
 
 import java.io.ByteArrayOutputStream;
@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.List;
 
 public class PackMetadataGenerator implements Transformer {
-    public static final String NAME = "pack.mcmeta";
+    public static final String RESOURCE = "pack.mcmeta";
     public static final int DATA_PACK_FORMAT = 12;
     public static final int RESOURCE_PACK_FORMAT = 13;
 
@@ -26,7 +26,7 @@ public class PackMetadataGenerator implements Transformer {
 
     @Override
     public ResourceEntry process(ResourceEntry entry) {
-        if (entry.getName().equals(NAME)) {
+        if (RESOURCE.equals(entry.getName())) {
             this.seen = true;
         }
         return entry;
@@ -46,11 +46,11 @@ public class PackMetadataGenerator implements Transformer {
 
             try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
                 try (Writer writer = new OutputStreamWriter(byteStream)) {
-                    new Gson().toJson(packMeta, writer);
+                    ConnectorUtil.prettyGson().toJson(packMeta, writer);
                     writer.flush();
                 }
                 byte[] data = byteStream.toByteArray();
-                return List.of(ResourceEntry.create(NAME, 318211200000L, data));
+                return List.of(ResourceEntry.create(RESOURCE, 318211200000L, data));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

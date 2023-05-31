@@ -14,6 +14,10 @@ import java.util.jar.Manifest;
 
 public class ConnectorFabricLauncher extends FabricLauncherBase {
 
+    public static void inject() {
+        new ConnectorFabricLauncher();
+    }
+
     public ConnectorFabricLauncher() {
         super();
     }

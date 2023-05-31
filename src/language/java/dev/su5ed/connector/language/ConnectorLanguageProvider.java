@@ -1,6 +1,7 @@
 package dev.su5ed.connector.language;
 
 import com.mojang.logging.LogUtils;
+import dev.su5ed.connector.ConnectorUtil;
 import net.minecraftforge.fml.ModLoadingException;
 import net.minecraftforge.fml.ModLoadingStage;
 import net.minecraftforge.forgespi.language.ILifecycleEvent;
@@ -21,8 +22,24 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 import static net.minecraftforge.fml.loading.LogMarkers.LOADING;
 
 public class ConnectorLanguageProvider implements IModLanguageProvider {
-    // TODO Read from locator
-    public static final String CONNECTOR_LANGUAGE = "connector";
+    @Override
+    public String name() {
+        return ConnectorUtil.CONNECTOR_LANGUAGE;
+    }
+
+    @Override
+    public Consumer<ModFileScanData> getFileVisitor() {
+        return scanResult -> {
+            Map<String, ConnectorModTarget> modTargetMap = scanResult.getIModInfoData().stream()
+                .flatMap(fi -> fi.getMods().stream())
+                .map(modInfo -> new ConnectorModTarget(modInfo.getModId()))
+                .collect(Collectors.toMap(ConnectorModTarget::modId, Function.identity(), (a, b) -> a));
+            scanResult.addLanguageLoader(modTargetMap);
+        };
+    }
+
+    @Override
+    public <R extends ILifecycleEvent<R>> void consumeLifecycleEvent(Supplier<R> consumeEvent) {}
 
     private record ConnectorModTarget(String modId) implements IModLanguageProvider.IModLanguageLoader {
         private static final Logger LOGGER = LogUtils.getLogger();
@@ -54,23 +71,4 @@ public class ConnectorLanguageProvider implements IModLanguageProvider {
             }
         }
     }
-
-    @Override
-    public String name() {
-        return CONNECTOR_LANGUAGE;
-    }
-
-    @Override
-    public Consumer<ModFileScanData> getFileVisitor() {
-        return scanResult -> {
-            Map<String, ConnectorModTarget> modTargetMap = scanResult.getIModInfoData().stream()
-                .flatMap(fi -> fi.getMods().stream())
-                .map(modInfo -> new ConnectorModTarget(modInfo.getModId()))
-                .collect(Collectors.toMap(ConnectorModTarget::modId, Function.identity(), (a, b) -> a));
-            scanResult.addLanguageLoader(modTargetMap);
-        };
-    }
-
-    @Override
-    public <R extends ILifecycleEvent<R>> void consumeLifecycleEvent(Supplier<R> consumeEvent) {}
 }

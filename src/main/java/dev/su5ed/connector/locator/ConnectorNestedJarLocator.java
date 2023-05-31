@@ -1,6 +1,8 @@
-package dev.su5ed.connector;
+package dev.su5ed.connector.locator;
 
 import cpw.mods.jarhandling.SecureJar;
+import dev.su5ed.connector.ConnectorUtil;
+import dev.su5ed.connector.locator.ConnectorLocator.FabricModPath;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.forgespi.language.IModFileInfo;
@@ -14,17 +16,20 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
 public class ConnectorNestedJarLocator implements IDependencyLocator {
+    private static final String NAME = "connector_locator_jij";
+    
     @SuppressWarnings("unchecked")
     @Override
     public List<IModFile> scanMods(Iterable<IModFile> loadedMods) {
         Path tempDir = FMLPaths.MODSDIR.get().resolve("connector").resolve("temp");
 
-        List<Path> discoveredRemapped = StreamSupport.stream(loadedMods.spliterator(), false)
+        List<FabricModPath> discoveredRemapped = StreamSupport.stream(loadedMods.spliterator(), false)
             .filter(modFile -> {
                 IModFileInfo modFileInfo = modFile.getModFileInfo();
                 return modFileInfo != null && modFileInfo.requiredLanguageLoaders().stream().anyMatch(l -> l.languageName().equals("connector"));
@@ -32,22 +37,29 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
             .flatMap(modFile -> {
                 SecureJar secureJar = modFile.getSecureJar();
                 Collection<NestedJarEntry> jars = (Collection<NestedJarEntry>) modFile.getModFileInfo().getFileProperties().get("jars");
-                return jars.stream()
-                    .map(entry -> secureJar.getPath(entry.getFile()))
-                    .filter(Files::exists)
-                    .map(path -> uncheck(() -> prepareJijModFile(tempDir, secureJar.name(), path)));
+                return discoverNestedJarsRecursive(tempDir, secureJar, jars);
             })
             .toList();
-        List<Path> moduleSafeJars = SplitPackageMerger.handleSplitPackages(discoveredRemapped);
+        List<SplitPackageMerger.ModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(discoveredRemapped);
         return moduleSafeJars.stream()
-            .map(path -> ConnectorLocator.createConnectorModFile(path, this))
+            .map(info -> ConnectorLocator.createConnectorModFile(info, this))
             .toList();
     }
 
-    private Path prepareJijModFile(Path tempDir, String parentName, Path path) throws IOException {
+    private Stream<FabricModPath> discoverNestedJarsRecursive(Path tempDir, SecureJar secureJar, Collection<NestedJarEntry> jars) {
+        return jars.stream()
+            .map(entry -> secureJar.getPath(entry.getFile()))
+            .filter(Files::exists)
+            .flatMap(path -> {
+                FabricModPath modInfo = uncheck(() -> prepareJijModFile(tempDir, secureJar.name(), path));
+                return Stream.concat(Stream.of(modInfo), discoverNestedJarsRecursive(tempDir, SecureJar.from(modInfo.path()), modInfo.metadata().modMetadata().getJars()));
+            });
+    }
+
+    // TODO Batch remap all nested jars
+    private FabricModPath prepareJijModFile(Path tempDir, String parentName, Path path) throws IOException {
         Files.createDirectories(tempDir);
 
-        // TODO Remap nested jars along with the main jar?
         String parentNameWithoutExt = parentName.split("\\.(?!.*\\.)")[0];
         // Extract JiJ
         Path extracted = tempDir.resolve(parentNameWithoutExt + "$" + path.getFileName().toString());
@@ -58,7 +70,7 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
 
     @Override
     public String name() {
-        return "connector-jij";
+        return NAME;
     }
 
     @Override

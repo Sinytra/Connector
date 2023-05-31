@@ -29,7 +29,7 @@ import java.util.function.BiFunction;
 
 @SuppressWarnings("rawtypes")
 public class ModlauncherMixinTransformService implements ITransformationService {
-    private static final String NAME = "connectormixin";
+    private static final String NAME = "connector_mixin";
     private static final MethodHandle START_METHOD;
     private static final MethodHandle PLUGIN_INIT_METHOD;
 

@@ -17,7 +17,7 @@ plugins {
     id("net.minecraftforge.gradle") version "5.1.+"
     id("com.github.johnrengelman.shadow") version "7.1.2" apply false
     id("org.spongepowered.mixin") version "0.7.+"
-    id("dev.su5ed.connector.yarn-remapper")
+    id("dev.su5ed.yarndeobf") version "0.1.+"
 }
 
 version = "1.0"
@@ -32,7 +32,6 @@ val mod by sourceSets.creating
 
 val shade: Configuration by configurations.creating
 val shadeRuntimeOnly: Configuration by configurations.creating
-val yarnMappings: Configuration by configurations.creating
 val commonMods: Configuration by configurations.creating
 
 val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
@@ -92,7 +91,7 @@ val createObfToMcp by tasks.registering(GenerateSRG::class) {
 }
 // TODO Create intermediate only for prod
 val createMappings by tasks.registering(ConvertSRGTask::class) {
-    inputYarnMappings.set { yarnMappings.singleFile }
+    inputYarnMappings.set { configurations.yarnMappings.get().singleFile }
     inputSrgMappings.set(tasks.extractSrg.flatMap { it.output })
     inputMcpMappings.set(createObfToMcp.flatMap { it.output })
 }

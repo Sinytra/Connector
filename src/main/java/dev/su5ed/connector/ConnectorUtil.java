@@ -3,9 +3,6 @@ package dev.su5ed.connector;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import cpw.mods.modlauncher.api.ServiceRunner;
-import net.fabricmc.api.EnvType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.InputStream;
@@ -16,6 +13,7 @@ public final class ConnectorUtil {
     public static final String MIXIN_CONFIGS_ATTRIBUTE = "ConnectorMixinConfigs";
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
     public static final String CONNECTOR_LANGUAGE = "connector";
+    public static final long ZIP_TIME = 318211200000L;
 
     private static final boolean CACHE_ENABLED;
 
@@ -50,10 +48,6 @@ public final class ConnectorUtil {
         } catch (Throwable t) {
             throw new RuntimeException(t);
         }
-    }
-
-    public static EnvType getEnvType() {
-        return FMLEnvironment.dist == Dist.CLIENT ? EnvType.CLIENT : EnvType.SERVER;
     }
 
     public static Gson prettyGson() {

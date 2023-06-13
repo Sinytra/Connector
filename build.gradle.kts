@@ -191,30 +191,27 @@ repositories {
         name = "Fabric"
         url = uri("https://maven.fabricmc.net")
     }
+    maven("https://maven.blamejared.com")
     mavenLocal()
 }
 
 dependencies {
     minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-45.0.64")
+    yarnMappings(group = "net.fabricmc", name = "yarn", version = "1.19.4+build.2")
 
     shade(group = "net.fabricmc", name = "fabric-loader", version = versionFabricLoader)
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
     // TODO Currently uses a local version with NPE fix on this line
     // https://github.com/MinecraftForge/ForgeAutoRenamingTool/blob/140befc9bf3e0ca5c8280c6d8e455ec01a916268/src/main/java/net/minecraftforge/fart/internal/EnhancedRemapper.java#L385
-    shade(group = "net.minecraftforge", name = "ForgeAutoRenamingTool", version = "1.0.2")
-    yarnMappings(group = "net.fabricmc", name = "yarn", version = "1.19.4+build.2")
+    shade(group = "net.minecraftforge", name = "ForgeAutoRenamingTool", version = "1.0.4")
+
+    compileOnly("dev.su5ed.sinytra.fabric-api:ForgifiedFabricAPI:1.0")
+    runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:ForgifiedFabricAPI:1.0"))
 
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-api-base:0.4.9+e62f51a3ff"))
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-entity-events-v1:1.5.9+a1ccd7bfa5"))
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-content-registries-v0:3.5.9+ae0966baf4"))
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-lifecycle-events-v1:2.2.17+1e9487d2f4"))
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-registry-sync-v0:2.2.2+504944c8f4"))
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-rendering-v1:2.1.3+504944c8f4"))
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-networking-api-v1:1.3.3+504944c8f4"))
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-events-interaction-v0:0.5.1+76ba65ebf4"))
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-item-api-v1:2.1.19+504944c8f4"))
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-item-group-api-v1:3.0.7+043f9acff4"))
-    
+
     "languageCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"(sourceSets.main.get().output)
 

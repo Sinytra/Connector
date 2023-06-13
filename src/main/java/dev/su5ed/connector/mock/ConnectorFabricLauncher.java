@@ -1,8 +1,8 @@
 package dev.su5ed.connector.mock;
 
-import dev.su5ed.connector.ConnectorUtil;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.impl.launch.FabricLauncherBase;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 
 import java.io.IOException;
@@ -14,12 +14,11 @@ import java.util.jar.Manifest;
 
 public class ConnectorFabricLauncher extends FabricLauncherBase {
 
+    /**
+     * @see FabricLauncherBase#FabricLauncherBase()
+     */
     public static void inject() {
         new ConnectorFabricLauncher();
-    }
-
-    public ConnectorFabricLauncher() {
-        super();
     }
 
     @Override
@@ -33,7 +32,7 @@ public class ConnectorFabricLauncher extends FabricLauncherBase {
 
     @Override
     public EnvType getEnvironmentType() {
-        return ConnectorUtil.getEnvType();
+        return FMLEnvironment.dist == Dist.CLIENT ? EnvType.CLIENT : EnvType.SERVER;
     }
 
     @Override

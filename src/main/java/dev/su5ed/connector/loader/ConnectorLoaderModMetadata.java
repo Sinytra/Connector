@@ -30,6 +30,14 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
         return modid.replace('-', '_');
     }
 
+    private static String normalizeVersion(String version) {
+        return version.replace("+", "");
+    }
+
+    public String getNormalizedVersion() {
+        return normalizeVersion(getVersion().getFriendlyString());
+    }
+
     @Override
     public String getId() {
         return normalizeModid(this.wrapped.getId());

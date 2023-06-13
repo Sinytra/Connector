@@ -1,12 +1,18 @@
 package dev.su5ed.connector.loader;
 
+import com.electronwill.nightconfig.core.Config;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.LanguageAdapterException;
 import net.fabricmc.loader.impl.metadata.EntrypointMetadata;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.LoadingModList;
@@ -20,6 +26,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +48,9 @@ public class ConnectorEarlyLoader {
     );
 
     private static final Map<String, List<Object>> MOD_INSTANCES = new HashMap<>();
-    
+
+    private static boolean loading;
+
     public static List<Object> getModInstances(String modid) {
         List<Object> instances = MOD_INSTANCES.get(modid);
         if (instances == null) {
@@ -50,9 +59,15 @@ public class ConnectorEarlyLoader {
         return instances;
     }
 
-    @SuppressWarnings("unchecked")
+    public static boolean isLoading() {
+        return loading;
+    }
+
     public static void init() {
         LOGGER.debug("ConnectorEarlyLoader starting");
+
+        loading = true;
+        // TODO HANDLE AND PROPAGATE EXCEPTIONS
         // Step 1: Find all connector loader mods
         List<ModInfo> mods = LoadingModList.get().getMods().stream()
             .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals("connector")))
@@ -60,28 +75,34 @@ public class ConnectorEarlyLoader {
         LOGGER.debug("Found {} mods to load", mods.size());
         for (ModInfo modInfo : mods) {
             LOGGER.debug("Loading mod {}", modInfo.getModId());
-            Map<String, List<EntrypointMetadata>> entryPoints = (Map<String, List<EntrypointMetadata>>) modInfo.getModProperties().get("entrypoints");
-            Map<String, List<EntrypointMetadata>> activeEntryPoints = entryPoints == null ? Map.of() : findActiveEntryPoints(entryPoints);
+            Config entryPoints = (Config) modInfo.getModProperties().get("entrypoints");
+            Map<String, Collection<EntrypointMetadata>> activeEntryPoints = entryPoints == null ? Map.of() : findActiveEntryPoints(entryPoints);
             List<Object> instances = constructMod(modInfo, activeEntryPoints);
             MOD_INSTANCES.put(modInfo.getModId(), instances);
         }
+        loading = false;
     }
 
-    private static Map<String, List<EntrypointMetadata>> findActiveEntryPoints(Map<String, List<EntrypointMetadata>> entryPoints) {
-        Map<String, List<EntrypointMetadata>> activeEntryPoints = new HashMap<>();
-        entryPoints.forEach((key, value) -> {
+    private static Map<String, Collection<EntrypointMetadata>> findActiveEntryPoints(Config entryPoints) {
+        Multimap<String, EntrypointMetadata> activeEntryPoints = HashMultimap.create();
+        entryPoints.entrySet().forEach(entry -> {
+            String key = entry.getKey();
             if (key.equals("main") || key.equals("client") && FMLEnvironment.dist == Dist.CLIENT || key.equals("server") && FMLEnvironment.dist == Dist.DEDICATED_SERVER) {
-                activeEntryPoints.put(key, value);
+                List<Config> value = entry.getValue();
+                value.forEach(config -> {
+                    SimpleEntrypointMetadata metadata = new SimpleEntrypointMetadata(config.get("adapter"), config.get("value"));
+                    activeEntryPoints.put(key, metadata);
+                });
             }
         });
-        return activeEntryPoints;
+        return activeEntryPoints.asMap();
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static List<Object> constructMod(ModInfo modInfo, Map<String, List<EntrypointMetadata>> activeEntryPoints) {
+    private static List<Object> constructMod(ModInfo modInfo, Map<String, Collection<EntrypointMetadata>> activeEntryPoints) {
         List<Object> instances = new ArrayList<>();
 
-        for (Map.Entry<String, List<EntrypointMetadata>> entry : activeEntryPoints.entrySet()) {
+        for (Map.Entry<String, Collection<EntrypointMetadata>> entry : activeEntryPoints.entrySet()) {
             Consumer initFunc = INIT_FUNCTIONS.get(entry.getKey());
             Class<?> type = INIT_TYPES.get(entry.getKey());
             for (EntrypointMetadata metadata : entry.getValue()) {
@@ -204,6 +225,18 @@ public class ConnectorEarlyLoader {
             } catch (Exception ex) {
                 throw new LanguageAdapterException(ex);
             }
+        }
+    }
+
+    record SimpleEntrypointMetadata(String adapter, String value) implements EntrypointMetadata {
+        @Override
+        public String getAdapter() {
+            return this.adapter;
+        }
+
+        @Override
+        public String getValue() {
+            return this.value;
         }
     }
 }

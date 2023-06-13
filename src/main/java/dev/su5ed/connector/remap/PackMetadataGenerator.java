@@ -50,7 +50,7 @@ public class PackMetadataGenerator implements Transformer {
                     writer.flush();
                 }
                 byte[] data = byteStream.toByteArray();
-                return List.of(ResourceEntry.create(RESOURCE, 318211200000L, data));
+                return List.of(ResourceEntry.create(RESOURCE, ConnectorUtil.ZIP_TIME, data));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

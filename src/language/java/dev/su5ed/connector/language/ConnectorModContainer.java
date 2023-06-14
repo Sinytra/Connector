@@ -20,7 +20,7 @@ public class ConnectorModContainer extends ModContainer {
 
         LOGGER.debug(LOADING, "Creating ConnectorModContainer for {}", info.getModId());
         this.contextExtension = () -> null;
-        this.modInstances = ConnectorEarlyLoader.getModInstances(info.getModId());
+        this.modInstances = List.copyOf(ConnectorEarlyLoader.getModInstances(info.getModId()));
     }
 
     @Override

@@ -3,6 +3,8 @@ package dev.su5ed.connector.locator;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
+import dev.su5ed.connector.loader.ConnectorLoaderModMetadata;
+import dev.su5ed.connector.locator.ConnectorLocator.FabricModPath;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -25,34 +27,32 @@ public class SplitPackageMerger {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Marker MERGER = MarkerFactory.getMarker("MERGER");
 
-    public static List<Path> mergeSplitPackages(List<Path> paths) {
-        List<Path> plainPaths = new ArrayList<>();
-        List<Path> mergedPaths = new ArrayList<>();
+    public static List<FabricModPath> mergeSplitPackages(List<FabricModPath> paths) {
+        List<FabricModPath> plainPaths = new ArrayList<>(paths);
+        List<FabricModPath> mergedPaths = new ArrayList<>();
 
         // Package name -> list of jars that contain the package
-        Map<String, List<Pair<SecureJar, Path>>> pkgSources = new HashMap<>();
-        for (Path path : paths) {
-            SecureJar secureJar = SecureJar.from(path);
+        Map<String, List<Pair<SecureJar, FabricModPath>>> pkgSources = new HashMap<>();
+        for (FabricModPath modInfo : paths) {
+            SecureJar secureJar = SecureJar.from(modInfo.path());
             for (String pkg : secureJar.getPackages()) {
-                pkgSources.computeIfAbsent(pkg, p -> new ArrayList<>()).add(Pair.of(secureJar, path));
+                pkgSources.computeIfAbsent(pkg, p -> new ArrayList<>()).add(Pair.of(secureJar, modInfo));
             }
-            plainPaths.add(path);
         }
 
         // Find all jars that need merging
         List<SecureJar> jarOrder = new ArrayList<>();
-        Map<String, List<SecureJar>> mergePkgs = new LinkedHashMap<>();
+        Map<String, List<Pair<SecureJar, FabricModPath>>> mergePkgs = new LinkedHashMap<>();
         AtomicInteger totalJars = new AtomicInteger(0);
         pkgSources.forEach((pkg, sources) -> {
             if (sources.size() > 1) {
                 LOGGER.info(MERGER, "Found split package {} in jars {}", pkg, sources.stream().map(info -> info.getFirst().name()).collect(Collectors.joining(",")));
                 sources.forEach(source -> {
-                    SecureJar sj = source.getFirst();
                     if (plainPaths.remove(source.getSecond())) {
                         totalJars.getAndIncrement();
                     }
-                    mergePkgs.computeIfAbsent(pkg, p -> new ArrayList<>()).add(sj);
-                    jarOrder.add(sj);
+                    mergePkgs.computeIfAbsent(pkg, p -> new ArrayList<>()).add(source);
+                    jarOrder.add(source.getFirst());
                 });
             }
         });
@@ -61,11 +61,12 @@ public class SplitPackageMerger {
         // Name -> Jar filter info
         Map<String, JarMergeInfo> jarMap = new HashMap<>();
         mergePkgs.forEach((pkg, sources) -> {
-            sources.sort(Comparator.comparingInt(jarOrder::indexOf));
+            sources.sort(Comparator.comparingInt(p -> jarOrder.indexOf(p.getFirst())));
 
-            SecureJar candidate = sources.get(0);
+            Pair<SecureJar, FabricModPath> pair = sources.get(0);
+            SecureJar candidate = pair.getFirst();
             String name = candidate.name();
-            JarMergeInfo owner = jarMap.computeIfAbsent(name, str -> new JarMergeInfo(candidate));
+            JarMergeInfo owner = jarMap.computeIfAbsent(name, str -> new JarMergeInfo(candidate, pair.getSecond().metadata()));
             analyzeJar(jarMap, owner, sources.subList(1, sources.size()), pkg);
         });
 
@@ -74,7 +75,7 @@ public class SplitPackageMerger {
             Set<String> excludedPackages = info.excludedPackages();
             BiPredicate<String, String> filter = !excludedPackages.isEmpty() ? new PackageTracker(Set.copyOf(excludedPackages)) : null;
             SecureJar merged = SecureJar.from(filter, Stream.concat(Stream.of(info.jar().getPrimaryPath()), additionalPaths.stream()).toArray(Path[]::new));
-            mergedPaths.add(merged.getRootPath());
+            mergedPaths.add(new FabricModPath(merged.getRootPath(), info.metadata));
         });
 
         mergedPaths.addAll(plainPaths);
@@ -86,11 +87,13 @@ public class SplitPackageMerger {
         return mergedPaths;
     }
 
-    private static void analyzeJar(Map<String, JarMergeInfo> swap, JarMergeInfo master, List<SecureJar> others, String pkg) {
+    private static void analyzeJar(Map<String, JarMergeInfo> swap, JarMergeInfo master, List<Pair<SecureJar, FabricModPath>> others, String pkg) {
         List<Path> additionalPaths = others.stream()
-            .flatMap(sj -> {
+            .flatMap(pair -> {
+                SecureJar sj = pair.getFirst();
+                ConnectorLocator.FabricModFileMetadata metadata = pair.getSecond().metadata();
                 SecureJar singlePackage = SecureJar.from(singlePackageFilter(pkg), sj.getPrimaryPath());
-                JarMergeInfo jarInfo = swap.computeIfAbsent(sj.name(), name -> new JarMergeInfo(sj));
+                JarMergeInfo jarInfo = swap.computeIfAbsent(sj.name(), name -> new JarMergeInfo(sj, metadata));
                 jarInfo.excludedPackages().add(pkg);
                 return Stream.of(singlePackage.getRootPath());
             })
@@ -105,9 +108,9 @@ public class SplitPackageMerger {
         };
     }
 
-    private record JarMergeInfo(SecureJar jar, Set<Path> additionalPaths, Set<String> excludedPackages) {
-        public JarMergeInfo(SecureJar jar) {
-            this(jar, new HashSet<>(), new HashSet<>());
+    private record JarMergeInfo(SecureJar jar, ConnectorLocator.FabricModFileMetadata metadata, Set<Path> additionalPaths, Set<String> excludedPackages) {
+        public JarMergeInfo(SecureJar jar, ConnectorLocator.FabricModFileMetadata metadata) {
+            this(jar, metadata, new HashSet<>(), new HashSet<>());
         }
     }
 }

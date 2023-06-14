@@ -27,10 +27,13 @@ public abstract class MinecraftMixin {
         Object oFluid = Fluids.EMPTY;
         Object oItem = Items.AIR;
 
-        ConnectorEarlyLoader.init();
+        ConnectorEarlyLoader.load();
 
         DelayedRegistrar.finishRegistering();
+    }
 
+    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraftforge/client/loading/ClientModLoader;begin(Lnet/minecraft/client/Minecraft;Lnet/minecraft/server/packs/repository/PackRepository;Lnet/minecraft/server/packs/resources/ReloadableResourceManager;)V", ordinal = 0, shift = At.Shift.AFTER))
+    private void onFinishInitClient(CallbackInfo ci) {
         // Lock the registries now
         BuiltInRegistries.bootStrap();
         GameData.vanillaSnapshot();

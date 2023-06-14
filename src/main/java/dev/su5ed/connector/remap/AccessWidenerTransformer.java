@@ -36,9 +36,9 @@ public class AccessWidenerTransformer implements Transformer {
         IMappingFile mappingFile = this.namedMappingFile.getMap(namespace.equals("named") ? "yarn" : namespace, "srg");
         IMappingFile nameMappingFile = this.namedMappingFile.getMap("srg", "official");
         RemappingAccessWidenerVisitor visitor = new RemappingAccessWidenerVisitor(mappingFile, nameMappingFile);
-        visitor.finish();
         AccessWidenerReader reader = new AccessWidenerReader(visitor);
         reader.read(content);
+        visitor.finish();
         return visitor.builder.toString();
     }
 

@@ -139,7 +139,7 @@ println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty(
 minecraft {
     mappings("official", versionMc)
 
-     accessTransformer(file("src/mod/resources/META-INF/accesstransformer.cfg"))
+    accessTransformer(file("src/mod/resources/META-INF/accesstransformer.cfg"))
 
     runs {
         val config = Action<RunConfig> {
@@ -199,7 +199,9 @@ dependencies {
     minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-45.0.64")
     yarnMappings(group = "net.fabricmc", name = "yarn", version = "1.19.4+build.2")
 
-    shade(group = "net.fabricmc", name = "fabric-loader", version = versionFabricLoader)
+    shade(project(":fabric-loader")) {
+        isTransitive = false
+    }
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
     // TODO Currently uses a local version with NPE fix on this line
     // https://github.com/MinecraftForge/ForgeAutoRenamingTool/blob/140befc9bf3e0ca5c8280c6d8e455ec01a916268/src/main/java/net/minecraftforge/fart/internal/EnhancedRemapper.java#L385

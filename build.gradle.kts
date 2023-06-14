@@ -14,7 +14,7 @@ import java.time.LocalDateTime
 plugins {
     java
     `maven-publish`
-    id("net.minecraftforge.gradle") version "5.1.+"
+    id("net.minecraftforge.gradle") version "[6.0,6.2)"
     id("com.github.johnrengelman.shadow") version "7.1.2" apply false
     id("org.spongepowered.mixin") version "0.7.+"
     id("dev.su5ed.yarndeobf") version "0.1.+"
@@ -28,7 +28,7 @@ val versionFabricLoader: String by project
 val versionAccessWidener: String by project
 
 val language by sourceSets.registering
-val mod by sourceSets.creating
+val mod: SourceSet by sourceSets.creating
 
 val shade: Configuration by configurations.creating
 val shadeRuntimeOnly: Configuration by configurations.creating
@@ -148,8 +148,6 @@ minecraft {
             property("mixin.debug", "true")
 //            property("connector.cache.enabled", "false")
             workingDirectory = project.file("run").canonicalPath
-            // Don't exit the daemon when the game closes
-            forceExit = false
 
             mods {
                 create("connector") {
@@ -211,7 +209,6 @@ dependencies {
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:ForgifiedFabricAPI:1.0"))
 
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-api-base:0.4.9+e62f51a3ff"))
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-registry-sync-v0:2.2.2+504944c8f4"))
     commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-rendering-v1:2.1.3+504944c8f4"))
 
     "languageCompileOnly"(sourceSets.main.get().output)

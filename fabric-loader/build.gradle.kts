@@ -16,8 +16,6 @@ minecraft {
             property("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE")
             property("mixin.debug", "true")
             workingDirectory = project.file("run").canonicalPath
-            // Don't exit the daemon when the game closes
-            forceExit = false
 
             mods {
                 create("connector") {

@@ -23,10 +23,7 @@ public class ConnectorEarlyLoader {
 
     public static Collection<Object> getModInstances(String modid) {
         Collection<Object> instances = FabricLoaderImpl.INSTANCE.getModInstances(modid);
-        if (instances == null) {
-            throw new RuntimeException("Mod instances not found for mod " + modid);
-        }
-        return instances;
+        return instances == null ? List.of() : instances;
     }
 
     public static boolean isLoading() {

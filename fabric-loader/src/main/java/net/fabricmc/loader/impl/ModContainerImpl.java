@@ -40,7 +40,7 @@ public class ModContainerImpl extends net.fabricmc.loader.ModContainer {
 
 	public ModContainerImpl(IModInfo modInfo) {
 		this.modInfo = modInfo;
-		this.metadata = Objects.requireNonNull((LoaderModMetadata) modInfo.getModProperties().get("metadata"));
+		this.metadata = Objects.requireNonNull((LoaderModMetadata) modInfo.getOwningFile().getFileProperties().get("metadata"));
 		this.origin = new ModOriginImpl(getRootPaths());
 		this.childModIds = modInfo.getOwningFile().getMods().stream().filter(other -> other != modInfo).map(IModInfo::getDisplayName).collect(Collectors.toSet());
 	}

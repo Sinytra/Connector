@@ -2,6 +2,7 @@ package dev.su5ed.connector.locator;
 
 import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.connector.ConnectorUtil;
+import dev.su5ed.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.connector.locator.ConnectorLocator.FabricModPath;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.minecraftforge.fml.loading.FMLPaths;
@@ -23,8 +24,7 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
 public class ConnectorNestedJarLocator implements IDependencyLocator {
     private static final String NAME = "connector_locator_jij";
-    
-    @SuppressWarnings("unchecked")
+
     @Override
     public List<IModFile> scanMods(Iterable<IModFile> loadedMods) {
         Path tempDir = FMLPaths.MODSDIR.get().resolve("connector").resolve("temp");
@@ -36,8 +36,8 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
             })
             .flatMap(modFile -> {
                 SecureJar secureJar = modFile.getSecureJar();
-                Collection<NestedJarEntry> jars = (Collection<NestedJarEntry>) modFile.getModFileInfo().getFileProperties().get("jars");
-                return discoverNestedJarsRecursive(tempDir, secureJar, jars);
+                ConnectorLoaderModMetadata metadata = (ConnectorLoaderModMetadata) modFile.getModFileInfo().getFileProperties().get("metadata");
+                return discoverNestedJarsRecursive(tempDir, secureJar, metadata.getJars());
             })
             .toList();
         List<FabricModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(discoveredRemapped);

@@ -286,7 +286,7 @@ open class ConvertSRGTask : DefaultTask() {
 
         println("Found Minecraft artifact at ${minecraftJoined.absolutePath}")
         ZipFile(minecraftJoined).use { mc ->
-            val builder = IMappingBuilder.create("srg", "official", "intermediary", "yarn")
+            val builder = IMappingBuilder.create("srg", "mcp", "intermediary", "named")
             obfToSrg.classes.forEach { cls ->
                 val mapClasses = arrayOf(obfToMcp, obfToIntermediary, obfToYarn).map { it.getClass(cls.original) }
                 if (mapClasses.none { it == null }) {

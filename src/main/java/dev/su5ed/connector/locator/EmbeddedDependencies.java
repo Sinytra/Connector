@@ -40,10 +40,6 @@ public final class EmbeddedDependencies {
         }
     }
 
-    public static Path getContainedFile(String path) {
-        return SELF_PATH.resolve(path);
-    }
-
     private static Path getJarInJar(String name) throws IOException, URISyntaxException {
         String depName = ATTRIBUTES.getValue(JIJ_ATTRIBUTE_PREFIX + name);
         if (depName == null) {

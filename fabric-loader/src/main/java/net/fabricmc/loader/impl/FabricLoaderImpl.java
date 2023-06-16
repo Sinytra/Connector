@@ -18,7 +18,6 @@ package net.fabricmc.loader.impl;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.LanguageAdapter;
-import net.fabricmc.loader.api.MappingResolver;
 import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.ObjectShare;
 import net.fabricmc.loader.api.entrypoint.EntrypointContainer;
@@ -32,13 +31,7 @@ import net.minecraftforge.fml.loading.moddiscovery.ModInfo;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @SuppressWarnings("deprecation")
 public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
@@ -51,6 +44,7 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
     private final EntrypointStorage entrypointStorage = new EntrypointStorage();
 
     private final ObjectShare objectShare = new ObjectShareImpl();
+    private final MappingResolverImpl mappingResolver = new MappingResolverImpl();
 
     private FabricLoaderImpl() {}
 
@@ -103,8 +97,8 @@ public final class FabricLoaderImpl extends net.fabricmc.loader.FabricLoader {
     }
 
     @Override
-    public MappingResolver getMappingResolver() {
-        throw new UnsupportedOperationException();
+    public MappingResolverImpl getMappingResolver() {
+        return mappingResolver;
     }
 
     @Override

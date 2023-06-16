@@ -38,6 +38,8 @@ sourceSets {
 
 dependencies { 
     minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-45.0.64")
+    
+    implementation("net.minecraftforge:srgutils:0.5.4")
 }
 
 // TODO Api compat check

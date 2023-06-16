@@ -2,9 +2,8 @@ package dev.su5ed.connector.remap;
 
 import net.fabricmc.accesswidener.AccessWidenerReader;
 import net.fabricmc.accesswidener.AccessWidenerVisitor;
+import net.fabricmc.loader.impl.MappingResolverImpl;
 import net.minecraftforge.fart.api.Transformer;
-import net.minecraftforge.srgutils.IMappingFile;
-import net.minecraftforge.srgutils.INamedMappingFile;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -14,11 +13,11 @@ public class AccessWidenerTransformer implements Transformer {
     private static final String AT_PATH = "META-INF/accesstransformer.cfg";
 
     private final String resource;
-    private final INamedMappingFile namedMappingFile;
+    private final MappingResolverImpl resolver;
 
-    public AccessWidenerTransformer(String resource, INamedMappingFile namedMappingFile) {
+    public AccessWidenerTransformer(String resource, MappingResolverImpl namedMappingFile) {
         this.resource = resource;
-        this.namedMappingFile = namedMappingFile;
+        this.resolver = namedMappingFile;
     }
 
     @Override
@@ -33,9 +32,7 @@ public class AccessWidenerTransformer implements Transformer {
     public String mapAccessWidener(byte[] content) {
         AccessWidenerReader.Header header = AccessWidenerReader.readHeader(content);
         String namespace = header.getNamespace();
-        IMappingFile mappingFile = this.namedMappingFile.getMap(namespace.equals("named") ? "yarn" : namespace, "srg");
-        IMappingFile nameMappingFile = this.namedMappingFile.getMap("srg", "official");
-        RemappingAccessWidenerVisitor visitor = new RemappingAccessWidenerVisitor(mappingFile, nameMappingFile);
+        RemappingAccessWidenerVisitor visitor = new RemappingAccessWidenerVisitor(resolver, namespace);
         AccessWidenerReader reader = new AccessWidenerReader(visitor);
         reader.read(content);
         visitor.finish();
@@ -43,15 +40,15 @@ public class AccessWidenerTransformer implements Transformer {
     }
 
     public static class RemappingAccessWidenerVisitor implements AccessWidenerVisitor {
-        private final IMappingFile mappingFile;
-        private final IMappingFile nameMappingFile;
+        private final MappingResolverImpl resolver;
+        private final String sourceNamespace;
         private final StringBuilder builder = new StringBuilder();
 
         private final Map<String, Map<String, AccessWidenerReader.AccessType>> classFields = new HashMap<>();
 
-        public RemappingAccessWidenerVisitor(IMappingFile mappingFile, IMappingFile nameMappingFile) {
-            this.mappingFile = mappingFile;
-            this.nameMappingFile = nameMappingFile;
+        public RemappingAccessWidenerVisitor(MappingResolverImpl resolver, String sourceNamespace) {
+            this.resolver = resolver;
+            this.sourceNamespace = sourceNamespace;
 
             // TODO Transitive AW entries
             this.builder.append("# Access Transformer file converted by Connector\n");
@@ -64,13 +61,12 @@ public class AccessWidenerTransformer implements Transformer {
                     case MUTABLE -> "public-f";
                     default -> throw new IllegalArgumentException("Invalid access type " + access + " for field");
                 };
-                IMappingFile.IClass cls = this.mappingFile.getClass(owner);
-                String mappedOwner = cls != null ? cls.getMapped() : owner;
-                String mappedName = cls != null ? cls.remapField(name) : name;
+                String mappedOwner = this.resolver.mapClassName(this.sourceNamespace, owner);
+                String mappedName = this.resolver.mapFieldName(this.sourceNamespace, owner, name, "");
                 this.builder.append(modifier).append(" ")
                     .append(mappedOwner.replace('/', '.')).append(" ")
                     .append(mappedName)
-                    .append(cls != null ? " # " + this.nameMappingFile.getClass(mappedOwner).remapField(mappedName) : "")
+                    .append(!name.equals(mappedName) ? " # " + mappedName : "")
                     .append("\n");
             }));
         }
@@ -82,7 +78,7 @@ public class AccessWidenerTransformer implements Transformer {
                 case EXTENDABLE -> "public-f";
                 default -> throw new IllegalArgumentException("Invalid access type " + access + " for class");
             };
-            String mappedName = this.mappingFile.remapClass(name).replace('/', '.');
+            String mappedName = this.resolver.mapClassName(this.sourceNamespace, name).replace('/', '.');
             this.builder.append(modifier).append(" ").append(mappedName).append("\n");
         }
 
@@ -93,14 +89,14 @@ public class AccessWidenerTransformer implements Transformer {
                 case EXTENDABLE -> "protected-f";
                 default -> throw new IllegalArgumentException("Invalid access type " + access + " for method");
             };
-            IMappingFile.IClass cls = this.mappingFile.getClass(owner);
-            String mappedOwner = cls != null ? cls.getMapped() : owner;
-            IMappingFile.IMethod mtd = cls != null ? cls.getMethod(name, descriptor) : null;
+            String mappedOwner = this.resolver.mapClassName(this.sourceNamespace, owner);
+            String mappedName = this.resolver.mapMethodName(this.sourceNamespace, owner, name, descriptor);
+            String mappedDescriptor = this.resolver.mapDescriptor(this.sourceNamespace, descriptor);
             this.builder.append(modifier).append(" ")
                 .append(mappedOwner.replace('/', '.')).append(" ")
-                .append(mtd != null ? mtd.getMapped() : name)
-                .append(mtd != null ? mtd.getMappedDescriptor() : descriptor)
-                .append(mtd != null ? " # " + this.nameMappingFile.getClass(mappedOwner).remapMethod(mtd.getMapped(), mtd.getMappedDescriptor()) : "")
+                .append(mappedName)
+                .append(mappedDescriptor)
+                .append(!name.equals(mappedName) ? " # " + mappedName : "")
                 .append("\n");
         }
 

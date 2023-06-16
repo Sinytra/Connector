@@ -10,18 +10,11 @@ import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.connector.ConnectorUtil;
 import dev.su5ed.connector.loader.ConnectorLoaderModMetadata;
-import dev.su5ed.connector.remap.AccessWidenerTransformer;
-import dev.su5ed.connector.remap.MixinReplacementTransformer;
-import dev.su5ed.connector.remap.PackMetadataGenerator;
-import dev.su5ed.connector.remap.RefmapTransformer;
-import dev.su5ed.connector.remap.SimpleRenamingTransformer;
-import dev.su5ed.connector.remap.SrgRemappingReferenceMapper;
+import dev.su5ed.connector.remap.*;
 import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.impl.metadata.DependencyOverrides;
-import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
-import net.fabricmc.loader.impl.metadata.ModMetadataParser;
-import net.fabricmc.loader.impl.metadata.ParseMetadataException;
-import net.fabricmc.loader.impl.metadata.VersionOverrides;
+import net.fabricmc.loader.impl.FabricLoaderImpl;
+import net.fabricmc.loader.impl.MappingResolverImpl;
+import net.fabricmc.loader.impl.metadata.*;
 import net.minecraftforge.fart.api.Renamer;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
@@ -32,33 +25,18 @@ import net.minecraftforge.fml.loading.moddiscovery.ModJarMetadata;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
 import net.minecraftforge.forgespi.locating.IModProvider;
-import net.minecraftforge.srgutils.IMappingFile;
-import net.minecraftforge.srgutils.INamedMappingFile;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -135,7 +113,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
         Path output = remappedDir.resolve(name + suffix + ".jar");
 
         FabricModFileMetadata metadata = readModMetadata(input);
-        ConnectorUtil.cache(String.valueOf(CACHE_VERSION), input.toPath(), output, () -> remapJar(input, remappedDir, output, metadata));
+        ConnectorUtil.cache(String.valueOf(CACHE_VERSION), input.toPath(), output, () -> remapJar(input, output, metadata));
 
         return new FabricModPath(output, metadata);
     }
@@ -192,19 +170,12 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
         return new FabricModFileMetadata(metadata, packageConfigs, refmaps, classes, manifestAttributes);
     }
 
-    private static void remapJar(File input, Path remappedDir, Path output, FabricModFileMetadata metadata) throws IOException {
-        Path mappingInput = EmbeddedDependencies.getContainedFile("mappings.tsrg");
-        Path mappingsOutput = remappedDir.resolve(mappingInput.getFileName().toString());
-        ConnectorUtil.cache(String.valueOf(CACHE_VERSION), mappingInput, mappingsOutput, () -> Files.copy(mappingInput, mappingsOutput));
-
-        INamedMappingFile namedMapping = INamedMappingFile.load(mappingsOutput.toFile());
-        // TODO Get current env mapping other than official
-        String fromMapping = Optional.ofNullable(metadata.manifestAttributes.getValue(FABRIC_MAPPING_NAMESPACE)).filter(str -> !str.equals("named")).orElse("intermediary");
-        IMappingFile modToOfficial = namedMapping.getMap(fromMapping, "official");
-        IMappingFile intermediaryToSrg = namedMapping.getMap("intermediary", "srg");
-        SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(intermediaryToSrg);
+    private static void remapJar(File input, Path output, FabricModFileMetadata metadata) throws IOException {
+        MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
+        SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(resolver.getMap("intermediary", "srg"));
         Collection<String> mixinConfigs = metadata.mixinConfigs.values();
-        Map<String, String> mappings = modToOfficial.getClasses().stream()
+        String fromMapping = Optional.ofNullable(metadata.manifestAttributes.getValue(FABRIC_MAPPING_NAMESPACE)).orElse("intermediary");
+        Map<String, String> mappings = resolver.getCurrentMap(fromMapping).getClasses().stream()
             .flatMap(cls -> {
                 Pair<String, String> clsRename = Pair.of(cls.getOriginal(), cls.getMapped());
                 Stream<Pair<String, String>> fieldRenames = cls.getFields().stream().map(field -> Pair.of(field.getOriginal(), field.getMapped()));
@@ -217,7 +188,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
             .add(new SimpleRenamingTransformer(mappings))
             .add(new MixinReplacementTransformer(mixinConfigs, metadata.mixinClasses, mappings))
             .add(new RefmapTransformer(mixinConfigs, metadata.refmaps, remapper))
-            .add(new AccessWidenerTransformer(metadata.modMetadata.getAccessWidener(), namedMapping))
+            .add(new AccessWidenerTransformer(metadata.modMetadata.getAccessWidener(), resolver))
             .add(new PackMetadataGenerator(metadata.modMetadata.getId()))
             .logger(s -> LOGGER.trace(REMAP_MARKER, s))
             .debug(s -> LOGGER.trace(REMAP_MARKER, s))

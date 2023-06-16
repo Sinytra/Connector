@@ -34,5 +34,5 @@ public interface PreLaunchEntrypoint {
 	/**
 	 * Runs the entrypoint.
 	 */
-	void onPreLaunch(); // TODO
+	void onPreLaunch();
 }

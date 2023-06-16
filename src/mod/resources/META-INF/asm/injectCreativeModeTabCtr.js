@@ -18,7 +18,10 @@ function initializeCoreMod() {
                 method.visitVarInsn(Opcodes.ALOAD, 4);
                 method.visitVarInsn(Opcodes.ALOAD, 5);
                 method.visitVarInsn(Opcodes.ALOAD, 6);
-                method.visitInsn(Opcodes.ACONST_NULL); // backgroundLocation
+                method.visitTypeInsn(Opcodes.NEW, "net/minecraft/resources/ResourceLocation"); // backgroundLocation
+                method.visitInsn(Opcodes.DUP);
+                method.visitLdcInsn("textures/gui/container/creative_inventory/tab_items.png");
+                method.visitMethodInsn(Opcodes.INVOKESPECIAL, "net/minecraft/resources/ResourceLocation", "<init>", "(Ljava/lang/String;)V");
                 method.visitInsn(Opcodes.ICONST_0); // hasSearchBar
                 method.visitLdcInsn(89); // searchBarWidth
                 method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/world/item/CreativeModeTab$Builder", "CREATIVE_INVENTORY_TABS_IMAGE", "Lnet/minecraft/resources/ResourceLocation;"); // tabsImage

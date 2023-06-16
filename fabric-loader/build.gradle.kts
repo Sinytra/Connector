@@ -14,7 +14,6 @@ minecraft {
         val config = Action<RunConfig> {
             property("forge.logging.console.level", "debug")
             property("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE")
-            property("mixin.debug", "true")
             workingDirectory = project.file("run").canonicalPath
 
             mods {

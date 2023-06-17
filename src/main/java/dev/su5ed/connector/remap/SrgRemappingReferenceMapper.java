@@ -73,10 +73,10 @@ public class SrgRemappingReferenceMapper {
     }
 
     private String remapRef(String reference) {
-        String sub = SUBSTITUTIONS.get(reference);
-        if (sub != null) {
-            return sub;
-        }
+//        String sub = SUBSTITUTIONS.get(reference);
+//        if (sub != null) {
+//            return sub;
+//        }
         Matcher methodMatcher = METHOD_REF_PATTERN.matcher(reference);
         if (methodMatcher.matches()) {
             return remapRefMapEntry(methodMatcher, "", (name, desc) -> this.methods.get(name + desc));

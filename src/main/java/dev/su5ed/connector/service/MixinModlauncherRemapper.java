@@ -21,7 +21,13 @@ public class MixinModlauncherRemapper implements IRemapper {
 
     @Override
     public String mapMethodName(String owner, String name, String desc) {
-        return this.mapping.apply(INameMappingService.Domain.METHOD, name);
+        String mapped = this.mapping.apply(INameMappingService.Domain.METHOD, name);
+        // Record method names issue workaround
+        // See: https://github.com/MinecraftForge/ForgeGradle/issues/922
+        if (mapped.equals(name) && name.startsWith("f_")) {
+            return this.mapping.apply(INameMappingService.Domain.FIELD, name);
+        }
+        return mapped;
     }
 
     @Override

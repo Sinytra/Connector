@@ -214,7 +214,7 @@ dependencies {
     "languageCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"(sourceSets.main.get().output)
 
-    shadeRuntimeOnly("net.fabricmc:sponge-mixin:0.12.5+mixin.0.8.5") {
+    shadeRuntimeOnly("net.fabricmc:sponge-mixin:0.12.6+mixin.0.8.5-local") {
         isTransitive = false
     }
 }

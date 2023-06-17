@@ -121,7 +121,6 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
     private static FabricModFileMetadata readModMetadata(File input) throws IOException {
         ConnectorLoaderModMetadata metadata;
         Set<String> configs;
-        Map<String, String> packageConfigs = new HashMap<>();
         Set<String> refmaps = new HashSet<>();
         Set<String> classes = new HashSet<>();
         Attributes manifestAttributes;
@@ -148,8 +147,6 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
                         }
                         if (json.has("package")) {
                             String pkg = json.get("package").getAsString();
-                            packageConfigs.put(pkg, entry.getName());
-
                             String pkgPath = pkg.replace('.', '/') + '/';
                             Set.of("mixins", "client", "server").stream()
                                 .flatMap(str -> {
@@ -167,13 +164,12 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
                     }
                 });
         }
-        return new FabricModFileMetadata(metadata, packageConfigs, refmaps, classes, manifestAttributes);
+        return new FabricModFileMetadata(metadata, configs, refmaps, classes, manifestAttributes);
     }
 
     private static void remapJar(File input, Path output, FabricModFileMetadata metadata) throws IOException {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(resolver.getMap("intermediary", "srg"));
-        Collection<String> mixinConfigs = metadata.mixinConfigs.values();
         String fromMapping = Optional.ofNullable(metadata.manifestAttributes.getValue(FABRIC_MAPPING_NAMESPACE)).orElse("intermediary");
         Map<String, String> mappings = resolver.getCurrentMap(fromMapping).getClasses().stream()
             .flatMap(cls -> {
@@ -186,8 +182,8 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
 
         try (Renamer renamer = Renamer.builder()
             .add(new SimpleRenamingTransformer(mappings))
-            .add(new MixinReplacementTransformer(mixinConfigs, metadata.mixinClasses, mappings))
-            .add(new RefmapTransformer(mixinConfigs, metadata.refmaps, remapper))
+            .add(new MixinReplacementTransformer(metadata.mixinConfigs, metadata.mixinClasses, mappings))
+            .add(new RefmapTransformer(metadata.mixinConfigs, metadata.refmaps, remapper))
             .add(new AccessWidenerTransformer(metadata.modMetadata.getAccessWidener(), resolver))
             .add(new PackMetadataGenerator(metadata.modMetadata.getId()))
             .logger(s -> LOGGER.trace(REMAP_MARKER, s))
@@ -206,10 +202,9 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
     public void initArguments(Map<String, ?> arguments) {}
 
     /**
-     * @param mixinConfigs a map of mixin packages to their mixin config file name
      * @param refmaps      a map of mixin config name to its refmap name
      */
-    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Map<String, String> mixinConfigs, Set<String> refmaps, Set<String> mixinClasses, Attributes manifestAttributes) {}
+    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinClasses, Attributes manifestAttributes) {}
 
     public record FabricModPath(Path path, ConnectorLocator.FabricModFileMetadata metadata) {}
 }

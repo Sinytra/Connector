@@ -4,7 +4,8 @@
   "package": "dev.su5ed.connector.mod.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "RegistryMixin"
+    "RegistryMixin",
+    "ForgeRegistryMixin"
   ],
   "client": [
     "MinecraftMixin"

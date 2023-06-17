@@ -1,7 +1,5 @@
 package dev.su5ed.connector.service;
 
-import cpw.mods.modlauncher.LaunchPluginHandler;
-import cpw.mods.modlauncher.Launcher;
 import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
@@ -17,10 +15,8 @@ import org.spongepowered.asm.mixin.MixinEnvironment;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -59,23 +55,8 @@ public class ModlauncherMixinTransformService implements ITransformationService 
         this.commandLineMixins.addAll(option.values(this.mixinsArgument));
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public void onLoad(IEnvironment env, Set<String> otherServices) {
-        ILaunchPluginService plugin = new ConnectorMixinLaunchPlugin();
-        try {
-            Field launchPluginsField = Launcher.class.getDeclaredField("launchPlugins");
-            launchPluginsField.setAccessible(true);
-            LaunchPluginHandler launchPluginHandler = (LaunchPluginHandler) launchPluginsField.get(Launcher.INSTANCE);
-            Field pluginsField = LaunchPluginHandler.class.getDeclaredField("plugins");
-            pluginsField.setAccessible(true);
-            Map<String, ILaunchPluginService> plugins = (Map<String, ILaunchPluginService>) pluginsField.get(launchPluginHandler);
-            // Ew hacks
-            plugins.put(plugin.name(), plugin);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+    public void onLoad(IEnvironment env, Set<String> otherServices) {}
 
     @Override
     public void initialize(IEnvironment environment) {

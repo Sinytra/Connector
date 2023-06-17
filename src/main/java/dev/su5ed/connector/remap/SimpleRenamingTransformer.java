@@ -26,8 +26,8 @@ public class SimpleRenamingTransformer implements Transformer {
         byte[] data = writer.toByteArray();
 
         return entry.isMultiRelease()
-            ? ClassEntry.create(entry.getName(), entry.getTime(), data, entry.getVersion())
-            : ClassEntry.create(entry.getName(), entry.getTime(), data);
+                ? ClassEntry.create(entry.getName(), entry.getTime(), data, entry.getVersion())
+                : ClassEntry.create(entry.getName(), entry.getTime(), data);
     }
 
     public static class DeadSimpleRemapper extends Remapper {
@@ -75,6 +75,20 @@ public class SimpleRenamingTransformer implements Transformer {
                 }
             }
             return remapped;
+        }
+
+        // An attempt at remapping reflection calls
+        @Override
+        public Object mapValue(Object value) {
+            if (value instanceof String str) {
+                for (Map.Entry<String, String> entry : this.relocation.entrySet()) {
+                    String pKey = entry.getKey().replace('/', '.');
+                    if (str.startsWith(pKey)) {
+                        return str.replace(pKey, entry.getValue().replace('/', '.'));
+                    }
+                }
+            }
+            return super.mapValue(value);
         }
     }
 }

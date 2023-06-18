@@ -1,4 +1,4 @@
-package dev.su5ed.connector.remap;
+package dev.su5ed.sinytra.connector.transformer;
 
 import net.minecraftforge.fart.api.Transformer;
 import org.objectweb.asm.ClassReader;

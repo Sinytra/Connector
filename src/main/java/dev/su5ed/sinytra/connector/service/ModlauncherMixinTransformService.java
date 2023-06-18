@@ -1,4 +1,4 @@
-package dev.su5ed.connector.service;
+package dev.su5ed.sinytra.connector.service;
 
 import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.ITransformationService;

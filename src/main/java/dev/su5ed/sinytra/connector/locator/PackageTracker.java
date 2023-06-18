@@ -15,7 +15,7 @@
  *     You should have received a copy of the GNU Lesser General Public License
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package dev.su5ed.connector.locator;
+package dev.su5ed.sinytra.connector.locator;
 
 import java.util.Set;
 import java.util.function.BiPredicate;

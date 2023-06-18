@@ -1,4 +1,4 @@
-package dev.su5ed.connector.loader;
+package dev.su5ed.sinytra.connector.loader;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.Version;

@@ -1,4 +1,4 @@
-package dev.su5ed.connector.locator;
+package dev.su5ed.sinytra.connector.locator;
 
 import com.google.common.collect.ImmutableMap;
 

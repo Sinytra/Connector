@@ -1,10 +1,9 @@
-package dev.su5ed.connector.locator;
+package dev.su5ed.sinytra.connector.locator;
 
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
-import dev.su5ed.connector.loader.ConnectorLoaderModMetadata;
-import dev.su5ed.connector.locator.ConnectorLocator.FabricModPath;
+import dev.su5ed.sinytra.connector.locator.ConnectorLocator.FabricModPath;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;

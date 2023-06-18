@@ -1,6 +1,6 @@
 package dev.su5ed.connector.mod.mixin;
 
-import dev.su5ed.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.connector.mod.DelayedRegistrar;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.main.GameConfig;

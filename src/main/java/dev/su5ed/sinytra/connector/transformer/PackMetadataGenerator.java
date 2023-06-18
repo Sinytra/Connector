@@ -1,7 +1,7 @@
-package dev.su5ed.connector.remap;
+package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.gson.JsonObject;
-import dev.su5ed.connector.ConnectorUtil;
+import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
 
 import java.io.ByteArrayOutputStream;

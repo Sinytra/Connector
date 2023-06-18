@@ -1,9 +1,10 @@
-package dev.su5ed.connector.locator;
+package dev.su5ed.sinytra.connector.locator;
 
 import cpw.mods.jarhandling.SecureJar;
-import dev.su5ed.connector.ConnectorUtil;
-import dev.su5ed.connector.loader.ConnectorLoaderModMetadata;
-import dev.su5ed.connector.locator.ConnectorLocator.FabricModPath;
+import cpw.mods.modlauncher.api.LamdbaExceptionUtils;
+import dev.su5ed.sinytra.connector.ConnectorUtil;
+import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
+import dev.su5ed.sinytra.connector.locator.ConnectorLocator.FabricModPath;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.forgespi.language.IModFileInfo;
@@ -65,7 +66,7 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
         Path extracted = tempDir.resolve(parentNameWithoutExt + "$" + path.getFileName().toString());
         ConnectorUtil.cache("1", path, extracted, () -> Files.copy(path, extracted));
 
-        return uncheck(() -> ConnectorLocator.cacheRemapJar(extracted.toFile()));
+        return LamdbaExceptionUtils.uncheck(() -> ConnectorLocator.cacheRemapJar(extracted.toFile()));
     }
 
     @Override

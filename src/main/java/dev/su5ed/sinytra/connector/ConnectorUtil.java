@@ -1,4 +1,4 @@
-package dev.su5ed.connector;
+package dev.su5ed.sinytra.connector;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

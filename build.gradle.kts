@@ -17,7 +17,6 @@ plugins {
     id("net.minecraftforge.gradle") version "[6.0,6.2)"
     id("com.github.johnrengelman.shadow") version "7.1.2" apply false
     id("org.spongepowered.mixin") version "0.7.+"
-    id("dev.su5ed.yarndeobf") version "0.1.+"
 }
 
 version = "1.0"
@@ -32,7 +31,7 @@ val mod: SourceSet by sourceSets.creating
 
 val shade: Configuration by configurations.creating
 val shadeRuntimeOnly: Configuration by configurations.creating
-val commonMods: Configuration by configurations.creating
+val yarnMappings: Configuration by configurations.creating
 
 val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     configurations = listOf(shade, shadeRuntimeOnly)
@@ -91,7 +90,7 @@ val createObfToMcp by tasks.registering(GenerateSRG::class) {
 }
 // TODO Create intermediate only for prod
 val createMappings by tasks.registering(ConvertSRGTask::class) {
-    inputYarnMappings.set { configurations.yarnMappings.get().singleFile }
+    inputYarnMappings.set { yarnMappings.singleFile }
     inputSrgMappings.set(tasks.extractSrg.flatMap { it.output })
     inputMcpMappings.set(createObfToMcp.flatMap { it.output })
 }
@@ -117,7 +116,7 @@ mixin {
 
 configurations {
     compileOnly {
-        extendsFrom(shade, commonMods)
+        extendsFrom(shade)
     }
 
     "languageImplementation" {
@@ -125,7 +124,7 @@ configurations {
     }
 
     "modImplementation" {
-        extendsFrom(configurations.minecraft.get(), shade, commonMods)
+        extendsFrom(configurations.minecraft.get(), shade)
     }
 }
 
@@ -207,9 +206,6 @@ dependencies {
 
     compileOnly("dev.su5ed.sinytra.fabric-api:ForgifiedFabricAPI:1.0")
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:ForgifiedFabricAPI:1.0"))
-
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-api-base:0.4.9+e62f51a3ff"))
-    commonMods(yarnDeobf.deobf("net.fabricmc.fabric-api:fabric-rendering-v1:2.1.3+504944c8f4"))
 
     "languageCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"(sourceSets.main.get().output)

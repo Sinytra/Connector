@@ -1,6 +1,7 @@
-package dev.su5ed.connector.loader;
+package dev.su5ed.sinytra.connector.loader;
 
 import com.mojang.logging.LogUtils;
+import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
@@ -35,7 +36,7 @@ public class ConnectorEarlyLoader {
         LOGGER.debug("ConnectorEarlyLoader starting");
         // Step 1: Find all connector loader mods
         List<ModInfo> mods = LoadingModList.get().getMods().stream()
-            .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals("connector")))
+            .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE)))
             .toList();
         // Step 2: Propagate mods to fabric
         FabricLoaderImpl.INSTANCE.setup(mods);

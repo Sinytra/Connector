@@ -1,2 +1,2 @@
-dev.su5ed.connector.service.ModlauncherMixinTransformService
-dev.su5ed.connector.service.ConnectorLoaderService
+dev.su5ed.sinytra.connector.service.ModlauncherMixinTransformService
+dev.su5ed.sinytra.connector.service.ConnectorLoaderService

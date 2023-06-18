@@ -1,7 +1,7 @@
 package dev.su5ed.connector.mod.mixin;
 
 import com.mojang.serialization.Lifecycle;
-import dev.su5ed.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import net.minecraft.core.Holder;
 import net.minecraftforge.registries.ForgeRegistry;
 import net.minecraftforge.registries.GameData;

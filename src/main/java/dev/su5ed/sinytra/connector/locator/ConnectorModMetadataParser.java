@@ -1,8 +1,8 @@
-package dev.su5ed.connector.locator;
+package dev.su5ed.sinytra.connector.locator;
 
 import com.electronwill.nightconfig.core.Config;
-import dev.su5ed.connector.ConnectorUtil;
-import dev.su5ed.connector.loader.ConnectorLoaderModMetadata;
+import dev.su5ed.sinytra.connector.ConnectorUtil;
+import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import net.fabricmc.loader.api.metadata.ContactInformation;
 import net.fabricmc.loader.api.metadata.Person;
 import net.minecraftforge.fml.loading.moddiscovery.ModFile;

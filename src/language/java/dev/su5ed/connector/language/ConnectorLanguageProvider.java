@@ -1,7 +1,7 @@
 package dev.su5ed.connector.language;
 
 import com.mojang.logging.LogUtils;
-import dev.su5ed.connector.ConnectorUtil;
+import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraftforge.fml.ModLoadingException;
 import net.minecraftforge.fml.ModLoadingStage;
 import net.minecraftforge.forgespi.language.ILifecycleEvent;

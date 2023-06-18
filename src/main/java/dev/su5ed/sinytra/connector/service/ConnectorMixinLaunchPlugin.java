@@ -1,4 +1,4 @@
-package dev.su5ed.connector.service;
+package dev.su5ed.sinytra.connector.service;
 
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;

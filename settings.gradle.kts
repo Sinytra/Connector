@@ -21,5 +21,3 @@ pluginManagement {
 }
 
 rootProject.name = "Connector"
-
-include("fabric-loader")

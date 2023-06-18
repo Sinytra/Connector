@@ -20,7 +20,7 @@ plugins {
 }
 
 version = "1.0"
-group = "dev.su5ed.connector"
+group = "dev.su5ed.sinytra"
 
 val versionMc: String by project
 val versionFabricLoader: String by project
@@ -98,7 +98,7 @@ val fullJar: Jar by tasks.creating(Jar::class) {
     from(zipTree(remappedDepsJar.archiveFile))
     from(languageJar)
     from(modJar)
-    from(createMappings.flatMap { it.outputFile }) { rename { "mappings.tsrg" } }
+    from(createMappings.flatMap { it.outputFile }) { rename { "mappings.tsrg" } } // This needs to match the expected file name in ForgifiedFabricLoader MappingResolverImpl
     manifest.attributes("Additional-Dependencies-Language" to languageJar.archiveFile.get().asFile.name)
     manifest.attributes("Additional-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
 
@@ -196,7 +196,7 @@ dependencies {
     minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-45.0.64")
     yarnMappings(group = "net.fabricmc", name = "yarn", version = "1.19.4+build.2")
 
-    shade(project(":fabric-loader")) {
+    shade("dev.su5ed.sinytra:fabric-loader:1.0") {
         isTransitive = false
     }
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)

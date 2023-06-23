@@ -3,6 +3,7 @@ package dev.su5ed.sinytra.connector;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import cpw.mods.modlauncher.api.ServiceRunner;
+import net.minecraftforge.fml.loading.FMLPaths;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.InputStream;
@@ -14,6 +15,7 @@ public final class ConnectorUtil {
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
     public static final String CONNECTOR_LANGUAGE = "connector";
     public static final long ZIP_TIME = 318211200000L;
+    public static final Path CONNECTOR_FOLDER = FMLPaths.MODSDIR.get().resolve(".connector");
 
     private static final boolean CACHE_ENABLED;
 

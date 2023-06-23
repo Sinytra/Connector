@@ -24,6 +24,7 @@ import net.fabricmc.loader.impl.metadata.ModMetadataParser;
 import net.fabricmc.loader.impl.metadata.ParseMetadataException;
 import net.fabricmc.loader.impl.metadata.VersionOverrides;
 import net.minecraftforge.fart.api.Renamer;
+import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
 import net.minecraftforge.fml.loading.StringUtils;
@@ -33,7 +34,6 @@ import net.minecraftforge.fml.loading.moddiscovery.ModJarMetadata;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
 import net.minecraftforge.forgespi.locating.IModProvider;
-import net.minecraftforge.versions.mcp.MCPVersion;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -72,8 +72,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
     private static final String NAME = "connector_locator";
     private static final String SUFFIX = ".jar";
     private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
-    private static final String MAPPED_SUFFIX = "_mapped_official_" + MCPVersion.getMCVersion();
-    private static final Path CONNECTOR_FOLDER = FMLPaths.MODSDIR.get().resolve(".connector");
+    private static final String MAPPED_SUFFIX = "_mapped_official_" + FMLLoader.versionInfo().mcVersion();
     // Increment to invalidate cache
     private static final int CACHE_VERSION = 1;
 
@@ -121,9 +120,9 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
     }
 
     public static FabricModPath cacheRemapJar(File input) throws IOException {
-        Files.createDirectories(CONNECTOR_FOLDER);
+        Files.createDirectories(ConnectorUtil.CONNECTOR_FOLDER);
         String name = input.getName().split("\\.(?!.*\\.)")[0];
-        Path output = CONNECTOR_FOLDER.resolve(name + MAPPED_SUFFIX + ".jar");
+        Path output = ConnectorUtil.CONNECTOR_FOLDER.resolve(name + MAPPED_SUFFIX + ".jar");
 
         FabricModFileMetadata metadata = readModMetadata(input);
         ConnectorUtil.cache(String.valueOf(CACHE_VERSION), input.toPath(), output, () -> transformJar(input, output, metadata));

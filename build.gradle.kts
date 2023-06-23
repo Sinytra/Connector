@@ -188,7 +188,10 @@ repositories {
         name = "Fabric"
         url = uri("https://maven.fabricmc.net")
     }
-    maven("https://maven.blamejared.com")
+    maven { 
+        name = "Su5eD"
+        url = uri("https://maven.su5ed.dev/releases")
+    }
     mavenLocal()
 }
 
@@ -196,23 +199,16 @@ dependencies {
     minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-45.0.64")
     yarnMappings(group = "net.fabricmc", name = "yarn", version = "1.19.4+build.2")
 
-    shade("dev.su5ed.sinytra:fabric-loader:1.0") {
-        isTransitive = false
-    }
+    shade(group = "dev.su5ed.sinytra", name = "fabric-loader", version = "1.0+0.14.21") { isTransitive = false }
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
-    // TODO Currently uses a local version with NPE fix on this line
-    // https://github.com/MinecraftForge/ForgeAutoRenamingTool/blob/140befc9bf3e0ca5c8280c6d8e455ec01a916268/src/main/java/net/minecraftforge/fart/internal/EnhancedRemapper.java#L385
-    shade(group = "net.minecraftforge", name = "ForgeAutoRenamingTool", version = "1.0.4")
+    shade(group = "dev.su5ed.sinytra", name = "ForgeAutoRenamingTool", version = "1.0.4")
+    shadeRuntimeOnly(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = "0.12.6+mixin.0.8.5") { isTransitive = false }
 
-    compileOnly("dev.su5ed.sinytra.fabric-api:ForgifiedFabricAPI:1.0")
+    compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "ForgifiedFabricAPI", version = "1.0")
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:ForgifiedFabricAPI:1.0"))
 
     "languageCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"(sourceSets.main.get().output)
-
-    shadeRuntimeOnly("net.fabricmc:sponge-mixin:0.12.6+mixin.0.8.5-local") {
-        isTransitive = false
-    }
 }
 
 tasks {
@@ -222,11 +218,11 @@ tasks {
         manifest {
             attributes(
                 "Specification-Title" to project.name,
-                "Specification-Vendor" to "Su5eD",
+                "Specification-Vendor" to "Sinytra",
                 "Specification-Version" to "1",
                 "Implementation-Title" to project.name,
                 "Implementation-Version" to project.version,
-                "Implementation-Vendor" to "Su5eD",
+                "Implementation-Vendor" to "Sinytra",
                 "Implementation-Timestamp" to LocalDateTime.now()
             )
         }
@@ -318,9 +314,7 @@ open class ConvertSRGTask : DefaultTask() {
     }
 
     private fun <T> runParentLookup(mc: ZipFile, mapping: IMappingFile, cls: IClass, mtd: T, processor: (ZipFile, IMappingFile, String, T) -> String?): String? =
-        lookupParents(mc, cls.original)
-            .mapNotNull { myParent -> processor(mc, mapping, myParent, mtd) }
-            .firstOrNull()
+        lookupParents(mc, cls.original).firstNotNullOfOrNull { myParent -> processor(mc, mapping, myParent, mtd) }
 
     private fun lookupParentMethod(mc: ZipFile, mapping: IMappingFile, parent: String, mtd: IMethod): String? {
         if (!parent.startsWith("net/minecraft") && (parent.startsWith("com/mojang/serialization") || parent.startsWith("com/mojang/brigadier") || !parent.startsWith("com/mojang/") || parent.startsWith("com/mojang/datafixers/"))) {

@@ -7,8 +7,11 @@ import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class SimpleRenamingTransformer implements Transformer {
+    private static final Pattern YARN_FIELD_PATERN = Pattern.compile("^field_\\d{5}$");
+    
     private final Remapper remapper;
 
     public SimpleRenamingTransformer(Map<String, String> mappings) {
@@ -86,6 +89,9 @@ public class SimpleRenamingTransformer implements Transformer {
                     if (str.startsWith(pKey)) {
                         return str.replace(pKey, entry.getValue().replace('/', '.'));
                     }
+                }
+                if (YARN_FIELD_PATERN.matcher(str).matches()) {
+                    return map(str);
                 }
             }
             return super.mapValue(value);

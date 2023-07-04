@@ -1,14 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import net.minecraftforge.gradle.common.util.MavenArtifactDownloader
 import net.minecraftforge.gradle.common.util.RunConfig
-import net.minecraftforge.gradle.mcp.tasks.GenerateSRG
-import net.minecraftforge.srgutils.IMappingBuilder
-import net.minecraftforge.srgutils.IMappingFile
-import net.minecraftforge.srgutils.IMappingFile.*
-import net.minecraftforge.srgutils.INamedMappingFile
-import org.apache.tools.zip.ZipFile
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.tree.ClassNode
 import java.time.LocalDateTime
 
 plugins {
@@ -23,15 +14,18 @@ version = "1.0"
 group = "dev.su5ed.sinytra"
 
 val versionMc: String by project
+val versionForge: String by project
+val versionForgeAutoRenamingTool: String by project
 val versionFabricLoader: String by project
 val versionAccessWidener: String by project
+val versionFabricApi: String by project
+val versionMixin: String by project
 
 val language by sourceSets.registering
 val mod: SourceSet by sourceSets.creating
 
 val shade: Configuration by configurations.creating
 val shadeRuntimeOnly: Configuration by configurations.creating
-val yarnMappings: Configuration by configurations.creating
 
 val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     configurations = listOf(shade, shadeRuntimeOnly)
@@ -82,23 +76,10 @@ val remappedDepsJar: Jar by tasks.creating(ShadowJar::class) {
     relocate("MixinConfigs", "ConnectorMixinConfigs")
     archiveClassifier.set("deps-reloc")
 }
-val createObfToMcp by tasks.registering(GenerateSRG::class) {
-    notch = true
-    srg.set(tasks.extractSrg.flatMap { it.output })
-    mappings.set(minecraft.mappings)
-    format.set(Format.TSRG)
-}
-// TODO Create intermediate only for prod
-val createMappings by tasks.registering(ConvertSRGTask::class) {
-    inputYarnMappings.set { yarnMappings.singleFile }
-    inputSrgMappings.set(tasks.extractSrg.flatMap { it.output })
-    inputMcpMappings.set(createObfToMcp.flatMap { it.output })
-}
 val fullJar: Jar by tasks.creating(Jar::class) {
     from(zipTree(remappedDepsJar.archiveFile))
     from(languageJar)
     from(modJar)
-    from(createMappings.flatMap { it.outputFile }) { rename { "mappings.tsrg" } } // This needs to match the expected file name in ForgifiedFabricLoader MappingResolverImpl
     manifest.attributes("Additional-Dependencies-Language" to languageJar.archiveFile.get().asFile.name)
     manifest.attributes("Additional-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
 
@@ -188,24 +169,22 @@ repositories {
         name = "Fabric"
         url = uri("https://maven.fabricmc.net")
     }
-    maven { 
+    maven {
         name = "Su5eD"
         url = uri("https://maven.su5ed.dev/releases")
     }
-    mavenLocal()
 }
 
 dependencies {
-    minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-45.0.64")
-    yarnMappings(group = "net.fabricmc", name = "yarn", version = "1.19.4+build.2")
+    minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-$versionForge")
 
-    shade(group = "dev.su5ed.sinytra", name = "fabric-loader", version = "1.0+0.14.21") { isTransitive = false }
+    shade(group = "dev.su5ed.sinytra", name = "fabric-loader", version = versionFabricLoader) { isTransitive = false }
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
-    shade(group = "dev.su5ed.sinytra", name = "ForgeAutoRenamingTool", version = "1.0.4")
-    shadeRuntimeOnly(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = "0.12.6+mixin.0.8.5") { isTransitive = false }
+    shade(group = "dev.su5ed.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool)
+    shadeRuntimeOnly(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = versionMixin) { isTransitive = false }
 
-    compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "ForgifiedFabricAPI", version = "1.0")
-    runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:ForgifiedFabricAPI:1.0"))
+    compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
+    runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))
 
     "languageCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"(sourceSets.main.get().output)
@@ -245,110 +224,6 @@ publishing {
             suppressAllPomMetadataWarnings()
 
             from(components["java"])
-        }
-    }
-}
-
-open class ConvertSRGTask : DefaultTask() {
-    @get:InputFile
-    val inputYarnMappings: RegularFileProperty = project.objects.fileProperty()
-
-    @get:InputFile
-    val inputSrgMappings: RegularFileProperty = project.objects.fileProperty()
-
-    @get:InputFile
-    val inputMcpMappings: RegularFileProperty = project.objects.fileProperty()
-
-    @get:OutputFile
-    val outputFile: RegularFileProperty = project.objects.fileProperty().convention(project.layout.buildDirectory.file("$name/output.tsrg"))
-
-    private val parentCache: MutableMap<String, Iterable<String>> = mutableMapOf()
-
-    @TaskAction
-    fun execute() {
-        val yarnMappings = ZipFile(inputYarnMappings.asFile.get()).use { zip ->
-            val inputStream = zip.getInputStream(zip.getEntry("mappings/mappings.tiny"))
-            INamedMappingFile.load(inputStream)
-        }
-        val obfToIntermediary = yarnMappings.getMap("official", "intermediary")
-        val obfToYarn = yarnMappings.getMap("official", "named")
-        val obfToSrg = load(inputSrgMappings.asFile.get())
-        val obfToMcp = load(inputMcpMappings.asFile.get())
-        val minecraftJoined = MavenArtifactDownloader.generate(project, "net.minecraft:joined:1.19.4", true)!!
-
-        println("Found Minecraft artifact at ${minecraftJoined.absolutePath}")
-        ZipFile(minecraftJoined).use { mc ->
-            val builder = IMappingBuilder.create("srg", "mcp", "intermediary", "named")
-            obfToSrg.classes.forEach { cls ->
-                val mapClasses = arrayOf(obfToMcp, obfToIntermediary, obfToYarn).map { it.getClass(cls.original) }
-                if (mapClasses.none { it == null }) {
-                    val mapCls = builder.addClass(cls.mapped, *mapClasses.map(INode::getMapped).toTypedArray())
-                    cls.methods.forEach { method ->
-                        mapCls.method(
-                            obfToSrg.remapDescriptor(method.descriptor), method.mapped,
-                            *mapClasses.map {
-                                it.getMethod(method.original, method.descriptor)?.mapped ?: inheritMethod(mc, obfToSrg, cls, method)
-                            }.toTypedArray()
-                        )
-                    }
-                    cls.fields.forEach { field ->
-                        mapCls.field(
-                            field.mapped,
-                            *mapClasses.map {
-                                it.getField(field.original)?.mapped ?: inheritField(mc, obfToSrg, cls, field)
-                            }.toTypedArray()
-                        )
-                    }
-                } else {
-                    project.logger.info("Ignoring mapping for class ${cls.original}")
-                }
-            }
-            builder.build().write(outputFile.get().asFile.toPath(), Format.TSRG2)
-        }
-    }
-
-    private fun inheritMethod(mc: ZipFile, mapping: IMappingFile, cls: IClass, mtd: IMethod): String {
-        return if (mtd.original == "<init>" || mtd.original == "<clinit>") mtd.mapped
-        else runParentLookup(mc, mapping, cls, mtd, ::lookupParentMethod)
-            ?: throw RuntimeException("Method ${mtd.original} not found in ${cls.mapped}")
-    }
-
-    private fun <T> runParentLookup(mc: ZipFile, mapping: IMappingFile, cls: IClass, mtd: T, processor: (ZipFile, IMappingFile, String, T) -> String?): String? =
-        lookupParents(mc, cls.original).firstNotNullOfOrNull { myParent -> processor(mc, mapping, myParent, mtd) }
-
-    private fun lookupParentMethod(mc: ZipFile, mapping: IMappingFile, parent: String, mtd: IMethod): String? {
-        if (!parent.startsWith("net/minecraft") && (parent.startsWith("com/mojang/serialization") || parent.startsWith("com/mojang/brigadier") || !parent.startsWith("com/mojang/") || parent.startsWith("com/mojang/datafixers/"))) {
-            return mtd.mapped
-        }
-        val parentCls = mapping.getClass(parent)
-        val parentMethod = parentCls.getMethod(mtd.original, mtd.descriptor)
-        return parentMethod?.mapped ?: runParentLookup(mc, mapping, parentCls, mtd, ::lookupParentMethod)
-    }
-
-    private fun inheritField(mc: ZipFile, mapping: IMappingFile, cls: IClass, fd: IField): String {
-        return runParentLookup(mc, mapping, cls, fd, ::lookupParentField)
-            ?: throw RuntimeException("Field ${fd.original} not found in ${cls.mapped}")
-    }
-
-    private fun lookupParentField(mc: ZipFile, mapping: IMappingFile, parent: String, fd: IField): String? {
-        if (!parent.startsWith("net/minecraft") && !parent.startsWith("com/mojang/") || parent.startsWith("java/") || parent.startsWith("jdk/") || parent.startsWith("com/mojang/datafixers/")) {
-            return fd.mapped
-        }
-        val parentCls = mapping.getClass(parent)
-        val parentField = parentCls.getField(fd.original)
-        return parentField?.mapped ?: runParentLookup(mc, mapping, parentCls, fd, ::lookupParentField)
-    }
-
-    private fun lookupParents(zip: ZipFile, name: String): Iterable<String> {
-        val cls = zip.getEntry("${name}.class")
-        return parentCache.computeIfAbsent(name) {
-            zip.getInputStream(cls).use { ins ->
-                val reader = ClassReader(ins)
-                ClassNode().run {
-                    reader.accept(this, 0)
-                    (superName?.let(::setOf) ?: emptySet()) + interfaces
-                }
-            }
         }
     }
 }

@@ -13,9 +13,13 @@ pluginManagement {
             name = "Su5eD"
             url = uri("https://maven.su5ed.dev/releases")
         }
+        maven {
+            name = "Architectury"
+            url = uri("https://maven.architectury.dev/")
+        }
     }
-    
-    plugins { 
+
+    plugins {
         id("org.gradle.toolchains.foojay-resolver-convention") version "0.5.0"
     }
 }

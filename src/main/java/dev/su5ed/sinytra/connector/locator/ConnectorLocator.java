@@ -24,10 +24,7 @@ import net.fabricmc.loader.impl.metadata.ModMetadataParser;
 import net.fabricmc.loader.impl.metadata.ParseMetadataException;
 import net.fabricmc.loader.impl.metadata.VersionOverrides;
 import net.minecraftforge.fart.api.Renamer;
-import net.minecraftforge.fml.loading.FMLLoader;
-import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
-import net.minecraftforge.fml.loading.StringUtils;
+import net.minecraftforge.fml.loading.*;
 import net.minecraftforge.fml.loading.moddiscovery.AbstractJarFileModProvider;
 import net.minecraftforge.fml.loading.moddiscovery.ModFile;
 import net.minecraftforge.fml.loading.moddiscovery.ModJarMetadata;
@@ -181,7 +178,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
 
     private static void transformJar(File input, Path output, FabricModFileMetadata metadata) throws IOException {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
-        SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(resolver.getMap("intermediary", "srg"));
+        SrgRemappingReferenceMapper remapper = new SrgRemappingReferenceMapper(resolver.getMap("intermediary", FMLEnvironment.naming));
         String fromMapping = Optional.ofNullable(metadata.manifestAttributes.getValue(FABRIC_MAPPING_NAMESPACE)).orElse("intermediary");
         Map<String, String> mappings = resolver.getCurrentMap(fromMapping).getClasses().stream()
             .flatMap(cls -> {

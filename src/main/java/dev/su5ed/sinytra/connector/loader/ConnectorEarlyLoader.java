@@ -6,12 +6,19 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
+import net.fabricmc.loader.api.metadata.ModMetadata;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
+import net.fabricmc.loader.impl.ModContainerImpl;
+import net.fabricmc.loader.impl.discovery.BuiltinMetadataWrapper;
 import net.fabricmc.loader.impl.entrypoint.EntrypointUtils;
+import net.fabricmc.loader.impl.metadata.BuiltinModMetadata;
+import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.loading.moddiscovery.ModInfo;
+import net.minecraftforge.forgespi.language.IModInfo;
 import org.slf4j.Logger;
 
 import java.util.Collection;
@@ -39,7 +46,9 @@ public class ConnectorEarlyLoader {
             .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE)))
             .toList();
         // Step 2: Propagate mods to fabric
-        FabricLoaderImpl.INSTANCE.setup(mods);
+        FabricLoaderImpl.INSTANCE.addFmlMods(mods);
+        FabricLoaderImpl.INSTANCE.addMods(List.of(createMinecraftMod()));
+        FabricLoaderImpl.INSTANCE.setup();
         // Step 3: Call prelaunch entrypoints
         EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
     }
@@ -50,9 +59,19 @@ public class ConnectorEarlyLoader {
         EntrypointUtils.invoke("main", ModInitializer.class, ModInitializer::onInitialize);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             EntrypointUtils.invoke("client", ClientModInitializer.class, ClientModInitializer::onInitializeClient);
-        } else {
+        }
+        else {
             EntrypointUtils.invoke("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
         }
         loading = false;
+    }
+
+    private static ModContainerImpl createMinecraftMod() {
+        IModInfo modInfo = LoadingModList.get().getModFileById("minecraft").getMods().get(0);
+        ModMetadata metadata = new BuiltinModMetadata.Builder("minecraft", FMLLoader.versionInfo().mcVersion())
+            .setName("Minecrtaft")
+            .build();
+        LoaderModMetadata loaderMetadata = new BuiltinMetadataWrapper(metadata);
+        return new ModContainerImpl(modInfo, loaderMetadata);
     }
 }

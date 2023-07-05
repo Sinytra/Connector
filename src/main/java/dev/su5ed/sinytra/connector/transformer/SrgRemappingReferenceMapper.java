@@ -70,9 +70,10 @@ public class SrgRemappingReferenceMapper {
         String name = matcher.group("name");
         String desc = matcher.group("desc");
         T node = nodeFunction.apply(name, desc);
+        String mappedName = node != null ? node.getMapped() : name;
 
         String mappedOwner = owner != null ? this.mappingFile.remapDescriptor(owner) : "";
-        return mappedOwner + node.getMapped() + separator + this.mappingFile.remapDescriptor(desc);
+        return mappedOwner + mappedName + separator + this.mappingFile.remapDescriptor(desc);
     }
 
     public static class SimpleRefmap {

@@ -3,7 +3,8 @@ package dev.su5ed.sinytra.connector.locator;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
-import dev.su5ed.sinytra.connector.locator.ConnectorLocator.FabricModPath;
+import dev.su5ed.sinytra.connector.transformer.JarTransformer;
+import dev.su5ed.sinytra.connector.transformer.JarTransformer.FabricModPath;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -90,7 +91,7 @@ public class SplitPackageMerger {
         List<Path> additionalPaths = others.stream()
             .flatMap(pair -> {
                 SecureJar sj = pair.getFirst();
-                ConnectorLocator.FabricModFileMetadata metadata = pair.getSecond().metadata();
+                JarTransformer.FabricModFileMetadata metadata = pair.getSecond().metadata();
                 SecureJar singlePackage = SecureJar.from(singlePackageFilter(pkg), sj.getPrimaryPath());
                 JarMergeInfo jarInfo = swap.computeIfAbsent(sj.name(), name -> new JarMergeInfo(sj, metadata));
                 jarInfo.excludedPackages().add(pkg);
@@ -107,8 +108,8 @@ public class SplitPackageMerger {
         };
     }
 
-    private record JarMergeInfo(SecureJar jar, ConnectorLocator.FabricModFileMetadata metadata, Set<Path> additionalPaths, Set<String> excludedPackages) {
-        public JarMergeInfo(SecureJar jar, ConnectorLocator.FabricModFileMetadata metadata) {
+    private record JarMergeInfo(SecureJar jar, JarTransformer.FabricModFileMetadata metadata, Set<Path> additionalPaths, Set<String> excludedPackages) {
+        public JarMergeInfo(SecureJar jar, JarTransformer.FabricModFileMetadata metadata) {
             this(jar, metadata, new HashSet<>(), new HashSet<>());
         }
     }

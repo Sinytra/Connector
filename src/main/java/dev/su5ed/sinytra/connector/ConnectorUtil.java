@@ -6,7 +6,9 @@ import cpw.mods.modlauncher.api.ServiceRunner;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.apache.commons.codec.digest.DigestUtils;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -24,14 +26,8 @@ public final class ConnectorUtil {
         CACHE_ENABLED = prop == null || prop.equals("true");
     }
 
-    public static void cache(String version, Path input, Path output, ServiceRunner action) {
-        try {
-            if (!CACHE_ENABLED) {
-                Files.deleteIfExists(output);
-                action.run();
-                return;
-            }
-
+    public static CacheFile getCached(String version, Path input, Path output) {
+        if (CACHE_ENABLED) {
             Path inputCache = output.getParent().resolve(output.getFileName() + ".input");
             try (InputStream is = Files.newInputStream(input)) {
                 String checksum = version + "," + DigestUtils.sha256Hex(is);
@@ -39,16 +35,27 @@ public final class ConnectorUtil {
                 if (Files.exists(inputCache) && Files.exists(output)) {
                     String cached = Files.readString(inputCache);
                     if (cached.equals(checksum)) {
-                        return;
+                        return new CacheFile(inputCache, checksum, true);
                     }
                 }
+                return new CacheFile(inputCache, checksum, false);
+            } catch (Throwable t) {
+                throw new RuntimeException(t);
+            }
+        }
+        return new CacheFile(null, null, false);
+    }
 
+    public static void cache(String version, Path input, Path output, ServiceRunner action) {
+        CacheFile cacheFile = getCached(version, input, output);
+        if (!cacheFile.isUpToDate()) {
+            try {
                 Files.deleteIfExists(output);
                 action.run();
-                Files.writeString(inputCache, checksum);
-            }
-        } catch (Throwable t) {
-            throw new RuntimeException(t);
+                cacheFile.save();
+            } catch (Throwable t) {
+                throw new RuntimeException(t);
+            }   
         }
     }
 
@@ -67,6 +74,31 @@ public final class ConnectorUtil {
     @FunctionalInterface
     public interface UncheckedSupplier<V> {
         V get() throws Throwable;
+    }
+
+    public static class CacheFile {
+        private final Path inputCache;
+        private final String inputChecksum;
+        private boolean isUpToDate;
+
+        public CacheFile(Path inputCache, String inputChecksum, boolean isUpToDate) {
+            this.inputCache = inputCache;
+            this.inputChecksum = inputChecksum;
+            this.isUpToDate = isUpToDate;
+        }
+
+        public boolean isUpToDate() {
+            return this.isUpToDate;
+        }
+
+        public void save() {
+            try {
+                Files.writeString(this.inputCache, this.inputChecksum);
+                this.isUpToDate = true;
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
     }
 
     private ConnectorUtil() {}

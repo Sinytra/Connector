@@ -54,8 +54,12 @@ public final class ConnectorModMetadataParser {
         modListConfig.add("credits", metadata.getContributors().stream()
             .map(Person::getName)
             .collect(Collectors.joining(", ")));
-        // TODO Dependencies, Environment
+        // TODO Dependencies
         config.add("mods", List.of(modListConfig));
+        switch (metadata.getEnvironment()) {
+            case CLIENT -> config.add("displayTest", "IGNORE_ALL_VERSION");
+            case SERVER -> config.add("displayTest", "IGNORE_SERVER_VERSION");
+        }
 
         IConfigurable configurable = new NightConfigWrapper(config);
         return new ModFileInfo((ModFile) modFile, configurable, List.of());

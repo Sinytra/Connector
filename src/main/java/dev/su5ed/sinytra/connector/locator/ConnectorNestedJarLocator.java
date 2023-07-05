@@ -3,11 +3,10 @@ package dev.su5ed.sinytra.connector.locator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import cpw.mods.jarhandling.SecureJar;
-import cpw.mods.modlauncher.api.LamdbaExceptionUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
-import dev.su5ed.sinytra.connector.locator.ConnectorLocator.FabricModPath;
-import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
+import dev.su5ed.sinytra.connector.transformer.JarTransformer;
+import dev.su5ed.sinytra.connector.transformer.JarTransformer.FabricModPath;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.minecraftforge.forgespi.language.IModFileInfo;
 import net.minecraftforge.forgespi.locating.IDependencyLocator;
@@ -34,7 +33,7 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
     public List<IModFile> scanMods(Iterable<IModFile> loadedMods) {
         Path tempDir = ConnectorUtil.CONNECTOR_FOLDER.resolve("temp");
 
-        List<FabricModPath> discoveredRemapped = StreamSupport.stream(loadedMods.spliterator(), false)
+        List<JarTransformer.TransformableJar> discovered = StreamSupport.stream(loadedMods.spliterator(), false)
             .filter(modFile -> {
                 IModFileInfo modFileInfo = modFile.getModFileInfo();
                 return modFileInfo != null && modFileInfo.requiredLanguageLoaders().stream().anyMatch(l -> l.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE));
@@ -45,25 +44,25 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
                 return discoverNestedJarsRecursive(tempDir, secureJar, metadata.getJars());
             })
             .toList();
-        List<FabricModPath> uniquePaths = handleDuplicateMods(discoveredRemapped);
-        List<FabricModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(uniquePaths);
+        List<JarTransformer.TransformableJar> uniquePaths = handleDuplicateMods(discovered);
+        List<FabricModPath> transformed = JarTransformer.transform(uniquePaths);
+        List<FabricModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed);
         return moduleSafeJars.stream()
             .map(info -> ConnectorLocator.createConnectorModFile(info, this))
             .toList();
     }
 
-    private Stream<FabricModPath> discoverNestedJarsRecursive(Path tempDir, SecureJar secureJar, Collection<NestedJarEntry> jars) {
+    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, SecureJar secureJar, Collection<NestedJarEntry> jars) {
         return jars.stream()
             .map(entry -> secureJar.getPath(entry.getFile()))
             .filter(Files::exists)
             .flatMap(path -> {
-                FabricModPath modInfo = uncheck(() -> prepareJijModFile(tempDir, secureJar.name(), path));
-                return Stream.concat(Stream.of(modInfo), discoverNestedJarsRecursive(tempDir, SecureJar.from(modInfo.path()), modInfo.metadata().modMetadata().getJars()));
+                JarTransformer.TransformableJar jar = uncheck(() -> prepareJijModFile(tempDir, secureJar.name(), path));
+                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, SecureJar.from(jar.input().toPath()), jar.modPath().metadata().modMetadata().getJars()));
             });
     }
 
-    // TODO Batch remap all nested jars
-    private FabricModPath prepareJijModFile(Path tempDir, String parentName, Path path) throws IOException {
+    private static JarTransformer.TransformableJar prepareJijModFile(Path tempDir, String parentName, Path path) throws IOException {
         Files.createDirectories(tempDir);
 
         String parentNameWithoutExt = parentName.split("\\.(?!.*\\.)")[0];
@@ -71,19 +70,18 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
         Path extracted = tempDir.resolve(parentNameWithoutExt + "$" + path.getFileName().toString());
         ConnectorUtil.cache("1", path, extracted, () -> Files.copy(path, extracted));
 
-        return LamdbaExceptionUtils.uncheck(() -> ConnectorLocator.cacheRemapJar(extracted.toFile()));
+        return uncheck(() -> JarTransformer.cacheTransformableJar(extracted.toFile()));
     }
 
-    private List<FabricModPath> handleDuplicateMods(List<FabricModPath> mods) {
-        Multimap<String, FabricModPath> map = HashMultimap.create();
-        for (FabricModPath mod : mods) {
-            LoaderModMetadata metadata = mod.metadata().modMetadata();
-            map.put(metadata.getId(), mod);
+    private static List<JarTransformer.TransformableJar> handleDuplicateMods(List<JarTransformer.TransformableJar> mods) {
+        Multimap<String, JarTransformer.TransformableJar> byId = HashMultimap.create();
+        for (JarTransformer.TransformableJar jar : mods) {
+            byId.put(jar.modPath().metadata().modMetadata().getId(), jar);
         }
-        List<FabricModPath> list = new ArrayList<>();
-        map.asMap().forEach((modid, candidates) -> {
-            FabricModPath mostRecent = candidates.stream()
-                .max(Comparator.comparing(m -> m.metadata().modMetadata().getVersion()))
+        List<JarTransformer.TransformableJar> list = new ArrayList<>();
+        byId.asMap().forEach((modid, candidates) -> {
+            JarTransformer.TransformableJar mostRecent = candidates.stream()
+                .max(Comparator.comparing(m -> m.modPath().metadata().modMetadata().getVersion()))
                 .orElseThrow();
             list.add(mostRecent);
         });

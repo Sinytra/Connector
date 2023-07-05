@@ -10,6 +10,7 @@ import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.sinytra.connector.transformer.AccessWidenerTransformer;
+import dev.su5ed.sinytra.connector.transformer.FieldToMethodTransformer;
 import dev.su5ed.sinytra.connector.transformer.MixinReplacementTransformer;
 import dev.su5ed.sinytra.connector.transformer.PackMetadataGenerator;
 import dev.su5ed.sinytra.connector.transformer.RefmapTransformer;
@@ -190,6 +191,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IMod
             .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond, (a, b) -> a));
 
         try (Renamer renamer = Renamer.builder()
+            .add(new FieldToMethodTransformer(metadata.modMetadata.getAccessWidener(), resolver.getMap("srg", "intermediary")))
             .add(new SimpleRenamingTransformer(mappings))
             .add(new MixinReplacementTransformer(metadata.mixinClasses, mappings))
             .add(new RefmapTransformer(metadata.mixinConfigs, metadata.refmaps, remapper))

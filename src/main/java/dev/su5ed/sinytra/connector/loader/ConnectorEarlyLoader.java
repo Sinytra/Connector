@@ -23,11 +23,14 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ConnectorEarlyLoader {
     private static final Logger LOGGER = LogUtils.getLogger();
 
+    private static final Set<String> CONNECTOR_MODS = new HashSet<>();
     private static boolean loading;
     private static Throwable loadingException;
 
@@ -44,6 +47,10 @@ public class ConnectorEarlyLoader {
     public static Throwable getLoadingException() {
         return loadingException;
     }
+    
+    public static boolean isConnectorMod(String modid) {
+        return CONNECTOR_MODS.contains(modid);
+    }
 
     public static void setup() {
         LOGGER.debug("ConnectorEarlyLoader starting");
@@ -51,6 +58,7 @@ public class ConnectorEarlyLoader {
             // Step 1: Find all connector loader mods
             List<ModInfo> mods = LoadingModList.get().getMods().stream()
                 .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE)))
+                .peek(modInfo -> CONNECTOR_MODS.add(modInfo.getModId()))
                 .toList();
             // Step 2: Propagate mods to fabric
             FabricLoaderImpl.INSTANCE.addFmlMods(mods);

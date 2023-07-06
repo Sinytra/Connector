@@ -5,13 +5,15 @@
   "package": "dev.su5ed.connector.mod.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "ForgeRegistryMixin",
-    "ForgeHooksMixin"
+    "BootstrapMixin",
+    "ForgeHooksMixin",
+    "ForgeRegistryMixin"
   ],
   "client": [
     "MinecraftMixin"
   ],
   "server": [
+    "MinecraftServerMixin",
     "ServerMainMixin"
   ],
   "injectors": {

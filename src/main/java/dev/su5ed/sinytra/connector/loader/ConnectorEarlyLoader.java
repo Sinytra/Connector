@@ -1,6 +1,8 @@
 package dev.su5ed.sinytra.connector.loader;
 
 import com.mojang.logging.LogUtils;
+import cpw.mods.modlauncher.Launcher;
+import cpw.mods.modlauncher.api.IModuleLayerManager;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
@@ -25,6 +27,7 @@ import org.slf4j.Logger;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 public class ConnectorEarlyLoader {
@@ -55,16 +58,16 @@ public class ConnectorEarlyLoader {
     public static void setup() {
         LOGGER.debug("ConnectorEarlyLoader starting");
         try {
-            // Step 1: Find all connector loader mods
+            // Find all connector loader mods
             List<ModInfo> mods = LoadingModList.get().getMods().stream()
                 .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE)))
                 .peek(modInfo -> CONNECTOR_MODS.add(modInfo.getModId()))
                 .toList();
-            // Step 2: Propagate mods to fabric
+            // Propagate mods to fabric
             FabricLoaderImpl.INSTANCE.addFmlMods(mods);
             FabricLoaderImpl.INSTANCE.addMods(List.of(createMinecraftMod()));
             FabricLoaderImpl.INSTANCE.setup();
-            // Step 3: Call prelaunch entrypoints
+            // Call prelaunch entrypoints
             EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
         } catch (Throwable t) {
             LOGGER.error("Encountered error during early mod setup", t);
@@ -80,7 +83,15 @@ public class ConnectorEarlyLoader {
 
         try {
             loading = true;
-            // Step 3: Invoke entry points
+
+            // Create RegistryHelper service to act as a bridge to the GAME layer
+            ModuleLayer gameLayer = Launcher.INSTANCE.findLayerManager().flatMap(manager -> manager.getLayer(IModuleLayerManager.Layer.GAME)).orElseThrow();
+            RegistryHelper registryHelper = ServiceLoader.load(gameLayer, RegistryHelper.class).stream().findFirst().orElseThrow().get();
+            
+            // Unfreeze registries
+            registryHelper.unfreezeRegistries();
+
+            // Invoke entry points
             EntrypointUtils.invoke("main", ModInitializer.class, ModInitializer::onInitialize);
             if (FMLEnvironment.dist == Dist.CLIENT) {
                 EntrypointUtils.invoke("client", ClientModInitializer.class, ClientModInitializer::onInitializeClient);
@@ -88,6 +99,10 @@ public class ConnectorEarlyLoader {
             else {
                 EntrypointUtils.invoke("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
             }
+
+            // Freeze registries
+            registryHelper.freezeRegistries();
+
             loading = false;
         } catch (Throwable t) {
             LOGGER.error("Encountered error during early mod loading", t);
@@ -98,7 +113,7 @@ public class ConnectorEarlyLoader {
     private static ModContainerImpl createMinecraftMod() {
         IModInfo modInfo = LoadingModList.get().getModFileById("minecraft").getMods().get(0);
         ModMetadata metadata = new BuiltinModMetadata.Builder("minecraft", FMLLoader.versionInfo().mcVersion())
-            .setName("Minecrtaft")
+            .setName("Minecraft")
             .build();
         LoaderModMetadata loaderMetadata = new BuiltinMetadataWrapper(metadata);
         return new ModContainerImpl(modInfo, loaderMetadata);

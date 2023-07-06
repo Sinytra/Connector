@@ -19,6 +19,7 @@ import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.loading.moddiscovery.ModInfo;
 import net.minecraftforge.forgespi.language.IModInfo;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.Collection;
@@ -28,6 +29,7 @@ public class ConnectorEarlyLoader {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static boolean loading;
+    private static Throwable loadingException;
 
     public static Collection<Object> getModInstances(String modid) {
         Collection<Object> instances = FabricLoaderImpl.INSTANCE.getModInstances(modid);
@@ -38,32 +40,51 @@ public class ConnectorEarlyLoader {
         return loading;
     }
 
+    @Nullable
+    public static Throwable getLoadingException() {
+        return loadingException;
+    }
+
     public static void setup() {
-        // TODO HANDLE AND PROPAGATE EXCEPTIONS
         LOGGER.debug("ConnectorEarlyLoader starting");
-        // Step 1: Find all connector loader mods
-        List<ModInfo> mods = LoadingModList.get().getMods().stream()
-            .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE)))
-            .toList();
-        // Step 2: Propagate mods to fabric
-        FabricLoaderImpl.INSTANCE.addFmlMods(mods);
-        FabricLoaderImpl.INSTANCE.addMods(List.of(createMinecraftMod()));
-        FabricLoaderImpl.INSTANCE.setup();
-        // Step 3: Call prelaunch entrypoints
-        EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
+        try {
+            // Step 1: Find all connector loader mods
+            List<ModInfo> mods = LoadingModList.get().getMods().stream()
+                .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE)))
+                .toList();
+            // Step 2: Propagate mods to fabric
+            FabricLoaderImpl.INSTANCE.addFmlMods(mods);
+            FabricLoaderImpl.INSTANCE.addMods(List.of(createMinecraftMod()));
+            FabricLoaderImpl.INSTANCE.setup();
+            // Step 3: Call prelaunch entrypoints
+            EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
+        } catch (Throwable t) {
+            LOGGER.error("Encountered error during early mod setup", t);
+            loadingException = t;
+        }
     }
 
     public static void load() {
-        loading = true;
-        // Step 3: Invoke entry points
-        EntrypointUtils.invoke("main", ModInitializer.class, ModInitializer::onInitialize);
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            EntrypointUtils.invoke("client", ClientModInitializer.class, ClientModInitializer::onInitializeClient);
+        if (loadingException != null) {
+            LOGGER.error("Skipping early mod loading due to previous error");
+            return;
         }
-        else {
-            EntrypointUtils.invoke("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
+
+        try {
+            loading = true;
+            // Step 3: Invoke entry points
+            EntrypointUtils.invoke("main", ModInitializer.class, ModInitializer::onInitialize);
+            if (FMLEnvironment.dist == Dist.CLIENT) {
+                EntrypointUtils.invoke("client", ClientModInitializer.class, ClientModInitializer::onInitializeClient);
+            }
+            else {
+                EntrypointUtils.invoke("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
+            }
+            loading = false;
+        } catch (Throwable t) {
+            LOGGER.error("Encountered error during early mod loading", t);
+            loadingException = t;
         }
-        loading = false;
     }
 
     private static ModContainerImpl createMinecraftMod() {

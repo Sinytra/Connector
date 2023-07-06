@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class DelayedRegistrar {
+public class DelayedRegister {
     private static final Multimap<ResourceLocation, Pair<ResourceKey<?>, Object>> registryObjects = HashMultimap.create();
 
     public static <V, T extends V> void register(Registry<V> registry, ResourceKey<V> key, T value) {

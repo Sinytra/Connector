@@ -17,7 +17,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.jar.Manifest;
 
-public class RefmapTransformer implements Transformer {
+public class RefmapRemapper implements Transformer {
     private static final Gson GSON = new Gson();
     private static final String INTERMEDIARY_MAPPING_ENV = "named:intermediary";
     private static final String SRG_MAPPING_ENV = "searge";
@@ -26,7 +26,7 @@ public class RefmapTransformer implements Transformer {
     private final Collection<String> refmaps;
     private final SrgRemappingReferenceMapper remapper;
 
-    public RefmapTransformer(Collection<String> configs, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) {
+    public RefmapRemapper(Collection<String> configs, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) {
         this.configs = configs;
         this.refmaps = refmaps;
         this.remapper = remapper;

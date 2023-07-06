@@ -1,4 +1,4 @@
-package dev.su5ed.connector.mod.mixin;
+package dev.su5ed.sinytra.connector.mod.mixin;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.registries.GameData;

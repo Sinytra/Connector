@@ -104,6 +104,10 @@ configurations {
         extendsFrom(configurations.minecraft.get(), shade)
     }
 
+    "modCompileOnly" {
+        extendsFrom(configurations.compileOnly.get())
+    }
+
     "modImplementation" {
         extendsFrom(configurations.minecraft.get(), shade)
     }
@@ -118,8 +122,6 @@ sourceSets {
 println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty("java.vm.version")} (${System.getProperty("java.vendor")}), Arch: ${System.getProperty("os.arch")}")
 minecraft {
     mappings("official", versionMc)
-
-    accessTransformer(file("src/mod/resources/META-INF/accesstransformer.cfg"))
 
     runs {
         val config = Action<RunConfig> {

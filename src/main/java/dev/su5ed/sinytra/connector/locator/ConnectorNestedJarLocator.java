@@ -57,7 +57,7 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
             .map(entry -> secureJar.getPath(entry.getFile()))
             .filter(Files::exists)
             .flatMap(path -> {
-                JarTransformer.TransformableJar jar = uncheck(() -> prepareJijModFile(tempDir, secureJar.name(), path));
+                JarTransformer.TransformableJar jar = uncheck(() -> prepareJijModFile(tempDir, secureJar.getPrimaryPath().getFileName().toString(), path));
                 return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, SecureJar.from(jar.input().toPath()), jar.modPath().metadata().modMetadata().getJars()));
             });
     }

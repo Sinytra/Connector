@@ -8,6 +8,7 @@ import net.fabricmc.accesswidener.AccessWidenerWriter;
 import net.fabricmc.accesswidener.ForwardingVisitor;
 import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.Transformer;
+import net.minecraftforge.fart.internal.EnhancedRemapper;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -55,11 +56,16 @@ public class FieldToMethodTransformer implements Transformer {
         )
     );
     private static final Logger LOGGER = LogUtils.getLogger();
-
     private final String accessWidenerResource;
     private final Map<String, String> mappedReplacements;
+    // Method redirects to ensure 2-way compatibility with Forge's API
+    private final EnhancedRemapper remapper;
 
-    public FieldToMethodTransformer(String accessWidenerResource, IMappingFile mappings) {
+    public static Transformer.Factory transformer(String accessWidenerResource, IMappingFile mappings, IMappingFile remapperMapping) {
+        return ctx -> new FieldToMethodTransformer(accessWidenerResource, mappings, new EnhancedRemapper(ctx.getClassProvider(), remapperMapping, ctx.getLog()));
+    }
+
+    public FieldToMethodTransformer(String accessWidenerResource, IMappingFile mappings, EnhancedRemapper remapper) {
         this.accessWidenerResource = accessWidenerResource;
         ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
         REPLACEMENTS.forEach((cls, replacements) -> {
@@ -67,6 +73,7 @@ public class FieldToMethodTransformer implements Transformer {
             replacements.forEach((field, getter) -> builder.put(classMap.remapField(field), getter));
         });
         this.mappedReplacements = builder.build();
+        this.remapper = remapper;
     }
 
     @Override
@@ -104,7 +111,7 @@ public class FieldToMethodTransformer implements Transformer {
                     for (Map.Entry<String, String> entry : this.mappedReplacements.entrySet()) {
                         String source = entry.getKey();
                         if (source.equals(fieldInsn.name)) {
-                            LOGGER.debug("[ForbiddenAW] Redirecting field {} to getter {} in class {}#{}", source, entry.getValue(), cls.name, method.name);
+                            LOGGER.trace("Replacing field getter {} to method {} in {}#{}", source, entry.getValue(), cls.name, method.name);
                             iterator.remove();
                             String getterDesc = "()" + fieldInsn.desc;
                             MethodInsnNode getterCall = new MethodInsnNode(Opcodes.INVOKEVIRTUAL, fieldInsn.owner, entry.getValue(), getterDesc, false);
@@ -113,11 +120,21 @@ public class FieldToMethodTransformer implements Transformer {
                         }
                     }
                 }
+                else if (insn instanceof MethodInsnNode methodInsn) {
+                    String mappedName = this.remapper.getClass(methodInsn.owner)
+                        .flatMap(c -> c.getMethod(methodInsn.name, methodInsn.desc))
+                        .map(EnhancedRemapper.MClass.MMethod::getMapped)
+                        .orElse(null);
+                    if (mappedName != null) {
+                        methodInsn.name = mappedName;
+                        replaced = true;
+                    }
+                }
             }
         }
         return replaced;
     }
-    
+
     private static class FilteringAccessWidenerVisitor extends ForwardingVisitor {
         private final Collection<String> exclude;
 

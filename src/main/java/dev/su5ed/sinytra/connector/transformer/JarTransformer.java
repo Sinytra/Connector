@@ -167,10 +167,10 @@ public final class JarTransformer {
         Map<String, String> mappings = getFlatMapping(fromMapping);
 
         try (Renamer renamer = Renamer.builder()
-            .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", "intermediary")))
+            .add(FieldToMethodTransformer.transformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", "intermediary"), ForgeApiRedirects.getMappings()))
             .add(new SimpleRenamingTransformer(mappings))
             .add(new MixinReplacementTransformer(metadata.mixinClasses(), mappings))
-            .add(new RefmapTransformer(metadata.mixinConfigs(), metadata.refmaps(), remapper))
+            .add(new RefmapRemapper(metadata.mixinConfigs(), metadata.refmaps(), remapper))
             .add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver))
             .add(new PackMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))

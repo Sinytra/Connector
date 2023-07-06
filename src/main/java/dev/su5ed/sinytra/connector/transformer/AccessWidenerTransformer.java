@@ -50,7 +50,6 @@ public class AccessWidenerTransformer implements Transformer {
             this.resolver = resolver;
             this.sourceNamespace = sourceNamespace;
 
-            // TODO Transitive AW entries
             this.builder.append("# Access Transformer file converted by Connector\n");
         }
 

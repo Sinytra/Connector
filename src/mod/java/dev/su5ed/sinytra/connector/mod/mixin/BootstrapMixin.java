@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.su5ed.connector.mod.mixin;
+package dev.su5ed.sinytra.connector.mod.mixin;
 
 import net.minecraft.server.Bootstrap;
 import org.spongepowered.asm.mixin.Mixin;

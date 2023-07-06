@@ -1,4 +1,4 @@
-package dev.su5ed.connector.mod;
+package dev.su5ed.sinytra.connector.mod;
 
 import dev.su5ed.sinytra.connector.loader.RegistryHelper;
 import net.minecraft.core.MappedRegistry;

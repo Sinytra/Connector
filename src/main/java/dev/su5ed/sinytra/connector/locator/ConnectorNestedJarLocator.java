@@ -9,6 +9,7 @@ import dev.su5ed.sinytra.connector.transformer.JarTransformer;
 import dev.su5ed.sinytra.connector.transformer.JarTransformer.FabricModPath;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.minecraftforge.forgespi.language.IModFileInfo;
+import net.minecraftforge.forgespi.language.IModInfo;
 import net.minecraftforge.forgespi.locating.IDependencyLocator;
 import net.minecraftforge.forgespi.locating.IModFile;
 
@@ -20,6 +21,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -33,6 +35,11 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
     public List<IModFile> scanMods(Iterable<IModFile> loadedMods) {
         Path tempDir = ConnectorUtil.CONNECTOR_FOLDER.resolve("temp");
 
+        Collection<String> loadedModIds = StreamSupport.stream(loadedMods.spliterator(), false)
+            .flatMap(modFile -> Optional.ofNullable(modFile.getModFileInfo()).stream())
+            .flatMap(modFileInfo -> modFileInfo.getMods().stream().map(IModInfo::getModId))
+            .toList();
+
         List<JarTransformer.TransformableJar> discovered = StreamSupport.stream(loadedMods.spliterator(), false)
             .filter(modFile -> {
                 IModFileInfo modFileInfo = modFile.getModFileInfo();
@@ -41,7 +48,7 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
             .flatMap(modFile -> {
                 SecureJar secureJar = modFile.getSecureJar();
                 ConnectorLoaderModMetadata metadata = (ConnectorLoaderModMetadata) modFile.getModFileInfo().getFileProperties().get("metadata");
-                return discoverNestedJarsRecursive(tempDir, secureJar, metadata.getJars());
+                return discoverNestedJarsRecursive(tempDir, secureJar, metadata.getJars(), loadedModIds);
             })
             .toList();
         List<JarTransformer.TransformableJar> uniquePaths = handleDuplicateMods(discovered);
@@ -52,13 +59,15 @@ public class ConnectorNestedJarLocator implements IDependencyLocator {
             .toList();
     }
 
-    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, SecureJar secureJar, Collection<NestedJarEntry> jars) {
+    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, SecureJar secureJar, Collection<NestedJarEntry> jars, Collection<String> loadedMods) {
         return jars.stream()
             .map(entry -> secureJar.getPath(entry.getFile()))
             .filter(Files::exists)
             .flatMap(path -> {
                 JarTransformer.TransformableJar jar = uncheck(() -> prepareJijModFile(tempDir, secureJar.getPrimaryPath().getFileName().toString(), path));
-                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, SecureJar.from(jar.input().toPath()), jar.modPath().metadata().modMetadata().getJars()));
+                ConnectorLoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
+                return loadedMods.contains(metadata.getId()) ? Stream.empty()
+                    : Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, SecureJar.from(jar.input().toPath()), metadata.getJars(), loadedMods));
             });
     }
 

@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 import java.util.List;
 import java.util.Set;
 
+@SuppressWarnings("unused")
 public class ConnectorMixinPlugin implements IMixinConfigPlugin {
     @Override
     public void onLoad(String mixinPackage) {}

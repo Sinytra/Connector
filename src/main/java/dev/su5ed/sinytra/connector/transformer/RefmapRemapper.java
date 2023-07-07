@@ -43,19 +43,22 @@ public class RefmapRemapper implements Transformer {
 
     @Override
     public ManifestEntry process(ManifestEntry entry) {
-        Manifest manifest = new Manifest();
-        try (InputStream is = new ByteArrayInputStream(entry.getData())) {
-            manifest.read(is);
+        if (!this.configs.isEmpty()) {
+            Manifest manifest = new Manifest();
+            try (InputStream is = new ByteArrayInputStream(entry.getData())) {
+                manifest.read(is);
 
-            manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs));
+                manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs));
 
-            try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
-                manifest.write(byteStream);
-                return ManifestEntry.create(entry.getTime(), byteStream.toByteArray());
+                try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
+                    manifest.write(byteStream);
+                    return ManifestEntry.create(entry.getTime(), byteStream.toByteArray());
+                }
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
             }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
+        return entry;
     }
 
     private byte[] remapRefmapInPlace(byte[] data) {

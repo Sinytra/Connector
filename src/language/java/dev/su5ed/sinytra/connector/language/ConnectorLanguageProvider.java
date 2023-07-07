@@ -1,4 +1,4 @@
-package dev.su5ed.connector.language;
+package dev.su5ed.sinytra.connector.language;
 
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
@@ -52,7 +52,7 @@ public class ConnectorLanguageProvider implements IModLanguageProvider {
             // in the classloader of the game - the context classloader is appropriate here.
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             try {
-                Class<?> modContainer = Class.forName("dev.su5ed.connector.language.ConnectorModContainer", true, classLoader);
+                Class<?> modContainer = Class.forName("dev.su5ed.sinytra.connector.language.ConnectorModContainer", true, classLoader);
                 LOGGER.debug(LOADING, "Loading ConnectorModContainer from classloader {} - got {}", classLoader, modContainer.getClassLoader());
                 Constructor<?> constructor = modContainer.getConstructor(IModInfo.class);
                 return (T) constructor.newInstance(info);

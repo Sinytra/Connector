@@ -1,4 +1,4 @@
-package dev.su5ed.connector.language;
+package dev.su5ed.sinytra.connector.language;
 
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;

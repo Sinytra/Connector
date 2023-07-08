@@ -68,6 +68,12 @@ public class ModlauncherMixinTransformService implements ITransformationService 
         ILaunchPluginService launchPlugin = plugin.get();
         if (launchPlugin instanceof ConnectorMixinLaunchPlugin connectorMixinLaunchPlugin) {
             try {
+                // In production, connector is loaded from the SERVICE layer and mixin requires access to its classes
+                // in order to function properly, so we change the context classloader from BOOT to SERVICE
+                // Shouldn't break anything according to module layer inheritance
+                // @see org.spongepowered.asm.service.modlauncher.ModLauncherClassProvider
+                Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+
                 START_METHOD.invoke();
 
                 PLUGIN_INIT_METHOD.invoke(connectorMixinLaunchPlugin, environment, this.commandLineMixins);

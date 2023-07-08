@@ -26,7 +26,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -69,16 +68,13 @@ public class MixinReplacementTransformer implements Transformer {
             "Lcom/google/common/collect/Ordering;sortedCopy(Ljava/lang/Iterable;)Ljava/util/List;",
             MODIFY_VARIABLE_ANN,
             "Ljava/util/stream/Stream;collect(Ljava/util/stream/Collector;)Ljava/lang/Object;"
-        ),
-        Replacement.mappingReplacement()
+        )
     );
 
     private final Set<String> mixins;
-    private final Map<String, String> mappings;
 
-    public MixinReplacementTransformer(Set<String> mixins, Map<String, String> mappings) {
+    public MixinReplacementTransformer(Set<String> mixins) {
         this.mixins = mixins;
-        this.mappings = mappings;
     }
 
     @Override
@@ -90,9 +86,9 @@ public class MixinReplacementTransformer implements Transformer {
             reader.accept(node, 0);
 
             List<Replacement> replacements = ENHANCEMENTS.stream()
-                .filter(r -> r.handles(node))
+                .filter(r -> r.apply(node, this))
                 .toList();
-            if (applyReplacements(node, replacements)) {
+            if (!replacements.isEmpty()) {
                 ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS); // TODO Compute frames
                 node.accept(writer);
                 return ClassEntry.create(entry.getName(), entry.getTime(), writer.toByteArray());
@@ -153,20 +149,8 @@ public class MixinReplacementTransformer implements Transformer {
         return false;
     }
 
-    private boolean applyReplacements(ClassNode node, List<Replacement> replacements) {
-        if (!replacements.isEmpty()) {
-            for (Replacement replacement : replacements) {
-                replacement.apply(node, this);
-            }
-            return true;
-        }
-        return false;
-    }
-
     interface Replacement {
-        boolean handles(ClassNode classNode);
-
-        void apply(ClassNode classNode, MixinReplacementTransformer instance);
+        boolean apply(ClassNode classNode, MixinReplacementTransformer instance);
 
         static Replacement redirectMixinTarget(String targetClass, String mixinMethod, String annotation, List<String> replacementMethods) {
             return new RedirectMixin(targetClass, mixinMethod, annotation, replacementMethods);
@@ -179,37 +163,6 @@ public class MixinReplacementTransformer implements Transformer {
         static Replacement modifyMixinMethodParams(String targetClass, String mixinMethod, String annotation, Function<Type[], Type[]> descFunc) {
             return new ModifyMixinMethodParams(targetClass, mixinMethod, annotation, descFunc);
         }
-
-        static Replacement mappingReplacement() {
-            return new MapMixin();
-        }
-    }
-
-    public record MapMixin() implements Replacement {
-        @Override
-        public boolean handles(ClassNode classNode) {
-            return true;
-        }
-
-        @Override
-        public void apply(ClassNode classNode, MixinReplacementTransformer instance) {
-            for (MethodNode method : classNode.methods) {
-                if (method.visibleAnnotations != null) {
-                    for (AnnotationNode annotation : method.visibleAnnotations) {
-                        if (annotation.values != null) {
-                            Boolean remap = MixinReplacementTransformer.findAnnotationValue(annotation.values, "remap", Function.identity());
-                            if (remap != null && !remap) {
-                                LOGGER.info(ENHANCE, "Renaming mixin {}.{}", classNode.name, method.name);
-                                List<String> targetMethods = MixinReplacementTransformer.findAnnotationValue(annotation.values, "method", Function.identity());
-                                List<String> remapped = targetMethods.stream().map(str -> instance.mappings.getOrDefault(str, str)).toList();
-                                MixinReplacementTransformer.setAnnotationValue(annotation.values, "method", remapped);
-                                LOGGER.info(ENHANCE, "Renamed {} -> {}", targetMethods, remapped);
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public interface TargetedMethodReplacement extends Replacement {
@@ -221,13 +174,16 @@ public class MixinReplacementTransformer implements Transformer {
 
         void apply(ClassNode node, MethodNode methodNode, List<String> targetMethods);
 
-        @Override
         default boolean handles(ClassNode classNode) {
             return targetsType(classNode, targetClass());
         }
 
         @Override
-        default void apply(ClassNode classNode, MixinReplacementTransformer instance) {
+        default boolean apply(ClassNode classNode, MixinReplacementTransformer instance) {
+            if (!handles(classNode)) {
+                return false;
+            }
+
             String annotationDesc = annotation();
             String targetMethod = targetMethod();
             int descIndex = targetMethod.indexOf('(');
@@ -252,6 +208,8 @@ public class MixinReplacementTransformer implements Transformer {
                     }
                 }
             }
+
+            return true;
         }
     }
 

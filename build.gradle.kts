@@ -35,6 +35,7 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     exclude("ui/**")
     exclude("*.json")
     exclude("module-info.class")
+    exclude("LICENSE.txt")
 
     dependencies {
         exclude(dependency("org.ow2.asm:"))
@@ -77,6 +78,7 @@ val remappedDepsJar: Jar by tasks.creating(ShadowJar::class) {
     archiveClassifier.set("deps-reloc")
 }
 val fullJar: Jar by tasks.creating(Jar::class) {
+    mustRunAfter("reobfModJar")
     from(zipTree(remappedDepsJar.archiveFile))
     from(languageJar)
     from(modJar)
@@ -95,6 +97,12 @@ mixin {
     add(mod, "mixins.connectormod.refmap.json")
 }
 
+reobf {
+    create("modJar") {
+        dependsOn(modJar)
+    }
+}
+
 configurations {
     compileOnly {
         extendsFrom(shade)
@@ -110,6 +118,10 @@ configurations {
 
     "modImplementation" {
         extendsFrom(configurations.minecraft.get(), shade)
+    }
+
+    "modAnnotationProcessor" {
+        extendsFrom(configurations.annotationProcessor.get())
     }
 }
 
@@ -184,6 +196,7 @@ dependencies {
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
     shade(group = "dev.su5ed.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool)
     shadeRuntimeOnly(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = versionMixin) { isTransitive = false }
+    annotationProcessor(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = versionMixin)
 
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))
@@ -213,9 +226,16 @@ tasks {
         options.encoding = "UTF-8" // Use the UTF-8 charset for Java compilation
     }
 
+    assemble {
+        dependsOn("reobfModJar", fullJar)
+    }
+
     configureEach {
         if (name == "prepareRuns") {
             dependsOn(fullJar)
+        }
+        if (name == "addMixinsToJar") {
+            enabled = false
         }
     }
 }

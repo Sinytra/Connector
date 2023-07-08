@@ -15,6 +15,15 @@ public class ConnectorModContainer extends ModContainer {
 
     private final List<Object> modInstances;
 
+    static {
+        try {
+            Class<?> cls = Class.forName("dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader");
+            ConnectorModContainer.class.getModule().addReads(cls.getModule());
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public ConnectorModContainer(IModInfo info) {
         super(info);
 

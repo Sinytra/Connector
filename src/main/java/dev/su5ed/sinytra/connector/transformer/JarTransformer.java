@@ -18,6 +18,7 @@ import net.fabricmc.loader.impl.metadata.ModMetadataParser;
 import net.fabricmc.loader.impl.metadata.ParseMetadataException;
 import net.fabricmc.loader.impl.metadata.VersionOverrides;
 import net.minecraftforge.fart.api.Renamer;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLLoader;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
@@ -47,6 +48,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -54,7 +56,7 @@ import java.util.zip.ZipEntry;
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 
 public final class JarTransformer {
-    private static final String MAPPED_SUFFIX = "_mapped_official_" + FMLLoader.versionInfo().mcVersion();
+    private static final String MAPPED_SUFFIX = "_mapped_" + FMLEnvironment.naming + "_" + FMLLoader.versionInfo().mcVersion();
     private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
     // Increment to invalidate cache
     private static final int CACHE_VERSION = 1;
@@ -62,6 +64,14 @@ public final class JarTransformer {
     private static final Marker TRANSFORM_MARKER = MarkerFactory.getMarker("TRANSFORM");
 
     private static final Map<String, Map<String, String>> FLAT_MAPPINGS_CACHE = new HashMap<>();
+    // Filter out non-obfuscated method names used in mapping namespaces as those don't need
+    // to be remapped and will only cause issues with our barebones find/replace remapper
+    private static final Map<String, Collection<String>> MAPPING_PREFIXES = Map.of(
+        "intermediary", Set.of("net/minecraft/class_", "field_", "method_")
+    );
+    private static final List<Path> RENAMER_LIBS = Stream.of(FMLLoader.getLaunchHandler().getMinecraftPaths())
+        .flatMap(paths -> Stream.concat(paths.minecraftPaths().stream(), paths.otherArtifacts().stream()))
+        .toList();
 
     private static SrgRemappingReferenceMapper remapper;
 
@@ -75,14 +85,12 @@ public final class JarTransformer {
                 }
 
                 LOGGER.debug(TRANSFORM_MARKER, "Creating flat mapping for namespace {}", sourceNamespace);
+                Collection<String> prefixes = MAPPING_PREFIXES.get(sourceNamespace);
                 MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
                 Map<String, String> resolved = resolver.getCurrentMap(sourceNamespace).getClasses().stream()
-                    .flatMap(cls -> {
-                        Pair<String, String> clsRename = Pair.of(cls.getOriginal(), cls.getMapped());
-                        Stream<Pair<String, String>> fieldRenames = cls.getFields().stream().map(field -> Pair.of(field.getOriginal(), field.getMapped()));
-                        Stream<Pair<String, String>> methodRenames = cls.getMethods().stream().map(method -> Pair.of(method.getOriginal(), method.getMapped()));
-                        return Stream.concat(Stream.of(clsRename), Stream.concat(fieldRenames, methodRenames));
-                    })
+                    .flatMap(cls -> Stream.concat(Stream.of(cls), Stream.concat(cls.getFields().stream(), cls.getMethods().stream()))
+                        .filter(node -> prefixes.stream().anyMatch(node.getOriginal()::startsWith))
+                        .map(node -> Pair.of(node.getOriginal(), node.getMapped())))
                     .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond, (a, b) -> a));
                 FLAT_MAPPINGS_CACHE.put(sourceNamespace, resolved);
                 return resolved;
@@ -91,13 +99,10 @@ public final class JarTransformer {
         return map;
     }
 
-    public static List<FabricModPath> transformPaths(List<Path> paths) {
-        return transform(paths.stream().map(rethrowFunction(p -> cacheTransformableJar(p.toFile()))).toList());
-    }
-
-    public static List<FabricModPath> transform(List<TransformableJar> jars) {
+    public static List<FabricModPath> transform(List<TransformableJar> jars, List<Path> libs) {
         List<FabricModPath> transformed = new ArrayList<>();
 
+        List<Path> inputLibs = new ArrayList<>(libs);
         List<TransformableJar> needTransforming = new ArrayList<>();
         for (TransformableJar jar : jars) {
             if (jar.cacheFile().isUpToDate()) {
@@ -106,10 +111,12 @@ public final class JarTransformer {
             else {
                 needTransforming.add(jar);
             }
+            inputLibs.add(jar.input().toPath());
         }
 
         if (!needTransforming.isEmpty()) {
-            transformed.addAll(transformJars(needTransforming));
+            List<Path> allLibs = Stream.concat(inputLibs.stream(), RENAMER_LIBS.stream()).toList();
+            transformed.addAll(transformJars(needTransforming, allLibs));
         }
 
         return transformed;
@@ -126,7 +133,7 @@ public final class JarTransformer {
         return new TransformableJar(input, path, cacheFile);
     }
 
-    private static List<FabricModPath> transformJars(List<TransformableJar> paths) {
+    private static List<FabricModPath> transformJars(List<TransformableJar> paths, List<Path> libs) {
         // Pregenerate mappings
         if (remapper == null) {
             MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
@@ -139,7 +146,7 @@ public final class JarTransformer {
         ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
 
         List<Future<FabricModPath>> futures = paths.stream()
-            .map(jar -> executorService.submit(jar::transform))
+            .map(jar -> executorService.submit(() -> jar.transform(libs)))
             .toList();
 
         executorService.shutdown();
@@ -159,23 +166,24 @@ public final class JarTransformer {
         return results;
     }
 
-    private static void transformJar(File input, Path output, FabricModFileMetadata metadata) throws IOException {
+    private static void transformJar(File input, Path output, FabricModFileMetadata metadata, List<Path> libs) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         String fromMapping = Optional.ofNullable(metadata.manifestAttributes().getValue(FABRIC_MAPPING_NAMESPACE)).orElse("intermediary");
         Map<String, String> mappings = getFlatMapping(fromMapping);
 
-        try (Renamer renamer = Renamer.builder()
-            .add(FieldToMethodTransformer.transformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", "intermediary"), ForgeApiRedirects.getMappings()))
-            .add(new SimpleRenamingTransformer(mappings))
-            .add(new MixinReplacementTransformer(metadata.mixinClasses(), mappings))
+        Renamer.Builder builder = Renamer.builder()
+            .add(FieldToMethodTransformer.transformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", fromMapping), ForgeApiRedirects.getMappings()))
+            .add(RelocatingRenamingTransformer.transformer(resolver.getCurrentMap(fromMapping), mappings))
+            .add(new MixinReplacementTransformer(metadata.mixinClasses()))
             .add(new RefmapRemapper(metadata.mixinConfigs(), metadata.refmaps(), remapper))
             .add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver))
             .add(new PackMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
-            .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s))
-            .build()) {
+            .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));
+        libs.forEach(builder::lib);
+        try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());
         }
 
@@ -185,8 +193,6 @@ public final class JarTransformer {
 
     private static FabricModFileMetadata readModMetadata(File input) throws IOException {
         try (JarFile jarFile = new JarFile(input)) {
-            Attributes manifestAttributes = jarFile.getManifest().getMainAttributes();
-
             ConnectorLoaderModMetadata metadata;
             Set<String> configs;
             try (InputStream ins = jarFile.getInputStream(jarFile.getEntry(ConnectorUtil.FABRIC_MOD_JSON))) {
@@ -228,6 +234,7 @@ public final class JarTransformer {
                     }
                 }
             }
+            Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
             return new FabricModFileMetadata(metadata, configs, refmaps, classes, manifestAttributes);
         }
     }
@@ -239,9 +246,9 @@ public final class JarTransformer {
     public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinClasses, Attributes manifestAttributes) {}
 
     public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
-        public FabricModPath transform() throws IOException {
+        public FabricModPath transform(List<Path> libs) throws IOException {
             Files.deleteIfExists(this.modPath.path);
-            transformJar(this.input, this.modPath.path, this.modPath.metadata());
+            transformJar(this.input, this.modPath.path, this.modPath.metadata(), libs);
             this.cacheFile.save();
             return this.modPath;
         }

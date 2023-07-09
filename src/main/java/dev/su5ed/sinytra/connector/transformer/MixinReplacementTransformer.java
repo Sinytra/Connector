@@ -28,6 +28,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.IntUnaryOperator;
+import java.util.function.Predicate;
 
 public class MixinReplacementTransformer implements Transformer {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -36,10 +38,12 @@ public class MixinReplacementTransformer implements Transformer {
     private static final String MIXIN_ANN = "Lorg/spongepowered/asm/mixin/Mixin;";
     private static final String INJECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Inject;";
     private static final String REDIRECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Redirect;";
+    private static final String OVERWRITE_ANN = "Lorg/spongepowered/asm/mixin/Overwrite;";
     private static final String MODIFY_VARIABLE_ANN = "Lorg/spongepowered/asm/mixin/injection/ModifyVariable;";
+    private static final Predicate<String> PARAM_SENSITIVE_ANNS = s -> s.equals(INJECT_ANN) || s.equals(OVERWRITE_ANN);
 
     private static final List<Replacement> ENHANCEMENTS = List.of(
-        Replacement.redirectMixinTarget(
+        Replacement.modifyTargetMethod(
             "net/minecraft/client/renderer/entity/BoatRenderer",
             "render",
             REDIRECT_ANN,
@@ -56,13 +60,35 @@ public class MixinReplacementTransformer implements Transformer {
                 return list.toArray(Type[]::new);
             }
         ),
-        Replacement.redirectMixinTarget(
+        Replacement.modifyMixinMethodParams(
+            Set.of("net/minecraft/client/resources/model/MultiPartBakedModel", "net/minecraft/client/resources/model/WeightedBakedModel"),
+            "getQuads",
+            PARAM_SENSITIVE_ANNS,
+            types -> {
+                List<Type> list = new ArrayList<>(Arrays.asList(types));
+                list.add(Type.getType("Lnet/minecraftforge/client/model/data/ModelData;"));
+                list.add(Type.getType("Lnet/minecraft/client/renderer/RenderType;"));
+                return list.toArray(Type[]::new);
+            }
+        ),
+        Replacement.modifyTargetMethod(
+            "net/minecraft/client/renderer/chunk/ChunkRenderDispatcher",
+            "<init>", 
+            s -> true,
+            List.of("<init>(Lnet/minecraft/client/multiplayer/ClientLevel;Lnet/minecraft/client/renderer/LevelRenderer;Ljava/util/concurrent/Executor;ZLnet/minecraft/client/renderer/ChunkBufferBuilderPack;I)V")
+        ),
+        Replacement.changeModifiedVariableIndex(
+            "net/minecraft/client/renderer/chunk/ChunkRenderDispatcher",
+            "<init>",
+            i -> i >= 6 ? i + 1 : i
+        ),
+        Replacement.modifyTargetMethod(
             "net/minecraft/world/item/ItemStack",
             "useOnBlock",
             INJECT_ANN,
             List.of("lambda$useOn$5")
         ),
-        Replacement.retargetMixinMethod(
+        Replacement.modifyInjectionPoint(
             "net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen",
             "renderEffects",
             "Lcom/google/common/collect/Ordering;sortedCopy(Ljava/lang/Iterable;)Ljava/util/List;",
@@ -152,31 +178,64 @@ public class MixinReplacementTransformer implements Transformer {
     interface Replacement {
         boolean apply(ClassNode classNode, MixinReplacementTransformer instance);
 
-        static Replacement redirectMixinTarget(String targetClass, String mixinMethod, String annotation, List<String> replacementMethods) {
+        static Replacement modifyTargetMethod(String targetClass, String mixinMethod, String annotation, List<String> replacementMethods) {
+            return new RedirectMixin(targetClass, mixinMethod, annotation::equals, replacementMethods);
+        }
+
+        static Replacement modifyTargetMethod(String targetClass, String mixinMethod, Predicate<String> annotation, List<String> replacementMethods) {
             return new RedirectMixin(targetClass, mixinMethod, annotation, replacementMethods);
         }
 
-        static Replacement retargetMixinMethod(String targetClass, String targetMethod, String targetDesc, String annotation, String replacementTargetDesc) {
+        static Replacement modifyInjectionPoint(String targetClass, String targetMethod, String targetDesc, String annotation, String replacementTargetDesc) {
             return new RetargetMixin(targetClass, targetMethod, targetDesc, annotation, replacementTargetDesc);
         }
 
         static Replacement modifyMixinMethodParams(String targetClass, String mixinMethod, String annotation, Function<Type[], Type[]> descFunc) {
-            return new ModifyMixinMethodParams(targetClass, mixinMethod, annotation, descFunc);
+            return new ModifyMixinMethodParams(Set.of(targetClass), mixinMethod, annotation::equals, descFunc);
+        }
+
+        static Replacement modifyMixinMethodParams(Set<String> targetClasses, String mixinMethod, Predicate<String> annotation, Function<Type[], Type[]> descFunc) {
+            return new ModifyMixinMethodParams(targetClasses, mixinMethod, annotation, descFunc);
+        }
+
+        static Replacement changeModifiedVariableIndex(String targetClass, String targetMethod, IntUnaryOperator operator) {
+            return new ChangeModifiedVariableIndex(targetClass, targetMethod, operator);
+        }
+    }
+
+    public interface SimpleTargetedMethodReplacement extends TargetedMethodReplacement {
+        String targetClass();
+
+        String annotation();
+
+        @Override
+        default boolean handlesAnnotation(String desc) {
+            return desc.equals(annotation());
+        }
+
+        @Override
+        default Set<String> targetClasses() {
+            return Set.of(targetClass());
         }
     }
 
     public interface TargetedMethodReplacement extends Replacement {
-        String targetClass();
+        Set<String> targetClasses();
 
         String targetMethod();
-
-        String annotation();
 
         void apply(ClassNode node, MethodNode methodNode, List<String> targetMethods);
 
         default boolean handles(ClassNode classNode) {
-            return targetsType(classNode, targetClass());
+            for (String cls : targetClasses()) {
+                if (targetsType(classNode, cls)) {
+                    return true;
+                }
+            }
+            return false;
         }
+
+        boolean handlesAnnotation(String desc);
 
         @Override
         default boolean apply(ClassNode classNode, MixinReplacementTransformer instance) {
@@ -184,7 +243,6 @@ public class MixinReplacementTransformer implements Transformer {
                 return false;
             }
 
-            String annotationDesc = annotation();
             String targetMethod = targetMethod();
             int descIndex = targetMethod.indexOf('(');
             String wantedName = descIndex == -1 ? targetMethod : targetMethod.substring(0, descIndex);
@@ -194,14 +252,21 @@ public class MixinReplacementTransformer implements Transformer {
                 MethodNode method = classNode.methods.get(i);
                 if (method.visibleAnnotations != null) {
                     for (AnnotationNode annotation : method.visibleAnnotations) {
-                        if (annotation.desc.equals(annotationDesc)) {
-                            List<String> targetMethods = findAnnotationValue(annotation.values, "method", Function.identity());
-                            for (String target : targetMethods) {
-                                int targetDescIndex = targetMethod.indexOf('(');
-                                String targetName = targetDescIndex == -1 ? target : target.substring(0, targetDescIndex);
-                                String targetDesc = targetDescIndex == -1 ? null : target.substring(targetDescIndex);
-                                if (wantedName.equals(targetName) && (wantedDesc == null || wantedDesc.equals(targetDesc))) {
-                                    apply(classNode, method, targetMethods);
+                        if (handlesAnnotation(annotation.desc)) {
+                            if (annotation.desc.equals(OVERWRITE_ANN)) {
+                                if (wantedName.equals(method.name) && (wantedDesc == null || wantedDesc.equals(method.desc))) {
+                                    apply(classNode, method, List.of());
+                                }
+                            }
+                            else {
+                                List<String> targetMethods = findAnnotationValue(annotation.values, "method", Function.identity());
+                                for (String target : targetMethods) {
+                                    int targetDescIndex = target.indexOf('(');
+                                    String targetName = targetDescIndex == -1 ? target : target.substring(0, targetDescIndex);
+                                    String targetDesc = targetDescIndex == -1 ? null : target.substring(targetDescIndex);
+                                    if (wantedName.equals(targetName) && (wantedDesc == null || wantedDesc.equals(targetDesc))) {
+                                        apply(classNode, method, targetMethods);
+                                    }
                                 }
                             }
                         }
@@ -213,7 +278,17 @@ public class MixinReplacementTransformer implements Transformer {
         }
     }
 
-    record RedirectMixin(String targetClass, String targetMethod, String annotation, List<String> replacementMethods) implements TargetedMethodReplacement {
+    record RedirectMixin(String targetClass, String targetMethod, Predicate<String> annotation, List<String> replacementMethods) implements TargetedMethodReplacement {
+        @Override
+        public Set<String> targetClasses() {
+            return Set.of(this.targetClass);
+        }
+
+        @Override
+        public boolean handlesAnnotation(String desc) {
+            return this.annotation.test(desc);
+        }
+
         @Override
         public void apply(ClassNode node, MethodNode method, List<String> targetMethods) {
             LOGGER.info(ENHANCE, "Redirecting mixin {}.{} to {}", node.name, method.name, this.replacementMethods);
@@ -222,7 +297,7 @@ public class MixinReplacementTransformer implements Transformer {
         }
     }
 
-    public record RetargetMixin(String targetClass, String targetMethod, String targetDesc, String annotation, String replacementTargetDesc) implements TargetedMethodReplacement {
+    public record RetargetMixin(String targetClass, String targetMethod, String targetDesc, String annotation, String replacementTargetDesc) implements SimpleTargetedMethodReplacement {
         @Override
         public void apply(ClassNode node, MethodNode methodNode, List<String> targetMethods) {
             String annotationDesc = annotation();
@@ -239,7 +314,31 @@ public class MixinReplacementTransformer implements Transformer {
         }
     }
 
-    public record ModifyMixinMethodParams(String targetClass, String targetMethod, String annotation, Function<Type[], Type[]> descFunc) implements TargetedMethodReplacement {
+    public record ChangeModifiedVariableIndex(String targetClass, String targetMethod, IntUnaryOperator operator) implements SimpleTargetedMethodReplacement {
+        @Override
+        public String annotation() {
+            return MODIFY_VARIABLE_ANN;
+        }
+
+        @Override
+        public void apply(ClassNode node, MethodNode methodNode, List<String> targetMethods) {
+            for (AnnotationNode annotation : methodNode.visibleAnnotations) {
+                if (annotation.desc.equals(annotation())) {
+                    int index = findAnnotationValue(annotation.values, "index", Function.identity());
+                    if (index > -1) {
+                        int newIndex = operator.applyAsInt(index);
+                        setAnnotationValue(annotation.values, "index", newIndex);
+                    }
+                }
+            }
+        }
+    } 
+
+    public record ModifyMixinMethodParams(Set<String> targetClasses, String targetMethod, Predicate<String> annotation, Function<Type[], Type[]> descFunc) implements TargetedMethodReplacement {
+        @Override
+        public boolean handlesAnnotation(String desc) {
+            return this.annotation.test(desc);
+        }
 
         @Override
         public void apply(ClassNode node, MethodNode methodNode, List<String> targetMethods) {

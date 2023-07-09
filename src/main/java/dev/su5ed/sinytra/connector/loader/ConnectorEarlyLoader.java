@@ -8,19 +8,12 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
-import net.fabricmc.loader.api.metadata.ModMetadata;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
-import net.fabricmc.loader.impl.ModContainerImpl;
-import net.fabricmc.loader.impl.discovery.BuiltinMetadataWrapper;
 import net.fabricmc.loader.impl.entrypoint.EntrypointUtils;
-import net.fabricmc.loader.impl.metadata.BuiltinModMetadata;
-import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.loading.FMLEnvironment;
-import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.loading.moddiscovery.ModInfo;
-import net.minecraftforge.forgespi.language.IModInfo;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -59,13 +52,14 @@ public class ConnectorEarlyLoader {
         LOGGER.debug("ConnectorEarlyLoader starting");
         try {
             // Find all connector loader mods
-            List<ModInfo> mods = LoadingModList.get().getMods().stream()
-                .filter(modInfo -> modInfo.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE)))
-                .peek(modInfo -> CONNECTOR_MODS.add(modInfo.getModId()))
-                .toList();
+            List<ModInfo> mods = LoadingModList.get().getMods();
+            for (ModInfo mod : mods) {
+                if (mod.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE))) {
+                    CONNECTOR_MODS.add(mod.getModId());
+                }
+            }
             // Propagate mods to fabric
             FabricLoaderImpl.INSTANCE.addFmlMods(mods);
-            FabricLoaderImpl.INSTANCE.addMods(List.of(createMinecraftMod()));
             FabricLoaderImpl.INSTANCE.setup();
             // Call prelaunch entrypoints
             EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
@@ -108,14 +102,5 @@ public class ConnectorEarlyLoader {
             LOGGER.error("Encountered error during early mod loading", t);
             loadingException = t;
         }
-    }
-
-    private static ModContainerImpl createMinecraftMod() {
-        IModInfo modInfo = LoadingModList.get().getModFileById("minecraft").getMods().get(0);
-        ModMetadata metadata = new BuiltinModMetadata.Builder("minecraft", FMLLoader.versionInfo().mcVersion())
-            .setName("Minecraft")
-            .build();
-        LoaderModMetadata loaderMetadata = new BuiltinMetadataWrapper(metadata);
-        return new ModContainerImpl(modInfo, loaderMetadata);
     }
 }

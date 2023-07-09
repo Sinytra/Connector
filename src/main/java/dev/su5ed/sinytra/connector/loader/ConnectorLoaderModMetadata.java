@@ -12,9 +12,11 @@ import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public class ConnectorLoaderModMetadata implements LoaderModMetadata {
     private final LoaderModMetadata wrapped;
@@ -110,7 +112,9 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
 
     @Override
     public Collection<String> getProvides() {
-        return this.wrapped.getProvides();
+        Set<String> provides = new HashSet<>(this.wrapped.getProvides());
+        provides.add(this.wrapped.getId()); // Add original modid to mod lookup
+        return provides;
     }
 
     @Override

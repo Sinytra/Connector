@@ -17,7 +17,9 @@ import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.fabricmc.loader.impl.metadata.ModMetadataParser;
 import net.fabricmc.loader.impl.metadata.ParseMetadataException;
 import net.fabricmc.loader.impl.metadata.VersionOverrides;
+import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Renamer;
+import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLLoader;
 import org.slf4j.Logger;
@@ -58,6 +60,7 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 public final class JarTransformer {
     private static final String MAPPED_SUFFIX = "_mapped_" + FMLEnvironment.naming + "_" + FMLLoader.versionInfo().mcVersion();
     private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
+    private static final String SOURCE_NAMESPACE = "intermediary";
     // Increment to invalidate cache
     private static final int CACHE_VERSION = 1;
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -67,7 +70,7 @@ public final class JarTransformer {
     // Filter out non-obfuscated method names used in mapping namespaces as those don't need
     // to be remapped and will only cause issues with our barebones find/replace remapper
     private static final Map<String, Collection<String>> MAPPING_PREFIXES = Map.of(
-        "intermediary", Set.of("net/minecraft/class_", "field_", "method_")
+        "intermediary", Set.of("net/minecraft/class_", "field_", "method_", "comp_")
     );
     private static final List<Path> RENAMER_LIBS = Stream.of(FMLLoader.getLaunchHandler().getMinecraftPaths())
         .flatMap(paths -> Stream.concat(paths.minecraftPaths().stream(), paths.otherArtifacts().stream()))
@@ -144,20 +147,19 @@ public final class JarTransformer {
 
         Stopwatch stopwatch = Stopwatch.createStarted();
         ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
-
+        ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
+        Transformer remappingTransformer = RelocatingRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
         List<Future<FabricModPath>> futures = paths.stream()
-            .map(jar -> executorService.submit(() -> jar.transform(libs)))
+            .map(jar -> executorService.submit(() -> jar.transform(remappingTransformer, classProvider)))
             .toList();
-
         executorService.shutdown();
         try {
-            if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
+            if (!executorService.awaitTermination(20, TimeUnit.SECONDS)) {
                 throw new RuntimeException("Timed out waiting for jar remap");
             }
         } catch (InterruptedException ignored) {
             // Dunny what I should do with this
         }
-
         List<FabricModPath> results = futures.stream()
             .map(rethrowFunction(Future::get))
             .toList();
@@ -166,23 +168,24 @@ public final class JarTransformer {
         return results;
     }
 
-    private static void transformJar(File input, Path output, FabricModFileMetadata metadata, List<Path> libs) throws IOException {
+    private static void transformJar(File input, Path output, FabricModFileMetadata metadata, Transformer remappingTransformer, ClassProvider classProvider) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
-        MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
-        String fromMapping = Optional.ofNullable(metadata.manifestAttributes().getValue(FABRIC_MAPPING_NAMESPACE)).orElse("intermediary");
-        Map<String, String> mappings = getFlatMapping(fromMapping);
+        String jarMapping = metadata.manifestAttributes().getValue(FABRIC_MAPPING_NAMESPACE);
+        if (jarMapping != null && !jarMapping.equals(SOURCE_NAMESPACE)) {
+            LOGGER.error("Found transformable jar with unsupported mapping {}, currently only {} is supported", jarMapping, SOURCE_NAMESPACE);
+        }
 
+        MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         Renamer.Builder builder = Renamer.builder()
-            .add(FieldToMethodTransformer.transformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", fromMapping), ForgeApiRedirects.getMappings()))
-            .add(RelocatingRenamingTransformer.transformer(resolver.getCurrentMap(fromMapping), mappings))
+            .add(FieldToMethodTransformer.create(classProvider, s -> {}, metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE), ForgeApiRedirects.getMappings()))
+            .add(remappingTransformer)
             .add(new MixinReplacementTransformer(metadata.mixinClasses()))
             .add(new RefmapRemapper(metadata.mixinConfigs(), metadata.refmaps(), remapper))
             .add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver))
             .add(new PackMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));
-        libs.forEach(builder::lib);
         try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());
         }
@@ -246,9 +249,9 @@ public final class JarTransformer {
     public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinClasses, Attributes manifestAttributes) {}
 
     public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
-        public FabricModPath transform(List<Path> libs) throws IOException {
+        public FabricModPath transform(Transformer remappingTransformer, ClassProvider classProvider) throws IOException {
             Files.deleteIfExists(this.modPath.path);
-            transformJar(this.input, this.modPath.path, this.modPath.metadata(), libs);
+            transformJar(this.input, this.modPath.path, this.modPath.metadata(), remappingTransformer, classProvider);
             this.cacheFile.save();
             return this.modPath;
         }

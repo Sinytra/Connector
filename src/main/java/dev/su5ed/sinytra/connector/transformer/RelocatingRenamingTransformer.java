@@ -24,18 +24,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public final class RelocatingRenamingTransformer {
-    private static final Pattern YARN_FIELD_PATERN = Pattern.compile("^field_\\d{5}$");
     private static final Map<String, String> RELOCATE = Map.of("org/spongepowered/", "org/spongepowered/reloc/");
 
-    public static Transformer.Factory transformer(IMappingFile mappingFile, Map<String, String> flatMappings) {
-        return ctx -> {
-            RenamingClassProvider reverseProvider = new RenamingClassProvider(ctx.getClassProvider(), mappingFile, mappingFile.reverse(), ctx.getLog());
-            return new RenamingTransformer(new RelocatingEnhancedRemapper(reverseProvider, mappingFile, flatMappings, ctx.getLog(), RELOCATE), false);
-        };
+    public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, Map<String, String> flatMappings) {
+        RenamingClassProvider reverseProvider = new RenamingClassProvider(classProvider, mappingFile, mappingFile.reverse(), log);
+        return new RenamingTransformer(new RelocatingEnhancedRemapper(reverseProvider, mappingFile, flatMappings, log, RELOCATE), false);
     }
 
     private static final class RenamingClassProvider implements ClassProvider {
@@ -59,11 +55,11 @@ public final class RelocatingRenamingTransformer {
 
         @Override
         public Optional<byte[]> getClassBytes(String cls) {
-            return this.upstream.getClassBytes(cls);
+            return this.upstream.getClassBytes(this.forwardMapping.remapClass(cls));
         }
 
         private Optional<IClassInfo> computeClassInfo(String cls) {
-            return getClassBytes(this.forwardMapping.remapClass(cls)).map(data -> {
+            return getClassBytes(cls).map(data -> {
                 ClassReader reader = new ClassReader(data);
                 ClassWriter writer = new ClassWriter(0);
                 ClassRemapper remapper = new EnhancedClassRemapper(writer, this.remapper, null);
@@ -84,7 +80,7 @@ public final class RelocatingRenamingTransformer {
 
     private static class MixinTargetAnalyzer extends ClassVisitor {
         private final Set<String> targets = new HashSet<>();
-        
+
         public MixinTargetAnalyzer(int api, ClassVisitor classVisitor) {
             super(api, classVisitor);
         }
@@ -98,10 +94,10 @@ public final class RelocatingRenamingTransformer {
     private static class MixinAnnotationVisitor extends AnnotationVisitor {
         private final Set<String> targets;
         private final String attributeName;
-        
+
         public MixinAnnotationVisitor(int api, AnnotationVisitor annotationVisitor, Set<String> targets, String attributeName) {
             super(api, annotationVisitor);
-            
+
             this.targets = targets;
             this.attributeName = attributeName;
         }
@@ -132,6 +128,10 @@ public final class RelocatingRenamingTransformer {
 
         @Override
         public String map(final String key) {
+            String fastMapped = this.flatMappings.get(key);
+            if (fastMapped != null) {
+                return fastMapped;
+            }
             String remapped = super.map(key);
             if (key.equals(remapped)) {
                 for (Map.Entry<String, String> entry : this.relocation.entrySet()) {
@@ -146,6 +146,10 @@ public final class RelocatingRenamingTransformer {
 
         @Override
         public String mapFieldName(String owner, String name, String descriptor) {
+            String fastMapped = this.flatMappings.get(name);
+            if (fastMapped != null) {
+                return fastMapped;
+            }
             return this.classProvider.getClass(owner)
                 .map(cls -> {
                     if (cls instanceof MixinClassInfo mcls) {
@@ -161,7 +165,22 @@ public final class RelocatingRenamingTransformer {
                 .orElseGet(() -> super.mapFieldName(owner, name, descriptor));
         }
 
-        // An attempt at remapping reflection calls
+        @Override
+        public String mapMethodName(String owner, String name, String descriptor) {
+            String fastMapped = this.flatMappings.get(name);
+            if (fastMapped != null) {
+                return fastMapped;
+            }
+            return super.mapMethodName(owner, name, descriptor);
+        }
+
+        @Override
+        public String mapPackageName(String name) {
+            // We don't need to map these
+            return name;
+        }
+
+        // An attempt at remapping reflection calls and mixin method names
         @Override
         public Object mapValue(Object value) {
             if (value instanceof String str) {
@@ -171,8 +190,9 @@ public final class RelocatingRenamingTransformer {
                         return str.replace(pKey, entry.getValue().replace('/', '.'));
                     }
                 }
-                if (YARN_FIELD_PATERN.matcher(str).matches()) {
-                    return this.flatMappings.getOrDefault(str, str);
+                String mapped = this.flatMappings.get(str);
+                if (mapped != null) {
+                    return mapped;
                 }
             }
             return super.mapValue(value);

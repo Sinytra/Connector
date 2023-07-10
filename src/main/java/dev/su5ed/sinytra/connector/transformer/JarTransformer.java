@@ -22,6 +22,8 @@ import net.minecraftforge.fart.api.Renamer;
 import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLLoader;
+import net.minecraftforge.fml.loading.progress.ProgressMeter;
+import net.minecraftforge.fml.loading.progress.StartupNotificationManager;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -146,11 +148,16 @@ public final class JarTransformer {
         }
 
         Stopwatch stopwatch = Stopwatch.createStarted();
+        ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Transforming Jars", paths.size());
         ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
         ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
         Transformer remappingTransformer = RelocatingRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
         List<Future<FabricModPath>> futures = paths.stream()
-            .map(jar -> executorService.submit(() -> jar.transform(remappingTransformer, classProvider)))
+            .map(jar -> executorService.submit(() -> {
+                FabricModPath path = jar.transform(remappingTransformer, classProvider);
+                progress.increment();
+                return path;
+            }))
             .toList();
         executorService.shutdown();
         try {
@@ -163,6 +170,7 @@ public final class JarTransformer {
         List<FabricModPath> results = futures.stream()
             .map(rethrowFunction(Future::get))
             .toList();
+        progress.complete();
         stopwatch.stop();
         LOGGER.debug(TRANSFORM_MARKER, "Processed all jars in {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
         return results;

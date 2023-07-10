@@ -14,6 +14,8 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.loading.moddiscovery.ModInfo;
+import net.minecraftforge.fml.loading.progress.ProgressMeter;
+import net.minecraftforge.fml.loading.progress.StartupNotificationManager;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -50,6 +52,7 @@ public class ConnectorEarlyLoader {
 
     public static void setup() {
         LOGGER.debug("ConnectorEarlyLoader starting");
+        ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Early Setup", 0);
         try {
             // Find all connector loader mods
             List<ModInfo> mods = LoadingModList.get().getMods();
@@ -67,6 +70,7 @@ public class ConnectorEarlyLoader {
             LOGGER.error("Encountered error during early mod setup", t);
             loadingException = t;
         }
+        progress.complete();
     }
 
     public static void load() {
@@ -75,6 +79,7 @@ public class ConnectorEarlyLoader {
             return;
         }
 
+        ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Loading mods", 0);
         try {
             loading = true;
 
@@ -102,5 +107,6 @@ public class ConnectorEarlyLoader {
             LOGGER.error("Encountered error during early mod loading", t);
             loadingException = t;
         }
+        progress.complete();
     }
 }

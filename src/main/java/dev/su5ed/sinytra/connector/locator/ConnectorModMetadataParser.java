@@ -62,7 +62,7 @@ public final class ConnectorModMetadataParser {
         }
 
         IConfigurable configurable = new NightConfigWrapper(config);
-        return new ModFileInfo((ModFile) modFile, configurable, List.of());
+        return new ModFileInfo((ModFile) modFile, configurable, f -> {}, List.of());
     }
 
     private ConnectorModMetadataParser() {}

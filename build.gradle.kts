@@ -82,8 +82,8 @@ val fullJar: Jar by tasks.creating(Jar::class) {
     from(zipTree(remappedDepsJar.archiveFile))
     from(languageJar)
     from(modJar)
-    manifest.attributes("Additional-Dependencies-Language" to languageJar.archiveFile.get().asFile.name)
-    manifest.attributes("Additional-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
+    manifest.attributes("Embedded-Dependencies-Language" to languageJar.archiveFile.get().asFile.name)
+    manifest.attributes("Embedded-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
 
     archiveClassifier.set("full")
 }

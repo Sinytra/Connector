@@ -18,6 +18,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * A wrapper around {@link LoaderModMetadata} allowing us to tweak certain properties
+ * to accomodate FML constraints, such as the modid and mod version.
+ */
 public class ConnectorLoaderModMetadata implements LoaderModMetadata {
     private final LoaderModMetadata wrapped;
 
@@ -32,6 +36,9 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
         return modid.replace('-', '_');
     }
 
+    /**
+     * Adjust version to accomodate Java Module System requirements
+     */
     private static String normalizeVersion(String version) {
         return version.replace("+", "");
     }

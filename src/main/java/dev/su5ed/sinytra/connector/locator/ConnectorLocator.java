@@ -86,11 +86,19 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         List<JarTransformer.FabricModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed);
         Stream<IModFile> fabricJars = moduleSafeJars.stream()
             .map(mod -> createConnectorModFile(mod, this));
-        Stream<IModFile> embeddedDeps = EmbeddedDependencies.locateAdditionalDependencies()
+        Stream<IModFile> embeddedDeps = EmbeddedDependencies.locateEmbeddedJars()
             .map(path -> createMod(path).file())
             .filter(Objects::nonNull);
 
         return Stream.concat(fabricJars, embeddedDeps).toList();
+    }
+
+    public static IModFile createConnectorModFile(JarTransformer.FabricModPath modPath, IModProvider provider) {
+        ModJarMetadata mjm = ConnectorUtil.uncheckThrowable(() -> (ModJarMetadata) MJM_INIT.invoke());
+        SecureJar modJar = SecureJar.from(Manifest::new, jar -> mjm, modPath.path());
+        IModFile mod = new ModFile(modJar, provider, modFile -> ConnectorModMetadataParser.createForgeMetadata(modFile, modPath.metadata().modMetadata()));
+        mjm.setModFile(mod);
+        return mod;
     }
 
     protected boolean locateFabricModJar(Path path) {
@@ -102,14 +110,6 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         }
         LOGGER.info(SCAN, "Fabric mod metadata not found in jar {}, ignoring", name);
         return false;
-    }
-
-    public static IModFile createConnectorModFile(JarTransformer.FabricModPath modPath, IModProvider provider) {
-        ModJarMetadata mjm = ConnectorUtil.uncheckThrowable(() -> (ModJarMetadata) MJM_INIT.invoke());
-        SecureJar modJar = SecureJar.from(Manifest::new, jar -> mjm, modPath.path());
-        IModFile mod = new ModFile(modJar, provider, modFile -> ConnectorModMetadataParser.createForgeMetadata(modFile, modPath.metadata().modMetadata()));
-        mjm.setModFile(mod);
-        return mod;
     }
 
     private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, SecureJar secureJar, Collection<NestedJarEntry> jars) {
@@ -134,6 +134,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         return uncheck(() -> JarTransformer.cacheTransformableJar(extracted.toFile()));
     }
 
+    // Removes any duplicates from located connector mods, as well as mods that are already located by FML.
     private static List<JarTransformer.TransformableJar> handleDuplicateMods(List<JarTransformer.TransformableJar> mods, Collection<String> loadedModIds) {
         Multimap<String, JarTransformer.TransformableJar> byId = HashMultimap.create();
         for (JarTransformer.TransformableJar jar : mods) {

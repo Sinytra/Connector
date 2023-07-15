@@ -27,9 +27,17 @@ public class SplitPackageMerger {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Marker MERGER = MarkerFactory.getMarker("MERGER");
 
+    /**
+     * Detect and resolve split package conflicts in jars.
+     * Supplied paths must point to valid jars paths usable by {@link SecureJar}.
+     * @param paths jar paths to process
+     * @return a list of adjusted jar paths
+     */
     public static List<FabricModPath> mergeSplitPackages(List<FabricModPath> paths) {
+        // Paths that don't contain conflicting jars
         List<FabricModPath> plainPaths = new ArrayList<>(paths);
-        List<FabricModPath> mergedPaths = new ArrayList<>();
+        // Processed paths result
+        List<FabricModPath> output = new ArrayList<>();
 
         // Package name -> list of jars that contain the package
         Map<String, List<Pair<SecureJar, FabricModPath>>> pkgSources = new HashMap<>();
@@ -41,7 +49,9 @@ public class SplitPackageMerger {
         }
 
         // Find all jars that need merging
+        // Keep track of the order jars were found in, for selecting package owners
         List<SecureJar> jarOrder = new ArrayList<>();
+        // Map of packages that need merging and their sources
         Map<String, List<Pair<SecureJar, FabricModPath>>> mergePkgs = new LinkedHashMap<>();
         AtomicInteger totalJars = new AtomicInteger(0);
         pkgSources.forEach((pkg, sources) -> {
@@ -58,9 +68,10 @@ public class SplitPackageMerger {
         });
         LOGGER.info(MERGER, "Found {} split packages across {} jars", mergePkgs.keySet().size(), totalJars.get());
 
-        // Name -> Jar filter info
+        // Name -> Jar merge info
         Map<String, JarMergeInfo> jarMap = new HashMap<>();
         mergePkgs.forEach((pkg, sources) -> {
+            // Sort sources in the order jars were discovered
             sources.sort(Comparator.comparingInt(p -> jarOrder.indexOf(p.getFirst())));
 
             Pair<SecureJar, FabricModPath> pair = sources.get(0);
@@ -70,23 +81,33 @@ public class SplitPackageMerger {
             analyzeJar(jarMap, owner, sources.subList(1, sources.size()), pkg);
         });
 
+        // Process gathered merge information
         jarMap.values().forEach(info -> {
             Set<Path> additionalPaths = info.additionalPaths();
             Set<String> excludedPackages = info.excludedPackages();
             BiPredicate<String, String> filter = !excludedPackages.isEmpty() ? new PackageTracker(Set.copyOf(excludedPackages)) : null;
             SecureJar merged = SecureJar.from(filter, Stream.concat(Stream.of(info.jar().getPrimaryPath()), additionalPaths.stream()).toArray(Path[]::new));
-            mergedPaths.add(new FabricModPath(merged.getRootPath(), info.metadata));
+            output.add(new FabricModPath(merged.getRootPath(), info.metadata));
         });
 
-        mergedPaths.addAll(plainPaths);
-        if (paths.size() != mergedPaths.size()) {
+        // Add unprocessed paths to output
+        output.addAll(plainPaths);
+        if (paths.size() != output.size()) {
             LOGGER.error("Expected {} paths, got {}", paths.size(), plainPaths.size());
             throw new IllegalStateException("Path size disprenancy detected!");
         }
 
-        return mergedPaths;
+        return output;
     }
 
+    /**
+     * Determines which packages to remove from / add to a jar given a package owner and other package sources.
+     *
+     * @param swap   jar merge info map to write information to, must be mutable
+     * @param master the package owner jar
+     * @param others the remaining package sources
+     * @param pkg    the package to look filter out
+     */
     private static void analyzeJar(Map<String, JarMergeInfo> swap, JarMergeInfo master, List<Pair<SecureJar, FabricModPath>> others, String pkg) {
         List<Path> additionalPaths = others.stream()
             .flatMap(pair -> {
@@ -101,13 +122,30 @@ public class SplitPackageMerger {
         master.additionalPaths().addAll(additionalPaths);
     }
 
+    /**
+     * {@return a filter that only matches files in a single java package and in the root of the jar}
+     *
+     * @param pkg the package to match
+     */
     private static BiPredicate<String, String> singlePackageFilter(String pkg) {
         return (path, basePath) -> {
             int idx = path.lastIndexOf('/');
-            return path.equals("/") || idx == path.length() - 1 || idx > -1 && pkg.equals(path.substring(0, idx).replace('/', '.'));
+            // Match any resource in the jar root
+            return path.equals("/")
+                // Match the package folder itself
+                || idx == path.length() - 1
+                // Match any file inside the package
+                || idx > -1 && pkg.equals(path.substring(0, idx).replace('/', '.'));
         };
     }
 
+    /**
+     * Keeps track of pending package merging modifications that should be done to a jar.
+     * @param jar the jar containing the package
+     * @param metadata fabric mod metadata of the jar's mod
+     * @param additionalPaths additional paths to include in the jar
+     * @param excludedPackages packages to exlude from the jar
+     */
     private record JarMergeInfo(SecureJar jar, JarTransformer.FabricModFileMetadata metadata, Set<Path> additionalPaths, Set<String> excludedPackages) {
         public JarMergeInfo(SecureJar jar, JarTransformer.FabricModFileMetadata metadata) {
             this(jar, metadata, new HashSet<>(), new HashSet<>());

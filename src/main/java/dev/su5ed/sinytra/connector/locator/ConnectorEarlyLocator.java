@@ -1,10 +1,13 @@
 package dev.su5ed.sinytra.connector.locator;
 
+import com.mojang.logging.LogUtils;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.moddiscovery.ModDiscoverer;
 import net.minecraftforge.forgespi.locating.IDependencyLocator;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
+import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -14,8 +17,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+/**
+ * An ugly hack to sort FML dependency providers and make sure {@link ConnectorLocator ours} comes last.
+ */
 public class ConnectorEarlyLocator implements IModLocator {
     private static final String NAME = "connector_early_locator";
+    private static final Logger LOGGER = LogUtils.getLogger();
     
     @Override
     public List<ModFileOrException> scanMods() {
@@ -27,10 +34,11 @@ public class ConnectorEarlyLocator implements IModLocator {
             Field field = ModDiscoverer.class.getDeclaredField("dependencyLocatorList");
             field.setAccessible(true);
             List<IDependencyLocator> dependencyLocatorList = (List<IDependencyLocator>) field.get(discoverer);
+            // 1 - move under; 0 - preserve original order
             dependencyLocatorList.sort(Comparator.comparingInt(loc -> loc instanceof ConnectorLocator ? 1 : 0));
         } catch (Throwable t) {
-            // TODO Set early loader exception
-            throw new RuntimeException(t);
+            LOGGER.error("Error sorting FML dependency locators", t);
+            ConnectorEarlyLoader.setLoadingException(t);
         }
         return List.of();
     }

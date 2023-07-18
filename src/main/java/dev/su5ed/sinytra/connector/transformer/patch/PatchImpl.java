@@ -19,6 +19,8 @@ import org.objectweb.asm.tree.ParameterNode;
 import org.objectweb.asm.tree.TypeAnnotationNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.slf4j.Logger;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,6 +44,7 @@ class PatchImpl implements Patch {
     private static final String MODIFY_VARIABLE_ANN = "Lorg/spongepowered/asm/mixin/injection/ModifyVariable;";
 
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Marker PATCHER = MarkerFactory.getMarker("MIXINPATCH");
 
     private final Set<String> targetClasses;
     private final Set<MethodMatcher> targetMethods;
@@ -214,7 +217,7 @@ class PatchImpl implements Patch {
         @Override
         public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues) {
             AnnotationValueHandle<String> handle = (AnnotationValueHandle<String>) Objects.requireNonNull(annotationValues.get("target"), "Missing target handle, did you specify the target descriptor?");
-            LOGGER.info("Changing mixin method target {}.{} to {}", node.name, methodNode.name, this.replacementTargetDesc);
+            LOGGER.info(PATCHER, "Changing mixin method target {}.{} to {}", node.name, methodNode.name, this.replacementTargetDesc);
             handle.set(this.replacementTargetDesc);
             return true;
         }
@@ -223,7 +226,7 @@ class PatchImpl implements Patch {
     record ModifyTargetTransform(List<String> replacementMethods) implements Transform {
         @Override
         public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues) {
-            LOGGER.info("Redirecting mixin {}.{} to {}", node.name, methodNode.name, this.replacementMethods);
+            LOGGER.info(PATCHER, "Redirecting mixin {}.{} to {}", node.name, methodNode.name, this.replacementMethods);
             if (annotation.desc.equals(OVERWRITE_ANN)) {
                 if (this.replacementMethods.size() > 1) {
                     throw new IllegalStateException("Cannot determine replacement @Overwrite method name, multiple specified: " + this.replacementMethods);
@@ -260,7 +263,7 @@ class PatchImpl implements Patch {
             Type[] newParameterTypes = list.toArray(Type[]::new);
             Type returnType = Type.getReturnType(methodNode.desc);
             String newDesc = Type.getMethodDescriptor(returnType, newParameterTypes);
-            LOGGER.info("Changing descriptor of method {}.{}{} to {}", node.name, methodNode.name, methodNode.desc, newDesc);
+            LOGGER.info(PATCHER, "Changing descriptor of method {}.{}{} to {}", node.name, methodNode.name, methodNode.desc, newDesc);
             Int2ObjectMap<Type> insertionIndices = new Int2ObjectOpenHashMap<>();
             int offset = (methodNode.access & Opcodes.ACC_STATIC) == 0 ? 1 : 0;
 

@@ -139,6 +139,7 @@ minecraft {
         val config = Action<RunConfig> {
             property("forge.logging.console.level", "debug")
             property("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE,COREMOD")
+            property("connector.logging.markers", "MIXINPATCH")
             property("mixin.debug", "true")
 //            property("connector.cache.enabled", "false")
             workingDirectory = project.file("run").canonicalPath

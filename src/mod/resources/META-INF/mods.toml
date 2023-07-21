@@ -11,6 +11,7 @@ authors="Su5eD"
 description='''
 Connector.
 '''
+displayTest = 'IGNORE_ALL_VERSION' # Connector is optional for both sides
 [[dependencies.connectormod]]
     modId="forge"
     mandatory=true

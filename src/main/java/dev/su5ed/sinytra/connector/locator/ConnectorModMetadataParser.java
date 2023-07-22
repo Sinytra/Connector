@@ -31,6 +31,7 @@ public final class ConnectorModMetadataParser {
         config.add("license", licenses.isEmpty() ? DEFAULT_LICENSE : String.join(", ", metadata.getLicense()));
 
         config.add("properties", Map.of("metadata", metadata));
+        config.add(List.of("modproperties", modid), metadata.getCustomValues());
 
         Config modListConfig = config.createSubConfig();
         modListConfig.add("modId", modid);

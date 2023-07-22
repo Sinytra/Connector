@@ -61,9 +61,14 @@ public class ConnectorEarlyLoader {
     public static Throwable getLoadingException() {
         return loadingException;
     }
-    
-    public static void setLoadingException(Throwable t) {
-        loadingException = t;
+
+    public static void addSuppressed(Throwable t) {
+        if (loadingException == null) {
+            loadingException = t;
+        }
+        else {
+            loadingException.addSuppressed(t);
+        }
     }
 
     /**
@@ -105,7 +110,7 @@ public class ConnectorEarlyLoader {
             EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
         } catch (Throwable t) {
             LOGGER.error("Encountered error during early mod setup", t);
-            loadingException = t;
+            addSuppressed(t);
         }
         progress.complete();
     }
@@ -148,7 +153,7 @@ public class ConnectorEarlyLoader {
             loading = false;
         } catch (Throwable t) {
             LOGGER.error("Encountered error during early mod loading", t);
-            loadingException = t;
+            addSuppressed(t);
         }
         progress.complete();
     }

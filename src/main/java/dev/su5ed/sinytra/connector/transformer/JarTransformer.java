@@ -8,6 +8,7 @@ import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
@@ -44,6 +45,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -56,8 +58,6 @@ import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
-
-import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 
 public final class JarTransformer {
     private static final String MAPPED_SUFFIX = "_mapped_" + FMLEnvironment.naming + "_" + FMLLoader.versionInfo().mcVersion();
@@ -168,7 +168,15 @@ public final class JarTransformer {
             // Dunny what I should do with this
         }
         List<FabricModPath> results = futures.stream()
-            .map(rethrowFunction(Future::get))
+            .map(future -> {
+                try {
+                    return future.get();
+                } catch (Throwable t) {
+                    ConnectorEarlyLoader.addSuppressed(t);
+                    return null;
+                }
+            })
+            .filter(Objects::nonNull)
             .toList();
         progress.complete();
         stopwatch.stop();
@@ -190,12 +198,17 @@ public final class JarTransformer {
             .add(remappingTransformer)
             .add(new MixinReplacementTransformer(metadata.mixinClasses()))
             .add(new RefmapRemapper(metadata.mixinConfigs(), metadata.refmaps(), remapper))
-            .add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver))
             .add(new PackMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));
+        if (!metadata.containsAT()) {
+            builder.add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver));
+        }
         try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());
+        } catch (Throwable t) {
+            LOGGER.error("Encountered error while transforming jar file {}", input.getAbsolutePath());
+            throw t;
         }
 
         stopwatch.stop();
@@ -214,6 +227,7 @@ public final class JarTransformer {
             } catch (ParseMetadataException e) {
                 throw new RuntimeException(e);
             }
+            boolean containsAT = jarFile.getEntry(AccessWidenerTransformer.AT_PATH) != null;
 
             Set<String> refmaps = new HashSet<>();
             Set<String> classes = new HashSet<>();
@@ -246,7 +260,7 @@ public final class JarTransformer {
                 }
             }
             Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
-            return new FabricModFileMetadata(metadata, configs, refmaps, classes, manifestAttributes);
+            return new FabricModFileMetadata(metadata, configs, refmaps, classes, manifestAttributes, containsAT);
         }
     }
 
@@ -254,7 +268,7 @@ public final class JarTransformer {
 
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
 
-    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinClasses, Attributes manifestAttributes) {}
+    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinClasses, Attributes manifestAttributes, boolean containsAT) {}
 
     public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
         public FabricModPath transform(Transformer remappingTransformer, ClassProvider classProvider) throws IOException {

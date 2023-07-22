@@ -44,7 +44,7 @@ public class ConnectorEarlyLocator implements IModLocator {
             dependencyLocatorList.sort(Comparator.comparingInt(loc -> loc instanceof ConnectorLocator ? 1 : 0));
         } catch (Throwable t) {
             LOGGER.error("Error sorting FML dependency locators", t);
-            ConnectorEarlyLoader.setLoadingException(t);
+            ConnectorEarlyLoader.addSuppressed(t);
         }
         injectLogMarkers();
         return List.of();

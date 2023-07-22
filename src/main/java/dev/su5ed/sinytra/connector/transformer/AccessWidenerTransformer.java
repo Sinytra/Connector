@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AccessWidenerTransformer implements Transformer {
-    private static final String AT_PATH = "META-INF/accesstransformer.cfg";
+    public static final String AT_PATH = "META-INF/accesstransformer.cfg";
 
     private final String resource;
     private final MappingResolverImpl resolver;

@@ -6,8 +6,10 @@ import org.objectweb.asm.tree.ClassNode;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
+import java.util.function.Predicate;
 
 public interface Patch {
+    Predicate<String> REDIRECT = PatchImpl.REDIRECT_ANN::equals;
 
     static Builder builder() {
         return new PatchImpl.BuilderImpl();
@@ -20,7 +22,11 @@ public interface Patch {
 
         Builder targetMethod(String... targets);
 
+        Builder targetMixinType(Predicate<String> annotationDescPredicate);
+
         Builder targetInjectionPoint(String target);
+
+        Builder targetInjectionPoint(String value, String target);
 
         Builder modifyInjectionPoint(String target);
 
@@ -29,7 +35,9 @@ public interface Patch {
         Builder modifyTarget(String... methods);
 
         Builder modifyVariableIndex(IntUnaryOperator operator);
-        
+
+        Builder disable();
+
         Patch build();
     }
 }

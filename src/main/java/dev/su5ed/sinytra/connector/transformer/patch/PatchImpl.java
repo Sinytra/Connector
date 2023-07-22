@@ -39,7 +39,7 @@ import java.util.function.Predicate;
 class PatchImpl implements Patch {
     private static final String MIXIN_ANN = "Lorg/spongepowered/asm/mixin/Mixin;";
     private static final String INJECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Inject;";
-    private static final String REDIRECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Redirect;";
+    public static final String REDIRECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Redirect;";
     private static final String OVERWRITE_ANN = "Lorg/spongepowered/asm/mixin/Overwrite;";
     private static final String MODIFY_VARIABLE_ANN = "Lorg/spongepowered/asm/mixin/injection/ModifyVariable;";
 
@@ -48,30 +48,50 @@ class PatchImpl implements Patch {
 
     private final Set<String> targetClasses;
     private final Set<MethodMatcher> targetMethods;
-    private final Set<String> targetInjectionPoints;
+    private final Set<InjectionPointMatcher> targetInjectionPoints;
+    private final Predicate<String> targetAnnotations;
     private final List<Transform> transforms;
 
-    public PatchImpl(Set<String> targetClasses, Set<MethodMatcher> targetMethods, Set<String> targetInjectionPoints, List<Transform> transforms) {
+    public PatchImpl(Set<String> targetClasses, Set<MethodMatcher> targetMethods, Set<InjectionPointMatcher> targetInjectionPoints, Predicate<String> targetAnnotations, List<Transform> transforms) {
         this.targetClasses = targetClasses;
         this.targetMethods = targetMethods;
         this.targetInjectionPoints = targetInjectionPoints;
+        this.targetAnnotations = targetAnnotations;
         this.transforms = transforms;
     }
 
     @Override
     public boolean apply(ClassNode classNode) {
         boolean applied = false;
+        PatchContext context = new PatchContext();
         if (checkClassTarget(classNode, this.targetClasses)) {
             for (MethodNode method : classNode.methods) {
-                Pair<AnnotationNode, Map<String, AnnotationValueHandle<?>>> annotationValues = checkMethodTarget(method, s -> true).orElse(null);
+                Pair<AnnotationNode, Map<String, AnnotationValueHandle<?>>> annotationValues = checkMethodTarget(method, this.targetAnnotations).orElse(null);
                 if (annotationValues != null) {
                     for (Transform transform : this.transforms) {
-                        applied |= transform.apply(classNode, method, annotationValues.getFirst(), annotationValues.getSecond());
+                        applied |= transform.apply(classNode, method, annotationValues.getFirst(), annotationValues.getSecond(), context);
                     }
                 }
             }
+            for (Runnable runnable : context.postApply) {
+                runnable.run();
+            }
         }
         return applied;
+    }
+
+    private static class PatchContext {
+        private final List<Runnable> postApply = new ArrayList<>();
+
+        public void postApply(Runnable consumer) {
+            this.postApply.add(consumer);
+        }
+    }
+
+    private record InjectionPointMatcher(@Nullable String value, String target) {
+        public boolean test(String value, String target) {
+            return this.target.equals(target) && (this.value == null || this.value.equals(value));
+        }
     }
 
     private static boolean checkClassTarget(ClassNode classNode, Set<String> targets) {
@@ -157,9 +177,14 @@ class PatchImpl implements Patch {
                 Object value = handle.get();
                 return value instanceof List<?> list ? (AnnotationNode) list.get(0) : (AnnotationNode) value;
             })
-            .flatMap(node -> PatchImpl.<String>findAnnotationValue(node.values, "target")
-                .filter(handle -> this.targetInjectionPoints.stream().anyMatch(handle.get()::equals))
-                .map(handle -> Map.of("target", handle)));
+            .flatMap(node -> {
+                String value = PatchImpl.<String>findAnnotationValue(node.values, "value").map(AnnotationValueHandle::get).orElse(null);
+                AnnotationValueHandle<String> target = PatchImpl.<String>findAnnotationValue(node.values, "target").orElse(null);
+                if (target != null && this.targetInjectionPoints.stream().anyMatch(pred -> pred.test(value, target.get()))) {
+                    return Optional.of(Map.of("target", target));
+                }
+                return Optional.empty();
+            });
     }
 
     private static <T> Optional<AnnotationValueHandle<T>> findAnnotationValue(@Nullable List<Object> values, String key) {
@@ -210,12 +235,12 @@ class PatchImpl implements Patch {
     }
 
     interface Transform {
-        boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues);
+        boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context);
     }
 
     record ModifyInjectionPointTransform(String replacementTargetDesc) implements Transform {
         @Override
-        public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues) {
+        public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
             AnnotationValueHandle<String> handle = (AnnotationValueHandle<String>) Objects.requireNonNull(annotationValues.get("target"), "Missing target handle, did you specify the target descriptor?");
             LOGGER.info(PATCHER, "Changing mixin method target {}.{} to {}", node.name, methodNode.name, this.replacementTargetDesc);
             handle.set(this.replacementTargetDesc);
@@ -225,7 +250,7 @@ class PatchImpl implements Patch {
 
     record ModifyTargetTransform(List<String> replacementMethods) implements Transform {
         @Override
-        public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues) {
+        public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
             LOGGER.info(PATCHER, "Redirecting mixin {}.{} to {}", node.name, methodNode.name, this.replacementMethods);
             if (annotation.desc.equals(OVERWRITE_ANN)) {
                 if (this.replacementMethods.size() > 1) {
@@ -243,7 +268,7 @@ class PatchImpl implements Patch {
 
     record ChangeModifiedVariableIndex(IntUnaryOperator operator) implements Transform {
         @Override
-        public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues) {
+        public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
             AnnotationValueHandle<Integer> index = PatchImpl.<Integer>findAnnotationValue(annotation.values, "index").orElseThrow();
             if (index.get() > -1) {
                 int newIndex = operator.applyAsInt(index.get());
@@ -256,7 +281,7 @@ class PatchImpl implements Patch {
 
     record ModifyMixinMethodParams(Consumer<List<Type>> operator) implements Transform {
         @Override
-        public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues) {
+        public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
             Type[] parameterTypes = Type.getArgumentTypes(methodNode.desc);
             List<Type> list = new ArrayList<>(Arrays.asList(parameterTypes));
             this.operator.accept(list);
@@ -332,10 +357,20 @@ class PatchImpl implements Patch {
         }
     }
 
+    record DisableMixins() implements Transform {
+        @Override
+        public boolean apply(ClassNode node, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
+            LOGGER.debug(PATCHER, "Removing mixin method {}.{}{}", node.name, methodNode.name, methodNode.desc);
+            context.postApply(() -> node.methods.remove(methodNode));
+            return true;
+        }
+    }
+
     static class BuilderImpl implements Builder {
         private final Set<String> targetClasses = new HashSet<>();
         private final Set<MethodMatcher> targetMethods = new HashSet<>();
-        private final Set<String> targetInjectionPoints = new HashSet<>();
+        private Predicate<String> targetAnnotations = s -> true;
+        private final Set<InjectionPointMatcher> targetInjectionPoints = new HashSet<>();
         private final List<Transform> transforms = new ArrayList<>();
 
         @Override
@@ -353,8 +388,19 @@ class PatchImpl implements Patch {
         }
 
         @Override
+        public Builder targetMixinType(Predicate<String> annotationDescPredicate) {
+            this.targetAnnotations = this.targetAnnotations.and(annotationDescPredicate);
+            return this;
+        }
+
+        @Override
         public Builder targetInjectionPoint(String target) {
-            this.targetInjectionPoints.add(target);
+            return targetInjectionPoint(null, target);
+        }
+
+        @Override
+        public Builder targetInjectionPoint(String value, String target) {
+            this.targetInjectionPoints.add(new InjectionPointMatcher(value, target));
             return this;
         }
 
@@ -383,11 +429,18 @@ class PatchImpl implements Patch {
         }
 
         @Override
+        public Builder disable() {
+            this.transforms.add(new DisableMixins());
+            return this;
+        }
+
+        @Override
         public Patch build() {
             return new PatchImpl(
                 Collections.unmodifiableSet(this.targetClasses),
                 Collections.unmodifiableSet(this.targetMethods),
                 Collections.unmodifiableSet(this.targetInjectionPoints),
+                this.targetAnnotations,
                 Collections.unmodifiableList(this.transforms)
             );
         }

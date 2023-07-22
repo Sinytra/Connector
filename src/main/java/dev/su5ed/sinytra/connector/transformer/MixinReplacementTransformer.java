@@ -56,6 +56,15 @@ public class MixinReplacementTransformer implements Transformer {
             .modifyTarget("removeBlock")
             .modifyParams(params -> params.add(1, Type.BOOLEAN_TYPE))
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
+            .build(),
+        // Disable potential duplicate attempts at making shaders IDs namespace aware - forge already does this for us.
+        // Attempts at doing it again will fail.
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/EffectInstance")
+            .targetMethod("<init>", "loadEffect")
+            .targetInjectionPoint("NEW", "net/minecraft/util/Identifier")
+            .targetMixinType(Patch.REDIRECT)
+            .disable()
             .build()
     );
 

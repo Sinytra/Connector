@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/Sinytra/ForgifiedFabricAPI/discussions
+    about: Please look here for frequently asked questions and questions on how to use Forgified Fabric API.

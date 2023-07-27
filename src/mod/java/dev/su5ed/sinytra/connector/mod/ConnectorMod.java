@@ -1,6 +1,7 @@
 package dev.su5ed.sinytra.connector.mod;
 
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
@@ -17,8 +18,13 @@ public class ConnectorMod {
         }
 
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
-        if (FMLLoader.getDist().isClient() && ModList.get().isLoaded("fabric_rendering_fluids_v1")) {
+        ModList modList = ModList.get();
+        if (FMLLoader.getDist().isClient() && modList.isLoaded("fabric_rendering_fluids_v1")) {
             bus.addListener(FluidHandlerCompat::onClientSetup);
+        }
+
+        if (modList.isLoaded("fabric_object_builder_api_v1")) {
+            bus.addListener(EventPriority.HIGHEST, LateEntityAttributeRegistry::onEntityAttributesCreate);
         }
     }
 }

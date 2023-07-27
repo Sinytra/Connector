@@ -77,6 +77,7 @@ public class ConnectorEarlyLocator implements IModLocator {
 
         // Add a marker filter to the logger's configuration
         config.addFilter(MarkerFilter.createFilter("MIXINPATCH", parseLogMarker("connector.logging.marker.mixinpatch"), Filter.Result.NEUTRAL));
+        config.addFilter(MarkerFilter.createFilter("MERGER", parseLogMarker("connector.logging.marker.merger"), Filter.Result.NEUTRAL));
 
         // Reconfigure the logger with the updated configuration
         logger.getContext().updateLoggers();

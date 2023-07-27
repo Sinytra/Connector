@@ -56,7 +56,7 @@ public class SplitPackageMerger {
         AtomicInteger totalJars = new AtomicInteger(0);
         pkgSources.forEach((pkg, sources) -> {
             if (sources.size() > 1) {
-                LOGGER.info(MERGER, "Found split package {} in jars {}", pkg, sources.stream().map(info -> info.getFirst().name()).collect(Collectors.joining(",")));
+                LOGGER.debug(MERGER, "Found split package {} in jars {}", pkg, sources.stream().map(info -> info.getFirst().name()).collect(Collectors.joining(",")));
                 sources.forEach(source -> {
                     if (plainPaths.remove(source.getSecond())) {
                         totalJars.getAndIncrement();
@@ -66,7 +66,7 @@ public class SplitPackageMerger {
                 });
             }
         });
-        LOGGER.info(MERGER, "Found {} split packages across {} jars", mergePkgs.keySet().size(), totalJars.get());
+        LOGGER.debug(MERGER, "Found {} split packages across {} jars", mergePkgs.keySet().size(), totalJars.get());
 
         // Name -> Jar merge info
         Map<String, JarMergeInfo> jarMap = new HashMap<>();

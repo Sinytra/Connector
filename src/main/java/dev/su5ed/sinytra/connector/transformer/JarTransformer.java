@@ -196,7 +196,7 @@ public final class JarTransformer {
         Renamer.Builder builder = Renamer.builder()
             .add(FieldToMethodTransformer.create(classProvider, s -> {}, metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE), ForgeApiRedirects.getMappings()))
             .add(remappingTransformer)
-            .add(new MixinReplacementTransformer(metadata.mixinClasses()))
+            .add(new MixinPatchTransformer(metadata.mixinClasses()))
             .add(new RefmapRemapper(metadata.mixinConfigs(), metadata.refmaps(), remapper))
             .add(new PackMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
@@ -207,7 +207,7 @@ public final class JarTransformer {
         try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());
         } catch (Throwable t) {
-            LOGGER.error("Encountered error while transforming jar file {}", input.getAbsolutePath());
+            LOGGER.error("Encountered error while transforming jar file " + input.getAbsolutePath(), t);
             throw t;
         }
 

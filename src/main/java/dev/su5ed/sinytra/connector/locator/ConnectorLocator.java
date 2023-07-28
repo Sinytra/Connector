@@ -5,6 +5,7 @@ import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.sinytra.connector.transformer.JarTransformer;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
@@ -14,6 +15,7 @@ import net.minecraftforge.fml.loading.StringUtils;
 import net.minecraftforge.fml.loading.moddiscovery.AbstractJarFileModProvider;
 import net.minecraftforge.fml.loading.moddiscovery.ModFile;
 import net.minecraftforge.fml.loading.moddiscovery.ModJarMetadata;
+import net.minecraftforge.fml.loading.progress.StartupNotificationManager;
 import net.minecraftforge.forgespi.language.IModInfo;
 import net.minecraftforge.forgespi.locating.IDependencyLocator;
 import net.minecraftforge.forgespi.locating.IModFile;
@@ -90,8 +92,17 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(allJars, renameLibs);
         // Deal with split packages (thanks modules)
         List<JarTransformer.FabricModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed);
-        Stream<IModFile> fabricJars = moduleSafeJars.stream()
-            .map(mod -> createConnectorModFile(mod, this));
+        Stream<IModFile> fabricJars;
+        // Handle jar transformation errors
+        if (ConnectorEarlyLoader.getLoadingException() != null) {
+            StartupNotificationManager.addModMessage("JAR TRANSFORMATION ERROR");
+            LOGGER.error("Cancelling Connector jar discovery due to previous error", ConnectorEarlyLoader.getLoadingException());
+            fabricJars = Stream.empty();
+        }
+        else {
+            fabricJars = moduleSafeJars.stream()
+                .map(mod -> createConnectorModFile(mod, this));
+        }
         Stream<IModFile> embeddedDeps = EmbeddedDependencies.locateEmbeddedJars()
             .map(path -> createMod(path).file())
             .filter(Objects::nonNull);

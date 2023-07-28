@@ -91,7 +91,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         // Run jar transformations (or get existing outputs from cache)
         List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(allJars, renameLibs);
         // Deal with split packages (thanks modules)
-        List<JarTransformer.FabricModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed);
+        List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed, loadedMods);
         Stream<IModFile> fabricJars;
         // Handle jar transformation errors
         if (ConnectorEarlyLoader.getLoadingException() != null) {
@@ -110,9 +110,9 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         return Stream.concat(fabricJars, embeddedDeps).toList();
     }
 
-    public static IModFile createConnectorModFile(JarTransformer.FabricModPath modPath, IModProvider provider) {
+    public static IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath, IModProvider provider) {
         ModJarMetadata mjm = ConnectorUtil.uncheckThrowable(() -> (ModJarMetadata) MJM_INIT.invoke());
-        SecureJar modJar = SecureJar.from(Manifest::new, jar -> mjm, modPath.path());
+        SecureJar modJar = SecureJar.from(Manifest::new, jar -> mjm, modPath.filter(), modPath.paths());
         IModFile mod = new ModFile(modJar, provider, modFile -> ConnectorModMetadataParser.createForgeMetadata(modFile, modPath.metadata().modMetadata()));
         mjm.setModFile(mod);
         return mod;

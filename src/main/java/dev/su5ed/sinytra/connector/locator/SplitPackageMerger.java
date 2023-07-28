@@ -5,6 +5,8 @@ import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.sinytra.connector.transformer.JarTransformer;
 import dev.su5ed.sinytra.connector.transformer.JarTransformer.FabricModPath;
+import net.minecraftforge.forgespi.locating.IModFile;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -33,11 +35,17 @@ public class SplitPackageMerger {
      * @param paths jar paths to process
      * @return a list of adjusted jar paths
      */
-    public static List<FabricModPath> mergeSplitPackages(List<FabricModPath> paths) {
+    public static List<FilteredModPath> mergeSplitPackages(List<FabricModPath> paths, Iterable<IModFile> existing) {
+        // Find all existing packages
+        Set<String> existingPackages = new HashSet<>();
+        for (IModFile modFile : existing) {
+            existingPackages.addAll(modFile.getSecureJar().getPackages());
+        }
+
         // Paths that don't contain conflicting jars
         List<FabricModPath> plainPaths = new ArrayList<>(paths);
         // Processed paths result
-        List<FabricModPath> output = new ArrayList<>();
+        List<FilteredModPath> output = new ArrayList<>();
 
         // Package name -> list of jars that contain the package
         Map<String, List<Pair<SecureJar, FabricModPath>>> pkgSources = new HashMap<>();
@@ -81,17 +89,34 @@ public class SplitPackageMerger {
             analyzeJar(jarMap, owner, sources.subList(1, sources.size()), pkg);
         });
 
+        // Remove existing classpath packages
+        for (String pkg : existingPackages) {
+            List<Pair<SecureJar, FabricModPath>> list = pkgSources.get(pkg);
+            if (list != null) {
+                for (Pair<SecureJar, FabricModPath> pair : list) {
+                    SecureJar jar = pair.getFirst();
+                    FabricModPath modPath = pair.getSecond();
+                    plainPaths.remove(modPath);
+                    JarMergeInfo info = jarMap.computeIfAbsent(jar.name(), str -> new JarMergeInfo(jar, modPath.metadata()));
+                    LOGGER.debug(MERGER, "Excluding existing package {} from jar {}", pkg, jar.name());
+                    info.excludedPackages().add(pkg);
+                }
+            }
+        }
+
         // Process gathered merge information
         jarMap.values().forEach(info -> {
             Set<Path> additionalPaths = info.additionalPaths();
             Set<String> excludedPackages = info.excludedPackages();
             BiPredicate<String, String> filter = !excludedPackages.isEmpty() ? new PackageTracker(Set.copyOf(excludedPackages)) : null;
-            SecureJar merged = SecureJar.from(filter, Stream.concat(Stream.of(info.jar().getPrimaryPath()), additionalPaths.stream()).toArray(Path[]::new));
-            output.add(new FabricModPath(merged.getRootPath(), info.metadata));
+            Path[] jarPaths = Stream.concat(Stream.of(info.jar().getPrimaryPath()), additionalPaths.stream()).toArray(Path[]::new);
+            output.add(new FilteredModPath(jarPaths, filter, info.metadata));
         });
 
         // Add unprocessed paths to output
-        output.addAll(plainPaths);
+        for (FabricModPath modPath : plainPaths) {
+            output.add(new FilteredModPath(new Path[] { modPath.path() }, null, modPath.metadata()));
+        }
         if (paths.size() != output.size()) {
             LOGGER.error("Expected {} paths, got {}", paths.size(), plainPaths.size());
             throw new IllegalStateException("Path size disprenancy detected!");
@@ -151,4 +176,6 @@ public class SplitPackageMerger {
             this(jar, metadata, new HashSet<>(), new HashSet<>());
         }
     }
+
+    record FilteredModPath(Path[] paths, @Nullable BiPredicate<String, String> filter, JarTransformer.FabricModFileMetadata metadata) {}
 }

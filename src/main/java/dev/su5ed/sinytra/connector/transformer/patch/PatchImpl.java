@@ -42,7 +42,7 @@ class PatchImpl implements Patch {
     static final String INJECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Inject;";
     static final String REDIRECT_ANN = "Lorg/spongepowered/asm/mixin/injection/Redirect;";
     private static final String OVERWRITE_ANN = "Lorg/spongepowered/asm/mixin/Overwrite;";
-    private static final String MODIFY_VARIABLE_ANN = "Lorg/spongepowered/asm/mixin/injection/ModifyVariable;";
+    static final String MODIFY_VARIABLE_ANN = "Lorg/spongepowered/asm/mixin/injection/ModifyVariable;";
     static final String MODIFY_ARG_ANN = "Lorg/spongepowered/asm/mixin/injection/ModifyArg;";
     // TODO why did I put this here? :thinkies:
     static final String ACCESSOR_ANN = "Lorg/spongepowered/asm/mixin/gen/Accessor;";
@@ -255,19 +255,26 @@ class PatchImpl implements Patch {
     record ChangeModifiedVariableIndex(IntUnaryOperator operator) implements MethodTransform {
         @Override
         public boolean apply(ClassNode classNode, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
-            AnnotationValueHandle<Integer> index = PatchImpl.<Integer>findAnnotationValue(annotation.values, "index").orElseThrow();
-            if (index.get() > -1) {
-                int newIndex = operator.applyAsInt(index.get());
-                index.set(newIndex);
-                return true;
-            }
-            return false;
+            return PatchImpl.<Integer>findAnnotationValue(annotation.values, "index")
+                .filter(index -> index.get() > -1)
+                .map(index -> {
+                    int newIndex = operator.applyAsInt(index.get());
+                    index.set(newIndex);
+                    return true;
+                })
+                .orElse(false);
         }
     }
 
     record ModifyMixinMethodParams(Consumer<List<Type>> operator, @Nullable LVTFixer lvtFixer) implements MethodTransform {
+        private static final Set<String> ACCEPTED_ANNOTATIONS = Set.of(INJECT_ANN, MODIFY_ARG_ANN, MODIFY_VARIABLE_ANN);
+
         @Override
         public boolean apply(ClassNode classNode, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
+            if (!ACCEPTED_ANNOTATIONS.contains(annotation.desc)) {
+                return false;
+            }
+
             Type[] parameterTypes = Type.getArgumentTypes(methodNode.desc);
             List<Type> list = new ArrayList<>(Arrays.asList(parameterTypes));
             this.operator.accept(list);
@@ -365,7 +372,7 @@ class PatchImpl implements Patch {
 
     private static class DisableMixins implements MethodTransform {
         public static final MethodTransform INSTANCE = new DisableMixins();
-        
+
         @Override
         public boolean apply(ClassNode classNode, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
             LOGGER.debug(PATCHER, "Removing mixin method {}.{}{}", classNode.name, methodNode.name, methodNode.desc);

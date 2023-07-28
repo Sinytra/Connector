@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SrgRemappingReferenceMapper {
-    private static final Pattern METHOD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-zA-Z0-9_]+|<[a-z0-9_]+>)(?<desc>\\((?:\\[?[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$");
+    private static final Pattern METHOD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-zA-Z0-9_]+|<[a-z0-9_]+>)?(?<desc>\\((?:\\[?[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$");
     private static final Pattern FIELD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-zA-Z0-9_]+):(?<desc>\\[?[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)$");
 
     private final IMappingFile mappingFile;
@@ -69,8 +69,8 @@ public class SrgRemappingReferenceMapper {
         String owner = matcher.group("owner");
         String name = matcher.group("name");
         String desc = matcher.group("desc");
-        T node = nodeFunction.apply(name, desc);
-        String mappedName = node != null ? node.getMapped() : name;
+        T node = name != null ? nodeFunction.apply(name, desc) : null;
+        String mappedName = node != null ? node.getMapped() : name != null ? name : "";
 
         String mappedOwner = owner != null ? this.mappingFile.remapDescriptor(owner) : "";
         return mappedOwner + mappedName + separator + this.mappingFile.remapDescriptor(desc);

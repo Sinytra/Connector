@@ -149,6 +149,10 @@ class PatchImpl implements Patch {
             return PatchImpl.<List<String>>findAnnotationValue(annotation.values, "method")
                 .flatMap(value -> {
                     for (String target : value.get()) {
+                        // Remove owner class; it is always the same as the mixin target
+                        if (target.contains(";")) {
+                            target = target.substring(target.indexOf(';') + 1);
+                        }
                         int targetDescIndex = target.indexOf('(');
                         String targetName = targetDescIndex == -1 ? target : target.substring(0, targetDescIndex);
                         String targetDesc = targetDescIndex == -1 ? null : target.substring(targetDescIndex);

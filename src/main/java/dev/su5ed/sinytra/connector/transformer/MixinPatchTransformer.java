@@ -44,6 +44,22 @@ public class MixinPatchTransformer implements Transformer {
             })
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/server/level/ServerPlayer")
+            .targetMethod("changeDimension")
+            .modifyTarget("changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraftforge/common/util/ITeleporter;Lorg/spongepowered/reloc/asm/mixin/injection/callback/CallbackInfoReturable;)V")
+            .modifyParams(params -> params.add(1, Type.getObjectType("net/minecraftforge/common/util/ITeleporter")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/particle/ParticleEngine")
+            .targetMethod("render")
+            .modifyTarget("render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/LightTexture;Lnet/minecraft/client/Camera;FLnet/minecraft/client/renderer/culling/Frustum;)V")
+            .modifyParams(params -> {
+                Type type = Type.getObjectType("net/minecraft/client/renderer/culling/Frustum");
+                if (params.size() < 5) params.add(type);
+                else params.add(5, type);
+            })
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/renderer/chunk/ChunkRenderDispatcher")
             .targetMethod("<init>")
             .modifyTarget("<init>(Lnet/minecraft/client/multiplayer/ClientLevel;Lnet/minecraft/client/renderer/LevelRenderer;Ljava/util/concurrent/Executor;ZLnet/minecraft/client/renderer/ChunkBufferBuilderPack;I)V")

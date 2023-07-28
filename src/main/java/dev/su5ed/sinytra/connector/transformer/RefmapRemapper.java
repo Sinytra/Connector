@@ -3,6 +3,7 @@ package dev.su5ed.sinytra.connector.transformer;
 import com.google.gson.Gson;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
+import org.apache.commons.lang3.RandomStringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -15,28 +16,43 @@ import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.jar.Manifest;
+import java.util.stream.Collectors;
 
 public class RefmapRemapper implements Transformer {
     private static final Gson GSON = new Gson();
     private static final String INTERMEDIARY_MAPPING_ENV = "named:intermediary";
     private static final String SRG_MAPPING_ENV = "searge";
 
-    private final Collection<String> configs;
+    private final Map<String, String> configs;
     private final Collection<String> refmaps;
     private final SrgRemappingReferenceMapper remapper;
 
     public RefmapRemapper(Collection<String> configs, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) {
-        this.configs = configs;
+        this.configs = configs.stream()
+            // Some mods (specifically mixinextras) are present on both platforms, and mixin can fail to select the correct configs for
+            // each jar due to their names being the same. To avoid conflicts, we assign fabric mixin configs new, unique names.
+            .collect(Collectors.toMap(Function.identity(), name -> {
+                // Split file name and extension
+                String[] parts = name.split("\\.(?!.*\\.)");
+                // Append unique string to file name
+                return parts[0] + "-" + RandomStringUtils.randomAlphabetic(5) + "." + parts[1];
+            }));
         this.refmaps = refmaps;
         this.remapper = remapper;
     }
 
     @Override
     public ResourceEntry process(ResourceEntry entry) {
-        if (this.refmaps.contains(entry.getName())) {
+        String name = entry.getName();
+        if (this.refmaps.contains(name)) {
             byte[] data = remapRefmapInPlace(entry.getData());
-            return ResourceEntry.create(entry.getName(), entry.getTime(), data);
+            return ResourceEntry.create(name, entry.getTime(), data);
+        }
+        String rename = this.configs.get(name);
+        if (rename != null) {
+            return ResourceEntry.create(rename, entry.getTime(), entry.getData());
         }
         return entry;
     }
@@ -48,7 +64,7 @@ public class RefmapRemapper implements Transformer {
             try (InputStream is = new ByteArrayInputStream(entry.getData())) {
                 manifest.read(is);
 
-                manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs));
+                manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs.values()));
 
                 try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
                     manifest.write(byteStream);

@@ -48,7 +48,6 @@ import static net.minecraftforge.fml.loading.LogMarkers.SCAN;
 public class ConnectorLocator extends AbstractJarFileModProvider implements IDependencyLocator {
     private static final String NAME = "connector_locator";
     private static final String SUFFIX = ".jar";
-    private static final Set<String> DISABLED_MODS = Set.of("fabric_api");
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final MethodHandle MJM_INIT = uncheck(() -> MethodHandles.privateLookupIn(ModJarMetadata.class, MethodHandles.lookup()).findConstructor(ModJarMetadata.class, MethodType.methodType(void.class)));
@@ -69,10 +68,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
             .filter(this::locateFabricModJar)
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
-            // No matter what, we remove upstream fabric api from loading to prevent it from conflicting with FFAPI 
-            // The unique mod filter isn't enough to handle api modules that have been left behind and not ported
-            // I'm sorry for hardcoding this, but it seems to be the best way around
-            .filter(jar -> !DISABLED_MODS.contains(jar.modPath().metadata().modMetadata().getId()))
+            .filter(jar -> !ConnectorUtil.DISABLED_MODS.contains(jar.modPath().metadata().modMetadata().getId()))
             .toList();
         // Discover fabric nested mod jars
         List<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()

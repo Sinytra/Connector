@@ -202,7 +202,7 @@ public final class JarTransformer {
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));
         if (!metadata.containsAT()) {
-            builder.add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver));
+            builder.add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver, getFlatMapping(SOURCE_NAMESPACE)));
         }
         try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());

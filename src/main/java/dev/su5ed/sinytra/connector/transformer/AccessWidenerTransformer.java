@@ -14,10 +14,12 @@ public class AccessWidenerTransformer implements Transformer {
 
     private final String resource;
     private final MappingResolverImpl resolver;
+    private final Map<String, String> flatMapping;
 
-    public AccessWidenerTransformer(String resource, MappingResolverImpl namedMappingFile) {
+    public AccessWidenerTransformer(String resource, MappingResolverImpl namedMappingFile, Map<String, String> flatMapping) {
         this.resource = resource;
         this.resolver = namedMappingFile;
+        this.flatMapping = flatMapping;
     }
 
     @Override
@@ -32,22 +34,20 @@ public class AccessWidenerTransformer implements Transformer {
     public String mapAccessWidener(byte[] content) {
         AccessWidenerReader.Header header = AccessWidenerReader.readHeader(content);
         String namespace = header.getNamespace();
-        RemappingAccessWidenerVisitor visitor = new RemappingAccessWidenerVisitor(resolver, namespace);
+        RemappingAccessWidenerVisitor visitor = new RemappingAccessWidenerVisitor(namespace);
         AccessWidenerReader reader = new AccessWidenerReader(visitor);
         reader.read(content);
         visitor.finish();
         return visitor.builder.toString();
     }
 
-    public static class RemappingAccessWidenerVisitor implements AccessWidenerVisitor {
-        private final MappingResolverImpl resolver;
+    public class RemappingAccessWidenerVisitor implements AccessWidenerVisitor {
         private final String sourceNamespace;
         private final StringBuilder builder = new StringBuilder();
 
         private final Map<String, Map<String, AccessWidenerReader.AccessType>> classFields = new HashMap<>();
 
-        public RemappingAccessWidenerVisitor(MappingResolverImpl resolver, String sourceNamespace) {
-            this.resolver = resolver;
+        public RemappingAccessWidenerVisitor(String sourceNamespace) {
             this.sourceNamespace = sourceNamespace;
 
             this.builder.append("# Access Transformer file converted by Connector\n");
@@ -60,8 +60,8 @@ public class AccessWidenerTransformer implements Transformer {
                     case MUTABLE -> "public-f";
                     default -> throw new IllegalArgumentException("Invalid access type " + access + " for field");
                 };
-                String mappedOwner = this.resolver.mapClassName(this.sourceNamespace, owner);
-                String mappedName = this.resolver.mapFieldName(this.sourceNamespace, owner, name, "");
+                String mappedOwner = AccessWidenerTransformer.this.resolver.mapClassName(this.sourceNamespace, owner);
+                String mappedName = AccessWidenerTransformer.this.resolver.mapFieldName(this.sourceNamespace, owner, name, "");
                 this.builder.append(modifier).append(" ")
                     .append(mappedOwner.replace('/', '.')).append(" ")
                     .append(mappedName)
@@ -77,7 +77,7 @@ public class AccessWidenerTransformer implements Transformer {
                 case EXTENDABLE -> "public-f";
                 default -> throw new IllegalArgumentException("Invalid access type " + access + " for class");
             };
-            String mappedName = this.resolver.mapClassName(this.sourceNamespace, name).replace('/', '.');
+            String mappedName = AccessWidenerTransformer.this.resolver.mapClassName(this.sourceNamespace, name).replace('/', '.');
             this.builder.append(modifier).append(" ").append(mappedName).append("\n");
         }
 
@@ -88,9 +88,13 @@ public class AccessWidenerTransformer implements Transformer {
                 case EXTENDABLE -> "protected-f";
                 default -> throw new IllegalArgumentException("Invalid access type " + access + " for method");
             };
-            String mappedOwner = this.resolver.mapClassName(this.sourceNamespace, owner);
-            String mappedName = this.resolver.mapMethodName(this.sourceNamespace, owner, name, descriptor);
-            String mappedDescriptor = this.resolver.mapDescriptor(this.sourceNamespace, descriptor);
+            String mappedOwner = AccessWidenerTransformer.this.resolver.mapClassName(this.sourceNamespace, owner);
+            String mappedName = AccessWidenerTransformer.this.resolver.mapMethodName(this.sourceNamespace, owner, name, descriptor);
+            // Mods might target inherited methods that are not part of the mapping file, we'll try to remap them using the flat mapping instead
+            if (name.equals(mappedName)) {
+                mappedName = AccessWidenerTransformer.this.flatMapping.getOrDefault(name, name);
+            }
+            String mappedDescriptor = AccessWidenerTransformer.this.resolver.mapDescriptor(this.sourceNamespace, descriptor);
             this.builder.append(modifier).append(" ")
                 .append(mappedOwner.replace('/', '.')).append(" ")
                 .append(mappedName)

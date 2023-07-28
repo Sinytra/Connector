@@ -1,5 +1,6 @@
 package dev.su5ed.sinytra.connector.loader;
 
+import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.api.metadata.ContactInformation;
@@ -89,7 +90,9 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
 
     @Override
     public List<EntrypointMetadata> getEntrypoints(String type) {
-        return this.wrapped.getEntrypoints(type);
+        return this.wrapped.getEntrypoints(type).stream()
+            .filter(metadata -> !ConnectorUtil.DISABLED_ENTRYPOINTS.contains(metadata.getValue()))
+            .toList();
     }
 
     @Override

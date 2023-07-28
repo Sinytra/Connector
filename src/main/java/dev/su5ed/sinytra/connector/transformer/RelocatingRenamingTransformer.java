@@ -17,6 +17,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.ClassRemapper;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -26,12 +27,54 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-public final class RelocatingRenamingTransformer {
-    private static final Map<String, String> RELOCATE = Map.of("org/spongepowered/", "org/spongepowered/reloc/");
+public final class RelocatingRenamingTransformer extends RenamingTransformer {
+    private static final Map<String, String> RELOCATE = Map.of(
+        "org/spongepowered/", "org/spongepowered/reloc/",
+        "com/llamalad7/mixinextras/", "com/llamalad7/mixinextras/reloc/"
+    );
 
     public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, Map<String, String> flatMappings) {
         RenamingClassProvider reverseProvider = new RenamingClassProvider(classProvider, mappingFile, mappingFile.reverse(), log);
-        return new RenamingTransformer(new RelocatingEnhancedRemapper(reverseProvider, mappingFile, flatMappings, log, RELOCATE), false);
+        EnhancedRemapper enhancedRemapper = new RelocatingEnhancedRemapper(reverseProvider, mappingFile, flatMappings, log);
+        return new RelocatingRenamingTransformer(enhancedRemapper, false);
+    }
+
+    public RelocatingRenamingTransformer(EnhancedRemapper remapper, boolean collectAbstractParams) {
+        super(remapper, collectAbstractParams);
+    }
+
+    @Override
+    public ClassEntry process(ClassEntry entry) {
+        ClassEntry processed = super.process(entry);
+        String name = relocateValue(entry.getName());
+        return ClassEntry.create(name, processed.getTime(), processed.getData());
+    }
+
+    @Override
+    public ResourceEntry process(ResourceEntry entry) {
+        String name = entry.getName();
+        if (name.startsWith("META-INF/services/") || name.endsWith(".json")) {
+            String content = new String(entry.getData(), StandardCharsets.UTF_8);
+            for (Map.Entry<String, String> relocateEntry : RELOCATE.entrySet()) {
+                content = content.replace(
+                    relocateEntry.getKey().replace('/', '.'),
+                    relocateEntry.getValue().replace('/', '.')
+                );
+            }
+            byte[] remapped = content.getBytes(StandardCharsets.UTF_8);
+            return ResourceEntry.create(name, entry.getTime(), remapped);
+        }
+        return super.process(entry);
+    }
+
+    private static String relocateValue(String key) {
+        for (Map.Entry<String, String> entry : RELOCATE.entrySet()) {
+            String relocKey = entry.getKey();
+            if (key.startsWith(relocKey)) {
+                return key.replace(relocKey, entry.getValue());
+            }
+        }
+        return key;
     }
 
     private static final class RenamingClassProvider implements ClassProvider {
@@ -118,12 +161,10 @@ public final class RelocatingRenamingTransformer {
 
     private static class RelocatingEnhancedRemapper extends EnhancedRemapper {
         private final Map<String, String> flatMappings;
-        private final Map<String, String> relocation;
 
-        public RelocatingEnhancedRemapper(ClassProvider classProvider, IMappingFile map, Map<String, String> flatMappings, Consumer<String> log, Map<String, String> relocation) {
+        public RelocatingEnhancedRemapper(ClassProvider classProvider, IMappingFile map, Map<String, String> flatMappings, Consumer<String> log) {
             super(classProvider, map, log);
             this.flatMappings = flatMappings;
-            this.relocation = relocation;
         }
 
         @Override
@@ -133,15 +174,7 @@ public final class RelocatingRenamingTransformer {
                 return fastMapped;
             }
             String remapped = super.map(key);
-            if (key.equals(remapped)) {
-                for (Map.Entry<String, String> entry : this.relocation.entrySet()) {
-                    String pKey = entry.getKey();
-                    if (key.startsWith(pKey)) {
-                        return key.replace(pKey, entry.getValue());
-                    }
-                }
-            }
-            return remapped;
+            return key.equals(remapped) ? relocateValue(key) : remapped;
         }
 
         @Override
@@ -184,7 +217,7 @@ public final class RelocatingRenamingTransformer {
         @Override
         public Object mapValue(Object value) {
             if (value instanceof String str) {
-                for (Map.Entry<String, String> entry : this.relocation.entrySet()) {
+                for (Map.Entry<String, String> entry : RELOCATE.entrySet()) {
                     String pKey = entry.getKey().replace('/', '.');
                     if (str.startsWith(pKey)) {
                         return str.replace(pKey, entry.getValue().replace('/', '.'));
@@ -205,6 +238,7 @@ public final class RelocatingRenamingTransformer {
         public Collection<String> getInterfaces() {
             return Stream.concat(this.wrapped.getInterfaces().stream(), this.computedParents.stream()).toList();
         }
+
         //@formatter:off
         @Override public int getAccess() {return this.wrapped.getAccess();}
         @Override public String getName() {return this.wrapped.getName();}
@@ -215,6 +249,4 @@ public final class RelocatingRenamingTransformer {
         @Override public Optional<? extends ClassProvider.IMethodInfo> getMethod(String name, String desc) {return this.wrapped.getMethod(name, desc);}
         //@formatter:on
     }
-
-    private RelocatingRenamingTransformer() {}
 }

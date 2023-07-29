@@ -191,13 +191,18 @@ public class MixinPatchTransformer implements Transformer {
     public ClassEntry process(ClassEntry entry) {
         String className = entry.getClassName();
         boolean needsWriting = false;
+        boolean computeFrames = false;
 
         ClassReader reader = new ClassReader(entry.getData());
         ClassNode node = new ClassNode();
         reader.accept(node, 0);
 
         for (ClassTransform transform : CLASS_TRANSFORMS) {
-            needsWriting |= transform.apply(node);
+            ClassTransform.Result result = transform.apply(node);
+            if (result.applied()) {
+                needsWriting = true;
+                computeFrames |= result.computeFrames();
+            }
         }
 
         if (this.mixins.contains(className)) {
@@ -207,7 +212,7 @@ public class MixinPatchTransformer implements Transformer {
         }
 
         if (needsWriting) {
-            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | (computeFrames ? ClassWriter.COMPUTE_FRAMES : 0));
             node.accept(writer);
             return ClassEntry.create(entry.getName(), entry.getTime(), writer.toByteArray());
         }

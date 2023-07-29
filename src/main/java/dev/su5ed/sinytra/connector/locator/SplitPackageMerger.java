@@ -3,6 +3,8 @@ package dev.su5ed.sinytra.connector.locator;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
+import cpw.mods.modlauncher.Launcher;
+import cpw.mods.modlauncher.api.IModuleLayerManager;
 import dev.su5ed.sinytra.connector.transformer.JarTransformer;
 import dev.su5ed.sinytra.connector.transformer.JarTransformer.FabricModPath;
 import net.minecraftforge.forgespi.locating.IModFile;
@@ -13,6 +15,7 @@ import org.slf4j.MarkerFactory;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,6 +43,13 @@ public class SplitPackageMerger {
         Set<String> existingPackages = new HashSet<>();
         for (IModFile modFile : existing) {
             existingPackages.addAll(modFile.getSecureJar().getPackages());
+        }
+        Collection<IModuleLayerManager.Layer> layers = Set.of(IModuleLayerManager.Layer.BOOT, IModuleLayerManager.Layer.SERVICE);
+        IModuleLayerManager manager = Launcher.INSTANCE.findLayerManager().orElseThrow();
+        for (IModuleLayerManager.Layer layer : layers) {
+            manager.getLayer(layer).orElseThrow().modules().stream()
+                .flatMap(module -> module.getPackages().stream())
+                .forEach(existingPackages::add);
         }
 
         // Paths that don't contain conflicting jars

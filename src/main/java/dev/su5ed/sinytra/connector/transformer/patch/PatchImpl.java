@@ -46,6 +46,7 @@ class PatchImpl implements Patch {
     static final String MODIFY_ARG_ANN = "Lorg/spongepowered/asm/mixin/injection/ModifyArg;";
     // TODO why did I put this here? :thinkies:
     static final String ACCESSOR_ANN = "Lorg/spongepowered/asm/mixin/gen/Accessor;";
+    private static final String OWNER_PREFIX = "^(?<owner>L(?:.*?)+;)";
 
     private static final Logger LOGGER = LogUtils.getLogger();
     static final Marker PATCHER = MarkerFactory.getMarker("MIXINPATCH");
@@ -72,7 +73,7 @@ class PatchImpl implements Patch {
         PatchContext context = new PatchContext();
         if (checkClassTarget(classNode, this.targetClasses)) {
             for (MethodTransform transform : this.transforms) {
-                applied |= transform.apply(classNode);
+                applied |= transform.apply(classNode).applied();
             }
             for (MethodNode method : classNode.methods) {
                 Pair<AnnotationNode, Map<String, AnnotationValueHandle<?>>> annotationValues = checkMethodTarget(method).orElse(null);
@@ -150,9 +151,7 @@ class PatchImpl implements Patch {
                 .flatMap(value -> {
                     for (String target : value.get()) {
                         // Remove owner class; it is always the same as the mixin target
-                        if (target.contains(";")) {
-                            target = target.substring(target.indexOf(';') + 1);
-                        }
+                        target = target.replaceAll(OWNER_PREFIX, "");
                         int targetDescIndex = target.indexOf('(');
                         String targetName = targetDescIndex == -1 ? target : target.substring(0, targetDescIndex);
                         String targetDesc = targetDescIndex == -1 ? null : target.substring(targetDescIndex);
@@ -267,7 +266,7 @@ class PatchImpl implements Patch {
     }
 
     record ModifyMixinMethodParams(Consumer<List<Type>> operator, @Nullable LVTFixer lvtFixer) implements MethodTransform {
-        private static final Set<String> ACCEPTED_ANNOTATIONS = Set.of(INJECT_ANN, MODIFY_ARG_ANN, MODIFY_VARIABLE_ANN);
+        private static final Set<String> ACCEPTED_ANNOTATIONS = Set.of(INJECT_ANN, MODIFY_ARG_ANN, MODIFY_VARIABLE_ANN, OVERWRITE_ANN);
 
         @Override
         public boolean apply(ClassNode classNode, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {

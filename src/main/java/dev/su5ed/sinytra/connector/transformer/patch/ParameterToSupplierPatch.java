@@ -1,13 +1,19 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
 import com.mojang.datafixers.util.Pair;
+import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import org.objectweb.asm.tree.JumpInsnNode;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
@@ -17,9 +23,12 @@ import org.objectweb.asm.tree.analysis.SourceInterpreter;
 import org.objectweb.asm.tree.analysis.SourceValue;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class ParameterToSupplierPatch implements ClassTransform {
     private static final Handle META_FACTORY = new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;", false);
@@ -31,10 +40,12 @@ public class ParameterToSupplierPatch implements ClassTransform {
         return this;
     }
 
-    record Replacement(MethodQualifier qualifier, Type suppliedType, MethodNode methodNode, MethodInsnNode source, int start, int end) {}
+    record Replacement(MethodQualifier qualifier, Type suppliedType, MethodNode methodNode, MethodInsnNode source, AbstractInsnNode start, AbstractInsnNode end) {}
+
+    record VarMapping(int from, VarInsnNode insn) {}
 
     @Override
-    public boolean apply(ClassNode node) {
+    public Result apply(ClassNode node) {
         List<Replacement> replacements = new ArrayList<>();
 
         for (MethodNode method : node.methods) {
@@ -52,45 +63,82 @@ public class ParameterToSupplierPatch implements ClassTransform {
             replacement.source.owner = replacement.qualifier.owner();
             replacement.source.name = replacement.qualifier.name();
             replacement.source.desc = replacement.qualifier.desc();
-            String lambdaName = "lambda$" + replacement.methodNode.name + "$" + RandomStringUtils.randomAlphabetic(4);
-            String lambdaDesc = Type.getMethodDescriptor(replacement.suppliedType);
 
-            boolean makeStatic = true;
-            MethodNode lambdaMethod = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_SYNTHETIC, lambdaName, lambdaDesc, null, null);
+            // Skip original insns
+            LabelNode skip = new LabelNode();
+            replacement.methodNode.instructions.insertBefore(replacement.start, new JumpInsnNode(Opcodes.GOTO, skip));
+            replacement.methodNode.instructions.insert(replacement.end, skip);
+
+            // Handle static method reference            
+            if (replacement.start == replacement.end && replacement.start instanceof MethodInsnNode methodInsn && methodInsn.getOpcode() == Opcodes.INVOKESTATIC) {
+                replacement.methodNode.instructions.insertBefore(replacement.source, new InvokeDynamicInsnNode(
+                    "get", Type.getMethodDescriptor(Type.getType(Supplier.class)),
+                    META_FACTORY,
+                    Type.getMethodType(Type.getType(Object.class)),
+                    new Handle(Opcodes.H_INVOKESTATIC, methodInsn.owner, methodInsn.name, methodInsn.desc, methodInsn.itf),
+                    Type.getMethodType(replacement.suppliedType)
+                ));
+                continue;
+            }
+
+            Int2ObjectMap<VarMapping> lvtVars = new Int2ObjectLinkedOpenHashMap<>();
+            String lambdaName = "lambda$" + replacement.methodNode.name + "$" + RandomStringUtils.randomAlphabetic(4);
+            MethodNode lambdaMethod = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_SYNTHETIC, lambdaName, null, null, null);
             node.methods.add(lambdaMethod);
+            Label start = new Label();
+            Label end = new Label();
             lambdaMethod.visitCode();
-            for (int i = 0; i <= replacement.end - replacement.start; i++) {
-                AbstractInsnNode insn = replacement.methodNode.instructions.get(replacement.start);
-                if (insn instanceof VarInsnNode varInsnNode) {
-                    if (varInsnNode.var == 0) {
-                        makeStatic = false;
-                    }
-                    else {
-                        throw new UnsupportedOperationException("Capturing local variables is not supported");
+            lambdaMethod.visitLabel(start);
+            for (AbstractInsnNode insn = replacement.start; insn != null; insn = insn.getNext()) {
+                AbstractInsnNode clone = insn.clone(Map.of());
+                if (clone instanceof VarInsnNode varInsnNode) {
+                    VarMapping varMapping = lvtVars.get(varInsnNode.var);
+                    if (varMapping == null) {
+                        varMapping = new VarMapping(varInsnNode.var, varInsnNode);
+                        lvtVars.put(varInsnNode.var, varMapping);
                     }
                 }
-                replacement.methodNode.instructions.remove(insn);
-                lambdaMethod.instructions.add(insn);
+                if (clone != null) lambdaMethod.instructions.add(clone);
+
+                if (insn == replacement.end) {
+                    break;
+                }
             }
             lambdaMethod.visitInsn(Opcodes.ARETURN);
-            lambdaMethod.visitEnd();
+            lambdaMethod.visitLabel(end);
+            List<Type> params = new ArrayList<>();
+            boolean makeStatic = !lvtVars.containsKey(0);
             if (makeStatic) {
                 lambdaMethod.access |= Opcodes.ACC_STATIC;
             }
-            else {
-                lambdaMethod.instructions.insert(new VarInsnNode(Opcodes.ALOAD, 0));
+            // Visit LVT
+            int lvtIndex = 0;
+            for (VarMapping lvtVar : lvtVars.values()) {
+                LocalVariableNode local = replacement.methodNode.localVariables.stream().filter(lvNode -> lvNode.index == lvtVar.from).findFirst().orElseThrow();
+                int to = makeStatic ? lvtIndex++ : lvtVar.from == 0 ? 0 : ++lvtIndex;
+                lvtVar.insn.var = to;
+                lambdaMethod.visitLocalVariable(local.name, local.desc, local.signature, start, end, to);
+                params.add(Type.getType(local.desc));
+                replacement.methodNode.instructions.insertBefore(replacement.source, new VarInsnNode(lvtVar.insn.getOpcode(), lvtVar.from));
             }
+            lambdaMethod.visitEnd();
+
+            Type[] paramTypes = params.toArray(Type[]::new);
+            lambdaMethod.desc = Type.getMethodDescriptor(replacement.suppliedType, makeStatic ? paramTypes : params.subList(1, params.size()).toArray(Type[]::new));
             replacement.methodNode.instructions.insertBefore(replacement.source, new InvokeDynamicInsnNode(
-                "get", "()Ljava/util/function/Supplier;",
+                "get", Type.getMethodDescriptor(Type.getType(Supplier.class), paramTypes),
                 META_FACTORY,
-                Type.getType("()Ljava/lang/Object;"), new Handle(Opcodes.H_INVOKESTATIC, node.name, lambdaName, lambdaDesc, false), Type.getType(lambdaDesc)
+                Type.getMethodType(Type.getType(Object.class)),
+                new Handle(makeStatic ? Opcodes.H_INVOKESTATIC : Opcodes.H_INVOKEVIRTUAL, node.name, lambdaName, lambdaMethod.desc, false),
+                Type.getMethodType(replacement.suppliedType)
             ));
         }
-        return !replacements.isEmpty();
+        return new Result(!replacements.isEmpty(), !replacements.isEmpty());
     }
 
     public class ScanningSourceInterpreter extends SourceInterpreter {
         private final MethodNode methodNode;
+        private final Collection<MethodInsnNode> seen = new HashSet<>();
         private final List<Replacement> replacements;
 
         public ScanningSourceInterpreter(int api, MethodNode methodNode, List<Replacement> replacements) {
@@ -101,7 +149,7 @@ public class ParameterToSupplierPatch implements ClassTransform {
 
         @Override
         public SourceValue naryOperation(AbstractInsnNode insn, List<? extends SourceValue> values) {
-            if (insn instanceof MethodInsnNode methodInsn) {
+            if (insn instanceof MethodInsnNode methodInsn && !this.seen.contains(methodInsn)) {
                 Pair<MethodQualifier, Type> pair = ParameterToSupplierPatch.this.patches.get(new MethodQualifier(methodInsn.owner, methodInsn.name, methodInsn.desc));
                 if (pair != null) {
                     for (int i = 0; i < values.size(); i++) {
@@ -110,9 +158,8 @@ public class ParameterToSupplierPatch implements ClassTransform {
                             // TODO Add ability to patch first parameter
                             if (i > 0) {
                                 AbstractInsnNode previous = values.get(i - 1).insns.iterator().next();
-                                int start = this.methodNode.instructions.indexOf(previous.getNext());
-                                int end = this.methodNode.instructions.indexOf(value.insns.iterator().next());
-                                this.replacements.add(new Replacement(pair.getFirst(), pair.getSecond(), this.methodNode, methodInsn, start, end));
+                                this.replacements.add(new Replacement(pair.getFirst(), pair.getSecond(), this.methodNode, methodInsn, previous.getNext(), value.insns.iterator().next()));
+                                this.seen.add(methodInsn);
                             }
                         }
                         else {

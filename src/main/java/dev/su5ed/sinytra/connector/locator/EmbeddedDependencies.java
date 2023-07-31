@@ -16,6 +16,7 @@ import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
+import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
 /**
@@ -42,13 +43,7 @@ public final class EmbeddedDependencies {
      * {@return a stream of paths of all embedded jars}
      */
     public static Stream<Path> locateEmbeddedJars() {
-        try {
-            Path languageJij = getJarInJar(LANGUAGE_JIJ_DEP);
-            Path modJij = getJarInJar(MOD_JIJ_DEP);
-            return Stream.of(languageJij, modJij);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return Stream.of(LANGUAGE_JIJ_DEP, MOD_JIJ_DEP).map(rethrowFunction(EmbeddedDependencies::getJarInJar));
     }
 
     /**

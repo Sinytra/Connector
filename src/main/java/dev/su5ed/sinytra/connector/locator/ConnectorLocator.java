@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -66,7 +65,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         List<JarTransformer.TransformableJar> discoveredJars = uncheck(() -> Files.list(FMLPaths.MODSDIR.get()))
             .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
             .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
-            .filter(this::locateFabricModJar)
+            .filter(ConnectorLocator::locateFabricModJar)
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
             .filter(jar -> !ConnectorUtil.DISABLED_MODS.contains(jar.modPath().metadata().modMetadata().getId()))
             .toList();
@@ -88,25 +87,18 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(allJars, renameLibs);
         // Deal with split packages (thanks modules)
         List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed, loadedMods);
-        Stream<IModFile> fabricJars;
         // Handle jar transformation errors
         if (ConnectorEarlyLoader.getLoadingException() != null) {
             StartupNotificationManager.addModMessage("JAR TRANSFORMATION ERROR");
             LOGGER.error("Cancelling Connector jar discovery due to previous error", ConnectorEarlyLoader.getLoadingException());
-            fabricJars = Stream.empty();
+            return List.of();
         }
-        else {
-            fabricJars = moduleSafeJars.stream()
-                .map(mod -> createConnectorModFile(mod, this));
-        }
-        Stream<IModFile> embeddedDeps = EmbeddedDependencies.locateEmbeddedJars()
-            .map(path -> createMod(path).file())
-            .filter(Objects::nonNull);
-
-        return Stream.concat(fabricJars, embeddedDeps).toList();
+        return moduleSafeJars.stream()
+            .map(mod -> createConnectorModFile(mod, this))
+            .toList();
     }
 
-    public static IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath, IModProvider provider) {
+    private static IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath, IModProvider provider) {
         ModJarMetadata mjm = ConnectorUtil.uncheckThrowable(() -> (ModJarMetadata) MJM_INIT.invoke());
         SecureJar modJar = SecureJar.from(Manifest::new, jar -> mjm, modPath.filter(), modPath.paths());
         IModFile mod = new ModFile(modJar, provider, modFile -> ConnectorModMetadataParser.createForgeMetadata(modFile, modPath.metadata().modMetadata()));
@@ -114,7 +106,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         return mod;
     }
 
-    protected boolean locateFabricModJar(Path path) {
+    private static boolean locateFabricModJar(Path path) {
         SecureJar secureJar = SecureJar.from(path);
         String name = secureJar.name();
         if (secureJar.moduleDataProvider().findFile(ConnectorUtil.FABRIC_MOD_JSON).isPresent()) {

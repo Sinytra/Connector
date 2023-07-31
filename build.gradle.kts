@@ -1,5 +1,10 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import net.minecraftforge.gradle.common.util.RunConfig
+import net.minecraftforge.jarjar.metadata.*
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion
+import org.apache.maven.artifact.versioning.VersionRange
+import java.nio.file.Files
+import java.nio.file.StandardOpenOption
 import java.time.LocalDateTime
 
 plugins {
@@ -54,19 +59,58 @@ val languageJar: Jar by tasks.creating(Jar::class) {
 
     archiveClassifier.set("language")
 }
-val modJar: Jar by tasks.creating(ShadowJar::class) {
+// We need fabric loader to be present on the service layer. In order to do that, we use shadow jar to ship it ourselves.
+// However, this easily creates conflicts with other mods that might be providing it via JarInJar. To avoid this conflict,
+// we provide a dummy nested jar with the same identifier, but a "max" version, so that it always takes priority over
+// nested jars shipped by other mods, effectively disabling them.
+val dummyFabricLoaderVersion = "999.999.999"
+// This is the actualy dummy jar, set to a LIBRARY type to be put on the PLUGIN layer
+val dummyFabricLoaderLangJar: Jar by tasks.creating(Jar::class) {
+    manifest.attributes(
+        "FMLModType" to "LIBRARY",
+        "Implementation-Version" to dummyFabricLoaderVersion
+    )
+    archiveClassifier.set("fabricloader")
+}
+// Generate JarJar metadata manually so that we control both the version and the file path
+val createJarJarMetadata: Task by tasks.creating {
+    val jarPath = "META-INF/jarjar/" + dummyFabricLoaderLangJar.archiveFile.get().asFile.name
+    val output = project.layout.buildDirectory.dir("createJarJarMetadata").get().file("metadata.json")
+    inputs.property("jarPath", jarPath)
+    outputs.file(output)
+    extra["output"] = output
+    doFirst { 
+        val metadata = Metadata(listOf(ContainedJarMetadata(
+            ContainedJarIdentifier("dev.su5ed.sinytra", "fabric-loader"),
+            ContainedVersion(VersionRange.createFromVersion("[$dummyFabricLoaderVersion,)"), DefaultArtifactVersion(dummyFabricLoaderVersion)),
+            jarPath,
+            false
+        )))
+        Files.deleteIfExists(output.asFile.toPath())
+        Files.write(output.asFile.toPath(), MetadataIOHandler.toLines(metadata), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
+    }
+}
+// ShadowJar doesn't support nesting archives - it will flatten them if they're included. Therefore, we must first preprocess
+// the jar contents with shadow before creating the final bundle that also includes the dummy nested jar.
+val prepareModJar: ShadowJar by tasks.creating(ShadowJar::class) {
     dependsOn("modClasses")
-
     from(mod.output)
     relocate("org.spongepowered.asm", "org.spongepowered.reloc.asm")
+    archiveClassifier.set("prepare-mod")
+}
+val modJar: Jar by tasks.creating(Jar::class) {
+    from(zipTree(prepareModJar.archiveFile))
+    into("META-INF/jarjar/") {
+        from(createJarJarMetadata)
+        from(dummyFabricLoaderLangJar)
+    }
     manifest.attributes("ConnectorMixinConfigs" to "connectormod.mixins.json")
-
     archiveClassifier.set("mod")
 }
-val remappedDepsJar: Jar by tasks.creating(ShadowJar::class) {
+val remappedDepsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     dependsOn(depsJar)
 
-    from(tasks.jar.flatMap { it.archiveFile })
+    from(tasks.jar)
     from(depsJar.archiveFile)
     mergeServiceFiles() // Relocate services
     relocate("org.spongepowered.asm", "org.spongepowered.reloc.asm")

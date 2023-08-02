@@ -1,13 +1,12 @@
 package dev.su5ed.sinytra.connector;
 
+import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import cpw.mods.modlauncher.api.ServiceRunner;
 import net.minecraftforge.fml.loading.FMLPaths;
-import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,8 +46,9 @@ public final class ConnectorUtil {
     public static CacheFile getCached(String version, Path input, Path output) {
         if (CACHE_ENABLED) {
             Path inputCache = output.getParent().resolve(output.getFileName() + ".input");
-            try (InputStream is = Files.newInputStream(input)) {
-                String checksum = version + "," + DigestUtils.sha256Hex(is);
+            try {
+                byte[] bytes = Files.readAllBytes(input);
+                String checksum = version + "," + Hashing.sha256().hashBytes(bytes);
 
                 if (Files.exists(inputCache) && Files.exists(output)) {
                     String cached = Files.readString(inputCache);

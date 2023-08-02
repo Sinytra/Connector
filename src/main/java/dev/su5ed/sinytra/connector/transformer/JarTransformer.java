@@ -194,7 +194,7 @@ public final class JarTransformer {
 
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         Renamer.Builder builder = Renamer.builder()
-            .add(FieldToMethodTransformer.create(classProvider, s -> {}, metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE), ForgeApiRedirects.getMappings()))
+            .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE)))
             .add(remappingTransformer)
             .add(new MixinPatchTransformer(metadata.mixinClasses()))
             .add(new RefmapRemapper(metadata.mixinConfigs(), metadata.refmaps(), remapper))

@@ -7,9 +7,7 @@ import net.fabricmc.accesswidener.AccessWidenerVisitor;
 import net.fabricmc.accesswidener.AccessWidenerWriter;
 import net.fabricmc.accesswidener.ForwardingVisitor;
 import net.minecraftforge.coremod.api.ASMAPI;
-import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Transformer;
-import net.minecraftforge.fart.internal.EnhancedRemapper;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -25,7 +23,6 @@ import java.util.Collection;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 public class FieldToMethodTransformer implements Transformer {
     // Extracted from forge's coremods/field_to_method.js
@@ -60,14 +57,8 @@ public class FieldToMethodTransformer implements Transformer {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final String accessWidenerResource;
     private final Map<String, String> mappedReplacements;
-    // Method redirects to ensure 2-way compatibility with Forge's API
-    private final EnhancedRemapper remapper;
 
-    public static Transformer create(ClassProvider classProvider, Consumer<String> log, String accessWidenerResource, IMappingFile mappings, IMappingFile remapperMapping) {
-        return new FieldToMethodTransformer(accessWidenerResource, mappings, new EnhancedRemapper(classProvider, remapperMapping, log));
-    }
-
-    public FieldToMethodTransformer(String accessWidenerResource, IMappingFile mappings, EnhancedRemapper remapper) {
+    public FieldToMethodTransformer(String accessWidenerResource, IMappingFile mappings) {
         this.accessWidenerResource = accessWidenerResource;
         ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
         REPLACEMENTS.forEach((cls, replacements) -> {
@@ -75,7 +66,6 @@ public class FieldToMethodTransformer implements Transformer {
             replacements.forEach((field, getter) -> builder.put(classMap.remapField(field), getter));
         });
         this.mappedReplacements = builder.build();
-        this.remapper = remapper;
     }
 
     @Override
@@ -120,13 +110,6 @@ public class FieldToMethodTransformer implements Transformer {
                             iterator.add(getterCall);
                             replaced = true;
                         }
-                    }
-                }
-                else if (insn instanceof MethodInsnNode methodInsn) {
-                    String mappedName = this.remapper.mapMethodName(methodInsn.owner, methodInsn.name, methodInsn.desc);
-                    if (!methodInsn.name.equals(mappedName)) {
-                        methodInsn.name = mappedName;
-                        replaced = true;
                     }
                 }
             }

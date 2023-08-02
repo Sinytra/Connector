@@ -1,6 +1,5 @@
 {
   "required": true,
-  "plugin": "dev.su5ed.sinytra.connector.mod.ConnectorMixinPlugin",
   "minVersion": "0.8.4",
   "refmap": "mixins.connectormod.refmap.json",
   "package": "dev.su5ed.sinytra.connector.mod.mixin",

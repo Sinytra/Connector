@@ -118,6 +118,7 @@ val remappedDepsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     relocate("org.spongepowered.tools", "org.spongepowered.reloc.tools")
     relocate("net.minecraftforge.fart", "net.minecraftforge.reloc.fart")
     relocate("net.minecraftforge.srgutils", "net.minecraftforge.reloc.srgutils")
+    relocate("net.fabricmc.accesswidener", "net.fabricmc.reloc.accesswidener")
     relocate("MixinConfigs", "ConnectorMixinConfigs")
     archiveClassifier.set("deps-reloc")
 }

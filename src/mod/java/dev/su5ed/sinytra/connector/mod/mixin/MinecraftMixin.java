@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.mixin;
 
-import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.main.GameConfig;
 import net.minecraftforge.registries.GameData;
@@ -19,7 +19,7 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Ljava/lang/Thread;currentThread()Ljava/lang/Thread;"), remap = false)
     private void earlyInit(GameConfig gameConfig, CallbackInfo ci) {
-        ConnectorEarlyLoader.load();
+        ConnectorLoader.load();
     }
 
     @Inject(at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;gameThread:Ljava/lang/Thread;", shift = At.Shift.AFTER, ordinal = 0), method = "run")

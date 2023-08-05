@@ -5,7 +5,7 @@ import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
-import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.loader.ConnectorExceptionHandler;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.sinytra.connector.transformer.JarTransformer;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
@@ -88,9 +88,9 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         // Deal with split packages (thanks modules)
         List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed, loadedMods);
         // Handle jar transformation errors
-        if (ConnectorEarlyLoader.getLoadingException() != null) {
+        if (ConnectorExceptionHandler.getLoadingException() != null) {
             StartupNotificationManager.addModMessage("JAR TRANSFORMATION ERROR");
-            LOGGER.error("Cancelling Connector jar discovery due to previous error", ConnectorEarlyLoader.getLoadingException());
+            LOGGER.error("Cancelling Connector jar discovery due to previous error", ConnectorExceptionHandler.getLoadingException());
             return List.of();
         }
         return moduleSafeJars.stream()

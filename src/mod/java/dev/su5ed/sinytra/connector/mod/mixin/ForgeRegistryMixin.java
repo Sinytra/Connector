@@ -1,7 +1,7 @@
 package dev.su5ed.sinytra.connector.mod.mixin;
 
 import com.mojang.serialization.Lifecycle;
-import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
 import net.minecraft.core.Holder;
 import net.minecraftforge.registries.ForgeRegistry;
 import net.minecraftforge.registries.GameData;
@@ -17,7 +17,7 @@ public abstract class ForgeRegistryMixin<V> implements IForgeRegistry<V> {
     // Mixin AP complained about not finding the target method, so we use @Desc instead of a string
     @Inject(target = @Desc(value = "getDelegateOrThrow", args = Object.class, ret = Holder.Reference.class), at = @At("HEAD"), cancellable = true, remap = false)
     private void getDelegateOrThrow(V value, CallbackInfoReturnable<Holder.Reference<V>> cir) {
-        if (ConnectorEarlyLoader.isLoading()) {
+        if (ConnectorLoader.isLoading()) {
             cir.setReturnValue(getDelegate(value).orElseGet(() -> GameData.getWrapper(getRegistryKey(), Lifecycle.stable()).createIntrusiveHolder(value)));
         }
     }

@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.mixin;
 
-import dev.su5ed.sinytra.connector.mod.TagCompat;
+import dev.su5ed.sinytra.connector.mod.compat.TagConverter;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.tags.TagLoader;
@@ -17,6 +17,6 @@ public class TagLoaderMixin {
 
     @Inject(method = "load", at = @At("RETURN"))
     private void afterLoad(ResourceManager manager, CallbackInfoReturnable<Map<ResourceLocation, List<TagLoader.EntryWithSource>>> cir) {
-        TagCompat.postProcessTags(cir.getReturnValue());
+        TagConverter.postProcessTags(cir.getReturnValue());
     }
 }

@@ -168,15 +168,15 @@ public class MixinPatchTransformer implements Transformer {
             // Forge modifies the createLivingAttributes method to include attributes which need to be registered before they can be queried (RegistryObject).
             // This means calling it at the time fabric mods do will fail. We replace the registration method with our own, which takes in the existing value as a supplier. 
             // The attributes are now registered by us, just before FabricDefaultAttributeRegistry processes them.
-            // @see dev.su5ed.sinytra.connector.mod.LateEntityAttributeRegistry
+            // @see dev.su5ed.sinytra.connector.mod.compat.LateEntityAttributeRegistry
             .add(
                 new MethodQualifier("net/fabricmc/fabric/api/object/builder/v1/entity/FabricDefaultAttributeRegistry", "register", "(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/ai/attributes/AttributeSupplier;)V"),
-                new MethodQualifier("dev/su5ed/sinytra/connector/mod/LateEntityAttributeRegistry", "register", "(Lnet/minecraft/world/entity/EntityType;Ljava/util/function/Supplier;)V"),
+                new MethodQualifier("dev/su5ed/sinytra/connector/mod/compat/LateEntityAttributeRegistry", "register", "(Lnet/minecraft/world/entity/EntityType;Ljava/util/function/Supplier;)V"),
                 Type.getObjectType("net/minecraft/world/entity/ai/attributes/AttributeSupplier")
             )
             .add(
                 new MethodQualifier("net/fabricmc/fabric/api/object/builder/v1/entity/FabricDefaultAttributeRegistry", "register", "(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/ai/attributes/AttributeSupplier$Builder;)V"),
-                new MethodQualifier("dev/su5ed/sinytra/connector/mod/LateEntityAttributeRegistry", "registerBuilder", "(Lnet/minecraft/world/entity/EntityType;Ljava/util/function/Supplier;)V"),
+                new MethodQualifier("dev/su5ed/sinytra/connector/mod/compat/LateEntityAttributeRegistry", "registerBuilder", "(Lnet/minecraft/world/entity/EntityType;Ljava/util/function/Supplier;)V"),
                 Type.getObjectType("net/minecraft/world/entity/ai/attributes/AttributeSupplier$Builder")
             )
     );

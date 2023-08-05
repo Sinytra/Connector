@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.mod;
+package dev.su5ed.sinytra.connector.mod.compat;
 
 import com.google.common.base.Stopwatch;
 import com.mojang.datafixers.util.Pair;
@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public final class TagCompat {
+public final class TagConverter {
     private static final String FABRIC_NAMESPACE = "c";
     private static final Pattern RAW_ORES_PATTERN = Pattern.compile("^raw_.+?_ores$");
     private static final String TAG_ENTRY_SPLITTER = "_(?!.*_)";
@@ -111,7 +111,7 @@ public final class TagCompat {
     }
 
     public static Pair<String, @Nullable String> getForgeTagName(String path) {
-        return FORGE_TAG_CACHE.computeIfAbsent(path, TagCompat::computeForgeTagName);
+        return FORGE_TAG_CACHE.computeIfAbsent(path, TagConverter::computeForgeTagName);
     }
 
     private static Pair<String, @Nullable String> computeForgeTagName(String path) {
@@ -143,5 +143,5 @@ public final class TagCompat {
         return location.getNamespace().equals(FABRIC_NAMESPACE);
     }
 
-    private TagCompat() {}
+    private TagConverter() {}
 }

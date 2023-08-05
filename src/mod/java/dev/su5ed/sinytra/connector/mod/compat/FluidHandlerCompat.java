@@ -1,6 +1,6 @@
-package dev.su5ed.sinytra.connector.mod;
+package dev.su5ed.sinytra.connector.mod.compat;
 
-import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
 import net.fabricmc.fabric.impl.client.rendering.fluid.FluidRenderHandlerRegistryImpl;
@@ -24,7 +24,7 @@ import java.util.Map;
 
 public final class FluidHandlerCompat {
 
-    static void onClientSetup(FMLClientSetupEvent event) {
+    public static void onClientSetup(FMLClientSetupEvent event) {
         // Use reflection to register forge handlers only to the "handlers" map and not "modHandlers"
         // This allows fabric mods to access render handlers for forge mods' fluids without them being
         // used for rendering fluids, as that should remain handled by forge
@@ -32,7 +32,7 @@ public final class FluidHandlerCompat {
         Map<FluidType, FluidRenderHandler> forgeHandlers = new HashMap<>();
         for (Map.Entry<ResourceKey<Fluid>, Fluid> entry : ForgeRegistries.FLUIDS.getEntries()) {
             ResourceKey<Fluid> key = entry.getKey();
-            if (!ConnectorEarlyLoader.isConnectorMod(key.location().getNamespace())) {
+            if (!ConnectorLoader.isConnectorMod(key.location().getNamespace())) {
                 Fluid fluid = entry.getValue();
                 FluidRenderHandler handler = forgeHandlers.computeIfAbsent(fluid.getFluidType(), ForgeFluidRenderHandler::new);
                 registryHandlers.put(fluid, handler);

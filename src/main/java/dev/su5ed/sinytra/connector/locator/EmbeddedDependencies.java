@@ -26,8 +26,6 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 public final class EmbeddedDependencies {
     // Manifest attribute name prefix for embedded dependencies
     private static final String JIJ_ATTRIBUTE_PREFIX = "Embedded-Dependencies-";
-    // Embedded language provider jar name
-    private static final String LANGUAGE_JIJ_DEP = "Language";
     // Embedded mod jar name
     private static final String MOD_JIJ_DEP = "Mod";
 
@@ -43,7 +41,7 @@ public final class EmbeddedDependencies {
      * {@return a stream of paths of all embedded jars}
      */
     public static Stream<Path> locateEmbeddedJars() {
-        return Stream.of(LANGUAGE_JIJ_DEP, MOD_JIJ_DEP).map(rethrowFunction(EmbeddedDependencies::getJarInJar));
+        return Stream.of(MOD_JIJ_DEP).map(rethrowFunction(EmbeddedDependencies::getJarInJar));
     }
 
     /**

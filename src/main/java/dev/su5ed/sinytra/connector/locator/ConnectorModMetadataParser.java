@@ -25,12 +25,15 @@ public final class ConnectorModMetadataParser {
         String modid = metadata.getId();
 
         Config config = Config.inMemory();
-        config.add("modLoader", ConnectorUtil.CONNECTOR_LANGUAGE);
-        config.add("loaderVersion", "[0, )"); // TODO
+        config.add("modLoader", "javafml");
+        config.add("loaderVersion", "[0, )");
         Collection<String> licenses = metadata.getLicense();
         config.add("license", licenses.isEmpty() ? DEFAULT_LICENSE : String.join(", ", metadata.getLicense()));
 
-        config.add("properties", Map.of("metadata", metadata));
+        config.add("properties", Map.of(
+            "metadata", metadata,
+            ConnectorUtil.CONNECTOR_MARKER, true
+        ));
         config.add(List.of("modproperties", modid), metadata.getCustomValues());
 
         Config modListConfig = config.createSubConfig();

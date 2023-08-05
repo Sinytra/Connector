@@ -26,7 +26,6 @@ val versionAccessWidener: String by project
 val versionFabricApi: String by project
 val versionMixin: String by project
 
-val language by sourceSets.registering
 val mod: SourceSet by sourceSets.creating
 
 val shade: Configuration by configurations.creating
@@ -50,14 +49,6 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     }
 
     archiveClassifier.set("deps")
-}
-val languageJar: Jar by tasks.creating(Jar::class) {
-    dependsOn("languageClasses")
-
-    from(language.get().output)
-    manifest.attributes("FMLModType" to "LANGPROVIDER")
-
-    archiveClassifier.set("language")
 }
 // We need fabric loader to be present on the service layer. In order to do that, we use shadow jar to ship it ourselves.
 // However, this easily creates conflicts with other mods that might be providing it via JarInJar. To avoid this conflict,
@@ -125,9 +116,7 @@ val remappedDepsJar: ShadowJar by tasks.creating(ShadowJar::class) {
 val fullJar: Jar by tasks.creating(Jar::class) {
     mustRunAfter("reobfModJar")
     from(zipTree(remappedDepsJar.archiveFile))
-    from(languageJar)
     from(modJar)
-    manifest.attributes("Embedded-Dependencies-Language" to languageJar.archiveFile.get().asFile.name)
     manifest.attributes("Embedded-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
 
     archiveClassifier.set("full")
@@ -151,10 +140,6 @@ reobf {
 configurations {
     compileOnly {
         extendsFrom(shade)
-    }
-
-    "languageImplementation" {
-        extendsFrom(configurations.minecraft.get(), shade)
     }
 
     "modCompileOnly" {
@@ -247,7 +232,6 @@ dependencies {
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))
 
-    "languageCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"(sourceSets.main.get().output)
 }
 

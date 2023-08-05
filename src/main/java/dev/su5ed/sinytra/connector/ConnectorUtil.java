@@ -16,7 +16,7 @@ import java.util.Set;
 public final class ConnectorUtil {
     public static final String MIXIN_CONFIGS_ATTRIBUTE = "ConnectorMixinConfigs";
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
-    public static final String CONNECTOR_LANGUAGE = "connector";
+    public static final String CONNECTOR_MARKER = "connector_transformed";
     public static final long ZIP_TIME = 318211200000L;
     public static final Path CONNECTOR_FOLDER = FMLPaths.MODSDIR.get().resolve(".connector");
 

@@ -19,7 +19,6 @@ import net.minecraftforge.fml.loading.progress.StartupNotificationManager;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ServiceLoader;
@@ -35,17 +34,6 @@ public class ConnectorEarlyLoader {
     // If we encounter an exception during setup/load, we store it here and throw it later during FML mod loading,
     // so that it is propagated to the forge error screen.
     private static Throwable loadingException;
-
-    /**
-     * Get the constructed instances for a connector mod by its id
-     *
-     * @param modid the mod id to look up
-     * @return the mod's instances, if any exist
-     */
-    public static Collection<Object> getModInstances(String modid) {
-        Collection<Object> instances = FabricLoaderImpl.INSTANCE.getModInstances(modid);
-        return instances == null ? List.of() : instances;
-    }
 
     /**
      * @return whether we are currently in a loading state
@@ -73,7 +61,7 @@ public class ConnectorEarlyLoader {
 
     /**
      * @param modid the mod id to look up
-     * @return whether a mod with the given modid uses the connector language provider
+     * @return whether a mod with the given modid is loaded via Connector
      */
     public static boolean isConnectorMod(String modid) {
         return CONNECTOR_MODS.contains(modid);
@@ -98,7 +86,7 @@ public class ConnectorEarlyLoader {
             // Find all connector loader mods
             List<ModInfo> mods = LoadingModList.get().getMods();
             for (ModInfo mod : mods) {
-                if (mod.getOwningFile().requiredLanguageLoaders().stream().anyMatch(spec -> spec.languageName().equals(ConnectorUtil.CONNECTOR_LANGUAGE))) {
+                if (mod.getOwningFile().getFileProperties().containsKey(ConnectorUtil.CONNECTOR_MARKER)) {
                     CONNECTOR_MODS.add(mod.getModId());
                 }
             }

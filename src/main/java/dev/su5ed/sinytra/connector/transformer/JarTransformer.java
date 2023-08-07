@@ -198,7 +198,7 @@ public final class JarTransformer {
             .add(remappingTransformer)
             .add(new MixinPatchTransformer(metadata.mixinClasses()))
             .add(new RefmapRemapper(metadata.mixinConfigs(), metadata.refmaps(), remapper))
-            .add(new PackMetadataGenerator(metadata.modMetadata().getId()))
+            .add(new ModMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));
         if (!metadata.containsAT()) {

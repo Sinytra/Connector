@@ -39,19 +39,6 @@ public class SplitPackageMerger {
      * @return a list of adjusted jar paths
      */
     public static List<FilteredModPath> mergeSplitPackages(List<FabricModPath> paths, Iterable<IModFile> existing) {
-        // Find all existing packages
-        Set<String> existingPackages = new HashSet<>();
-        for (IModFile modFile : existing) {
-            existingPackages.addAll(modFile.getSecureJar().getPackages());
-        }
-        Collection<IModuleLayerManager.Layer> layers = Set.of(IModuleLayerManager.Layer.BOOT, IModuleLayerManager.Layer.SERVICE);
-        IModuleLayerManager manager = Launcher.INSTANCE.findLayerManager().orElseThrow();
-        for (IModuleLayerManager.Layer layer : layers) {
-            manager.getLayer(layer).orElseThrow().modules().stream()
-                .flatMap(module -> module.getPackages().stream())
-                .forEach(existingPackages::add);
-        }
-
         // Paths that don't contain conflicting jars
         List<FabricModPath> plainPaths = new ArrayList<>(paths);
         // Processed paths result
@@ -99,6 +86,18 @@ public class SplitPackageMerger {
             analyzeJar(jarMap, owner, sources.subList(1, sources.size()), pkg);
         });
 
+        // Find packages that are already loaded, along with packages of discovered mods
+        Set<String> existingPackages = new HashSet<>();
+        for (IModFile modFile : existing) {
+            existingPackages.addAll(modFile.getSecureJar().getPackages());
+        }
+        Collection<IModuleLayerManager.Layer> layers = Set.of(IModuleLayerManager.Layer.BOOT, IModuleLayerManager.Layer.SERVICE);
+        IModuleLayerManager manager = Launcher.INSTANCE.findLayerManager().orElseThrow();
+        for (IModuleLayerManager.Layer layer : layers) {
+            manager.getLayer(layer).orElseThrow().modules().stream()
+                .flatMap(module -> module.getPackages().stream())
+                .forEach(existingPackages::add);
+        }
         // Remove existing classpath packages
         for (String pkg : existingPackages) {
             List<Pair<SecureJar, FabricModPath>> list = pkgSources.get(pkg);
@@ -187,5 +186,5 @@ public class SplitPackageMerger {
         }
     }
 
-    record FilteredModPath(Path[] paths, @Nullable BiPredicate<String, String> filter, JarTransformer.FabricModFileMetadata metadata) {}
+    public record FilteredModPath(Path[] paths, @Nullable BiPredicate<String, String> filter, JarTransformer.FabricModFileMetadata metadata) {}
 }

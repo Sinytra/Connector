@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 public class ConnectorEarlyLocator extends AbstractJarFileModLocator {
     private static final String NAME = "connector_early_locator";
     private static final Logger LOGGER = LogUtils.getLogger();
-    
+
     @Override
     public Stream<Path> scanCandidates() {
         // Unfortunately, FML doesn't provide a way to sort mod/dependency locators by priority, so we have to create our own

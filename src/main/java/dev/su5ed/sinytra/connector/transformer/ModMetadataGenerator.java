@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class PackMetadataGenerator implements Transformer {
+public class ModMetadataGenerator implements Transformer {
     public static final String RESOURCE = "pack.mcmeta";
     public static final int RESOURCE_PACK_FORMAT = 15;
     private static final String MOD_ANNOTATION_DESC = "Lnet/minecraftforge/fml/common/Mod;";
@@ -26,7 +26,7 @@ public class PackMetadataGenerator implements Transformer {
     private final String modid;
     private boolean seen;
 
-    public PackMetadataGenerator(String modid) {
+    public ModMetadataGenerator(String modid) {
         this.modid = modid;
     }
 

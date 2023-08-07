@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import me.modmuss50.mpp.ReleaseType
 import net.minecraftforge.gradle.common.util.RunConfig
 import net.minecraftforge.jarjar.metadata.*
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion
@@ -13,6 +14,9 @@ plugins {
     id("net.minecraftforge.gradle") version "[6.0,6.2)"
     id("com.github.johnrengelman.shadow") version "7.1.2" apply false
     id("org.spongepowered.mixin") version "0.7.+"
+    id("me.qoomon.git-versioning") version "6.3.+"
+    id("me.modmuss50.mod-publish-plugin") version "0.3.+"
+    id("wtf.gofancy.git-changelog") version "1.1.+"
 }
 
 version = "1.0"
@@ -25,6 +29,18 @@ val versionFabricLoader: String by project
 val versionAccessWidener: String by project
 val versionFabricApi: String by project
 val versionMixin: String by project
+val curseForgeId: String by project
+val modrinthId: String by project
+val githubRepository: String by project
+val publishBranch: String by project
+val forgifiedFabricApiCurseForge: String by project
+val forgifiedFabricApiModrinth: String by project
+
+gitVersioning.apply {
+    rev {
+        version = "\${describe.tag.version.major}.\${describe.tag.version.minor}.\${describe.tag.version.patch.plus.describe.distance}+$versionMc"
+    }
+}
 
 val mod: SourceSet by sourceSets.creating
 
@@ -70,13 +86,17 @@ val createJarJarMetadata: Task by tasks.creating {
     inputs.property("jarPath", jarPath)
     outputs.file(output)
     extra["output"] = output
-    doFirst { 
-        val metadata = Metadata(listOf(ContainedJarMetadata(
-            ContainedJarIdentifier("dev.su5ed.sinytra", "fabric-loader"),
-            ContainedVersion(VersionRange.createFromVersion("[$dummyFabricLoaderVersion,)"), DefaultArtifactVersion(dummyFabricLoaderVersion)),
-            jarPath,
-            false
-        )))
+    doFirst {
+        val metadata = Metadata(
+            listOf(
+                ContainedJarMetadata(
+                    ContainedJarIdentifier("dev.su5ed.sinytra", "fabric-loader"),
+                    ContainedVersion(VersionRange.createFromVersion("[$dummyFabricLoaderVersion,)"), DefaultArtifactVersion(dummyFabricLoaderVersion)),
+                    jarPath,
+                    false
+                )
+            )
+        )
         Files.deleteIfExists(output.asFile.toPath())
         Files.write(output.asFile.toPath(), MetadataIOHandler.toLines(metadata), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
     }
@@ -266,6 +286,36 @@ tasks {
         }
         if (name == "addMixinsToJar") {
             enabled = false
+        }
+    }
+}
+
+publishMods {
+    file.set(fullJar.archiveFile)
+    changelog.set(provider { project.changelog.generateChangelog(1, true) })
+    type.set(providers.environmentVariable("PUBLISH_RELEASE_TYPE").orElse("alpha").map(ReleaseType::of))
+    modLoaders.add("forge")
+    dryRun.set(!providers.environmentVariable("CI").isPresent)
+
+    github {
+        accessToken.set(providers.environmentVariable("GITHUB_TOKEN"))
+        repository.set(githubRepository)
+        commitish.set(publishBranch)
+    }
+    curseforge {
+        accessToken.set(providers.environmentVariable("CURSEFORGE_TOKEN"))
+        projectId.set(curseForgeId)
+        minecraftVersions.add(versionMc)
+        requires {
+            slug.set(forgifiedFabricApiCurseForge)
+        }
+    }
+    modrinth {
+        accessToken.set(providers.environmentVariable("MODRINTH_TOKEN"))
+        projectId.set(modrinthId)
+        minecraftVersions.add(versionMc)
+        requires {
+            id.set(forgifiedFabricApiModrinth)
         }
     }
 }

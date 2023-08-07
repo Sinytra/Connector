@@ -44,8 +44,6 @@ class PatchImpl implements Patch {
     private static final String OVERWRITE_ANN = "Lorg/spongepowered/asm/mixin/Overwrite;";
     static final String MODIFY_VARIABLE_ANN = "Lorg/spongepowered/asm/mixin/injection/ModifyVariable;";
     static final String MODIFY_ARG_ANN = "Lorg/spongepowered/asm/mixin/injection/ModifyArg;";
-    // TODO why did I put this here? :thinkies:
-    static final String ACCESSOR_ANN = "Lorg/spongepowered/asm/mixin/gen/Accessor;";
     private static final String OWNER_PREFIX = "^(?<owner>L(?:.*?)+;)";
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -58,7 +56,7 @@ class PatchImpl implements Patch {
     private final Predicate<Map<String, AnnotationValueHandle<?>>> targetAnnotationValues;
     private final List<MethodTransform> transforms;
 
-    public PatchImpl(Set<String> targetClasses, Set<MethodMatcher> targetMethods, Set<InjectionPointMatcher> targetInjectionPoints, Predicate<String> targetAnnotations, Predicate<Map<String, AnnotationValueHandle<?>>> targetAnnotationValues, List<MethodTransform> transforms) {
+    PatchImpl(Set<String> targetClasses, Set<MethodMatcher> targetMethods, Set<InjectionPointMatcher> targetInjectionPoints, Predicate<String> targetAnnotations, Predicate<Map<String, AnnotationValueHandle<?>>> targetAnnotationValues, List<MethodTransform> transforms) {
         this.targetClasses = targetClasses;
         this.targetMethods = targetMethods;
         this.targetInjectionPoints = targetInjectionPoints;

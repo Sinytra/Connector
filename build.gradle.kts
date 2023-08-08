@@ -15,7 +15,6 @@ plugins {
     id("com.github.johnrengelman.shadow") version "7.1.2" apply false
     id("org.spongepowered.mixin") version "0.7.+"
     id("me.modmuss50.mod-publish-plugin") version "0.3.+"
-    id("wtf.gofancy.git-changelog") version "1.1.+"
 }
 
 val versionConnector: String by project
@@ -298,7 +297,7 @@ tasks {
 
 publishMods {
     file.set(fullJar.archiveFile)
-    changelog.set(provider { project.changelog.generateChangelog(1, true) })
+    changelog.set(providers.environmentVariable("CHANGELOG").orElse("# $version"))
     type.set(providers.environmentVariable("PUBLISH_RELEASE_TYPE").orElse("alpha").map(ReleaseType::of))
     modLoaders.add("forge")
     dryRun.set(!providers.environmentVariable("CI").isPresent)

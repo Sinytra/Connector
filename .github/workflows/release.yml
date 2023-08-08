@@ -24,6 +24,11 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - uses: FabricMC/fabric-action-scripts@v2
+        id: changelog
+        with:
+          context: changelog
+          workflow_id: release.yml
       - uses: actions/setup-java@v3
         with:
           distribution: 'microsoft'
@@ -42,3 +47,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}

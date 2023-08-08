@@ -147,6 +147,17 @@ java {
     withSourcesJar()
 }
 
+configurations {
+    setOf(runtimeElements, apiElements).forEach { conf ->
+        conf.configure { 
+            outgoing { 
+                artifacts.clear()
+                artifact(fullJar)
+            }
+        }
+    }
+}
+
 mixin {
     add(mod, "mixins.connectormod.refmap.json")
 }

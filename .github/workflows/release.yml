@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  workflow_dispatch: 
+    inputs: 
+      release_type:
+        description: 'The published artifact release type'
+        required: false
+        default: 'STABLE'
+        type: choice
+        options:
+          - STABLE
+          - BETA
+          - ALPHA
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'microsoft'
+          java-version: '17'
+      - uses: gradle/wrapper-validation-action@v1
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-home-cache-cleanup: true
+          gradle-home-cache-excludes: |
+            gradle.properties
+      - name: Build with Gradle
+        run: ./gradlew build publishMods --stacktrace
+        env:
+          PUBLISH_RELEASE_TYPE: ${{ inputs.release_type }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}

@@ -200,11 +200,20 @@ public final class RelocatingRenamingTransformer extends RenamingTransformer {
 
         @Override
         public String mapMethodName(String owner, String name, String descriptor) {
-            String fastMapped = this.flatMappings.get(name);
-            if (fastMapped != null) {
-                return fastMapped;
-            }
-            return super.mapMethodName(owner, name, descriptor);
+            return this.classProvider.getClass(owner)
+                .map(cls -> {
+                    // Handle methods belonging to interfaces added through @Implements
+                    if (cls instanceof MixinClassInfo && !name.startsWith("lambda$")) {
+                        int interfacePrefix = name.indexOf("$");
+                        if (interfacePrefix > -1 && name.lastIndexOf("$") == interfacePrefix) {
+                            String actualName = name.substring(interfacePrefix + 1);
+                            String mapped = this.flatMappings.get(actualName);
+                            return mapped != null ? name.substring(0, interfacePrefix + 1) + mapped : mapMethodName(owner, actualName, descriptor);
+                        }
+                    }
+                    return this.flatMappings.get(name);
+                })
+                .orElseGet(() -> super.mapMethodName(owner, name, descriptor));
         }
 
         @Override

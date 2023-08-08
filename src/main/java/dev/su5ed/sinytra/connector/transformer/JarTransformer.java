@@ -154,7 +154,7 @@ public final class JarTransformer {
         Transformer remappingTransformer = RelocatingRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
         List<Future<FabricModPath>> futures = paths.stream()
             .map(jar -> executorService.submit(() -> {
-                FabricModPath path = jar.transform(remappingTransformer, classProvider);
+                FabricModPath path = jar.transform(remappingTransformer);
                 progress.increment();
                 return path;
             }))
@@ -184,7 +184,7 @@ public final class JarTransformer {
         return results;
     }
 
-    private static void transformJar(File input, Path output, FabricModFileMetadata metadata, Transformer remappingTransformer, ClassProvider classProvider) throws IOException {
+    private static void transformJar(File input, Path output, FabricModFileMetadata metadata, Transformer remappingTransformer) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         String jarMapping = metadata.manifestAttributes().getValue(FABRIC_MAPPING_NAMESPACE);
@@ -271,9 +271,9 @@ public final class JarTransformer {
     public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinClasses, Attributes manifestAttributes, boolean containsAT) {}
 
     public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
-        public FabricModPath transform(Transformer remappingTransformer, ClassProvider classProvider) throws IOException {
+        public FabricModPath transform(Transformer remappingTransformer) throws IOException {
             Files.deleteIfExists(this.modPath.path);
-            transformJar(this.input, this.modPath.path, this.modPath.metadata(), remappingTransformer, classProvider);
+            transformJar(this.input, this.modPath.path, this.modPath.metadata(), remappingTransformer);
             this.cacheFile.save();
             return this.modPath;
         }

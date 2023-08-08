@@ -59,6 +59,12 @@ public class MixinPatchTransformer implements Transformer {
                 else params.add(5, type);
             })
             .build(),
+        // float breakChance; added by Forge in AnvilMenu#onTake
+        Patch.builder()
+            .targetClass("net/minecraft/world/inventory/AnvilMenu")
+            .targetMethod("lambda$onTake$2")
+            .modifyParams(params -> params.add(1, Type.FLOAT_TYPE))
+            .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/chunk/ChunkRenderDispatcher")
             .targetMethod("<init>")

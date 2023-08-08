@@ -18,7 +18,7 @@ jobs:
           gradle-home-cache-cleanup: true
           gradle-home-cache-excludes: |
             gradle.properties
-      - run: ./gradlew build publishToMavenLocal --stacktrace
+      - run: ./gradlew clean build publishToMavenLocal --stacktrace
       - uses: actions/upload-artifact@v3
         with:
           name: Maven Local

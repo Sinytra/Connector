@@ -36,7 +36,7 @@ jobs:
           gradle-home-cache-excludes: |
             gradle.properties
       - name: Build with Gradle
-        run: ./gradlew build publishMods --stacktrace
+        run: ./gradlew clean build publishMods --stacktrace
         env:
           PUBLISH_RELEASE_TYPE: ${{ inputs.release_type }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

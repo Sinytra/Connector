@@ -14,14 +14,11 @@ plugins {
     id("net.minecraftforge.gradle") version "[6.0,6.2)"
     id("com.github.johnrengelman.shadow") version "7.1.2" apply false
     id("org.spongepowered.mixin") version "0.7.+"
-    id("me.qoomon.git-versioning") version "6.3.+"
     id("me.modmuss50.mod-publish-plugin") version "0.3.+"
     id("wtf.gofancy.git-changelog") version "1.1.+"
 }
 
-version = "1.0"
-group = "dev.su5ed.sinytra"
-
+val versionConnector: String by project
 val versionMc: String by project
 val versionForge: String by project
 val versionForgeAutoRenamingTool: String by project
@@ -36,11 +33,9 @@ val publishBranch: String by project
 val forgifiedFabricApiCurseForge: String by project
 val forgifiedFabricApiModrinth: String by project
 
-gitVersioning.apply {
-    rev {
-        version = "\${describe.tag.version.major}.\${describe.tag.version.minor}.\${describe.tag.version.patch.plus.describe.distance}+$versionMc"
-    }
-}
+version = "$versionConnector+$versionMc"
+group = "dev.su5ed.sinytra"
+println("Project version: $version")
 
 val mod: SourceSet by sourceSets.creating
 
@@ -149,8 +144,8 @@ java {
 
 configurations {
     setOf(runtimeElements, apiElements).forEach { conf ->
-        conf.configure { 
-            outgoing { 
+        conf.configure {
+            outgoing {
                 artifacts.clear()
                 artifact(fullJar)
             }

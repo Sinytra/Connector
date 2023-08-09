@@ -1,6 +1,6 @@
-name: Bug Report
-description: Report an issue you've encountered
-labels: [bug]
+name: Mod Incompatibility
+description: Report an incompatible mod
+labels: [compat]
 body:
   - type: markdown
     attributes:
@@ -8,8 +8,24 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking your time to report this bug!
-        Make sure you are running the latest version before reporting.
+        Thank you for taking your time to report this incompatibility!
+        Make sure you are running the latest version of Connector and its dependencies before reporting.
+  - type: input
+    id: mod
+    attributes: 
+      label: Mod Name
+      description: "Name of the problematic mod"
+      placeholder: "Examplemod"
+    validations:
+      required: true
+  - type: input
+    id: homepage
+    attributes: 
+      label: Mod Homepage
+      description: "A link to the mod's homepage. This can be its CurseForge, Modrinth, Github repository or something else."
+      placeholder: "https://example.com"
+    validations:
+      required: true
   - type: input
     id: description
     attributes:
@@ -18,12 +34,13 @@ body:
     validations:
       required: true
   - type: textarea
-    id: repro
+    id: steps
     attributes:
       label: Steps to reproduce
       description: |
         How do you trigger this bug? Please walk us through it step by step.
-        If applicable, add screenshots to help explain your problem.
+        If applicable, add screenshots to help explain your problem. In case the mod crashes the game without
+        ever loading, feel free to skip this step.
       value: |
         1.
         2.

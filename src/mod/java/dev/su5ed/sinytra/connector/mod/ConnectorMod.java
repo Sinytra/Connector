@@ -2,7 +2,7 @@ package dev.su5ed.sinytra.connector.mod;
 
 import dev.su5ed.sinytra.connector.loader.ConnectorExceptionHandler;
 import dev.su5ed.sinytra.connector.mod.compat.FluidHandlerCompat;
-import dev.su5ed.sinytra.connector.mod.compat.LateEntityAttributeRegistry;
+import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
@@ -26,7 +26,7 @@ public class ConnectorMod {
         }
 
         if (modList.isLoaded("fabric_object_builder_api_v1")) {
-            bus.addListener(EventPriority.HIGHEST, LateEntityAttributeRegistry::onEntityAttributesCreate);
+            bus.addListener(EventPriority.HIGHEST, LazyEntityAttributes::addMissingAttributes);
         }
     }
 }

@@ -1,8 +1,7 @@
 package dev.su5ed.sinytra.connector.transformer;
 
+import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassTransform;
-import dev.su5ed.sinytra.connector.transformer.patch.MethodQualifier;
-import dev.su5ed.sinytra.connector.transformer.patch.ParameterToSupplierPatch;
 import dev.su5ed.sinytra.connector.transformer.patch.Patch;
 import net.minecraftforge.fart.api.Transformer;
 import org.objectweb.asm.ClassReader;
@@ -169,22 +168,7 @@ public class MixinPatchTransformer implements Transformer {
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
-        new ParameterToSupplierPatch()
-            // Calling FabricDefaultAttributeRegistry.register usually involves passing in the result of LivingEntity.createLivingAttributes.
-            // Forge modifies the createLivingAttributes method to include attributes which need to be registered before they can be queried (RegistryObject).
-            // This means calling it at the time fabric mods do will fail. We replace the registration method with our own, which takes in the existing value as a supplier. 
-            // The attributes are now registered by us, just before FabricDefaultAttributeRegistry processes them.
-            // @see dev.su5ed.sinytra.connector.mod.compat.LateEntityAttributeRegistry
-            .add(
-                new MethodQualifier("net/fabricmc/fabric/api/object/builder/v1/entity/FabricDefaultAttributeRegistry", "register", "(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/ai/attributes/AttributeSupplier;)V"),
-                new MethodQualifier("dev/su5ed/sinytra/connector/mod/compat/LateEntityAttributeRegistry", "register", "(Lnet/minecraft/world/entity/EntityType;Ljava/util/function/Supplier;)V"),
-                Type.getObjectType("net/minecraft/world/entity/ai/attributes/AttributeSupplier")
-            )
-            .add(
-                new MethodQualifier("net/fabricmc/fabric/api/object/builder/v1/entity/FabricDefaultAttributeRegistry", "register", "(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/ai/attributes/AttributeSupplier$Builder;)V"),
-                new MethodQualifier("dev/su5ed/sinytra/connector/mod/compat/LateEntityAttributeRegistry", "registerBuilder", "(Lnet/minecraft/world/entity/EntityType;Ljava/util/function/Supplier;)V"),
-                Type.getObjectType("net/minecraft/world/entity/ai/attributes/AttributeSupplier$Builder")
-            )
+        new ClassResourcesTransformer()
     );
 
     private final Set<String> mixins;

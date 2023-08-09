@@ -6,9 +6,11 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "TagEntryAccessor",
+    "AttributeSupplierAccessor",
     "BootstrapMixin",
     "ForgeHooksMixin",
     "ForgeRegistryMixin",
+    "LivingEntityMixin",
     "TagLoaderMixin"
   ],
   "client": [

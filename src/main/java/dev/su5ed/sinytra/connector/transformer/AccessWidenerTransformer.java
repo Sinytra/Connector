@@ -45,6 +45,7 @@ public class AccessWidenerTransformer implements Transformer {
         private final String sourceNamespace;
         private final StringBuilder builder = new StringBuilder();
 
+        private final Map<String, AccessWidenerReader.AccessType> classAccess = new HashMap<>();
         private final Map<String, Map<String, AccessWidenerReader.AccessType>> classFields = new HashMap<>();
 
         public RemappingAccessWidenerVisitor(String sourceNamespace) {
@@ -54,6 +55,17 @@ public class AccessWidenerTransformer implements Transformer {
         }
 
         public void finish() {
+            // Translate class AWs
+            this.classAccess.forEach((name, access) -> {
+                String modifier = switch (access) {
+                    case ACCESSIBLE -> "public";
+                    case EXTENDABLE -> "public-f";
+                    default -> throw new IllegalArgumentException("Invalid access type " + access + " for class");
+                };
+                String mappedName = AccessWidenerTransformer.this.resolver.mapClassName(this.sourceNamespace, name).replace('/', '.');
+                this.builder.append(modifier).append(" ").append(mappedName).append("\n");
+            });
+            // Translate field AWs
             this.classFields.forEach((owner, fields) -> fields.forEach((name, access) -> {
                 String modifier = switch (access) {
                     case ACCESSIBLE -> "public";
@@ -72,13 +84,11 @@ public class AccessWidenerTransformer implements Transformer {
 
         @Override
         public void visitClass(String name, AccessWidenerReader.AccessType access, boolean transitive) {
-            String modifier = switch (access) {
-                case ACCESSIBLE -> "public";
-                case EXTENDABLE -> "public-f";
-                default -> throw new IllegalArgumentException("Invalid access type " + access + " for class");
-            };
-            String mappedName = AccessWidenerTransformer.this.resolver.mapClassName(this.sourceNamespace, name).replace('/', '.');
-            this.builder.append(modifier).append(" ").append(mappedName).append("\n");
+            // AcessWidener silently also access widens owners of methods that are being AW'd, but never calls visitClass for those entries
+            // Therefore, we have to replicate this behavior ourselves in visitMethod below. In addition, we first gather all class AWs in a map
+            // and only translate them once all AW entries have been process. This prevents conflicts in case visitMethod generates an AW entry
+            // for a class that already has one, except with lower access.
+            this.classAccess.compute(name, (value, existing) -> existing == null || access.ordinal() > existing.ordinal() ? access : existing);
         }
 
         @Override
@@ -101,6 +111,8 @@ public class AccessWidenerTransformer implements Transformer {
                 .append(mappedDescriptor)
                 .append(!name.equals(mappedName) ? " # " + mappedName : "")
                 .append("\n");
+            // Make parent class accessible / extensible if necessary
+            visitClass(owner, access, false);
         }
 
         @Override

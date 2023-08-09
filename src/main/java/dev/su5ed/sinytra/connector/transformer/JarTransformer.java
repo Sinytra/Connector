@@ -63,7 +63,7 @@ public final class JarTransformer {
     private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
     private static final String SOURCE_NAMESPACE = "intermediary";
     // Increment to invalidate cache
-    private static final int CACHE_VERSION = 1;
+    private static final int CACHE_VERSION = 2;
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Marker TRANSFORM_MARKER = MarkerFactory.getMarker("TRANSFORM");
 
@@ -172,7 +172,7 @@ public final class JarTransformer {
             .toList();
         executorService.shutdown();
         try {
-            if (!executorService.awaitTermination(20, TimeUnit.SECONDS)) {
+            if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
                 throw new RuntimeException("Timed out waiting for jar remap");
             }
         } catch (InterruptedException ignored) {

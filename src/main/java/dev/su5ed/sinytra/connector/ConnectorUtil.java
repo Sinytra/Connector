@@ -54,6 +54,9 @@ public final class ConnectorUtil {
                     String cached = Files.readString(inputCache);
                     if (cached.equals(checksum)) {
                         return new CacheFile(inputCache, checksum, true);
+                    } else {
+                        Files.delete(output);
+                        Files.delete(inputCache);
                     }
                 }
                 return new CacheFile(inputCache, checksum, false);

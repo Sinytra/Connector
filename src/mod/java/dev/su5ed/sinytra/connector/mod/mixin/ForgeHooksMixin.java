@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.mixin;
 
-import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.common.ForgeMod;
@@ -19,7 +19,7 @@ public abstract class ForgeHooksMixin {
     private static void getFabricVanillaFluidType(Fluid fluid, CallbackInfoReturnable<FluidType> cir) {
         ForgeRegistries.FLUIDS.getResourceKey(fluid)
             .flatMap(key -> ModList.get().getModContainerById(key.location().getNamespace()))
-            .filter(container -> ConnectorLoader.isConnectorMod(container.getModInfo().getModId()))
+            .filter(container -> ConnectorEarlyLoader.isConnectorMod(container.getModInfo().getModId()))
             .ifPresent(container -> cir.setReturnValue(ForgeMod.EMPTY_TYPE.get()));
     }
 }

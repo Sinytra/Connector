@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.compat;
 
-import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
 import net.fabricmc.fabric.impl.client.rendering.fluid.FluidRenderHandlerRegistryImpl;
@@ -32,7 +32,7 @@ public final class FluidHandlerCompat {
         Map<FluidType, FluidRenderHandler> forgeHandlers = new HashMap<>();
         for (Map.Entry<ResourceKey<Fluid>, Fluid> entry : ForgeRegistries.FLUIDS.getEntries()) {
             ResourceKey<Fluid> key = entry.getKey();
-            if (!ConnectorLoader.isConnectorMod(key.location().getNamespace())) {
+            if (!ConnectorEarlyLoader.isConnectorMod(key.location().getNamespace())) {
                 Fluid fluid = entry.getValue();
                 FluidRenderHandler handler = forgeHandlers.computeIfAbsent(fluid.getFluidType(), ForgeFluidRenderHandler::new);
                 registryHandlers.put(fluid, handler);

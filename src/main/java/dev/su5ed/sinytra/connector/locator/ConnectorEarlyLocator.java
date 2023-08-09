@@ -1,7 +1,7 @@
 package dev.su5ed.sinytra.connector.locator;
 
 import com.mojang.logging.LogUtils;
-import dev.su5ed.sinytra.connector.loader.ConnectorExceptionHandler;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.moddiscovery.AbstractJarFileModLocator;
 import net.minecraftforge.fml.loading.moddiscovery.ModDiscoverer;
@@ -43,7 +43,7 @@ public class ConnectorEarlyLocator extends AbstractJarFileModLocator {
             dependencyLocatorList.sort(Comparator.comparingInt(loc -> loc instanceof ConnectorLocator ? 1 : 0));
         } catch (Throwable t) {
             LOGGER.error("Error sorting FML dependency locators", t);
-            ConnectorExceptionHandler.addSuppressed(t);
+            ConnectorEarlyLoader.addSuppressed(t);
         }
         injectLogMarkers();
 

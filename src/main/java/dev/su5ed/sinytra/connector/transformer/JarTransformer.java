@@ -8,7 +8,7 @@ import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
-import dev.su5ed.sinytra.connector.loader.ConnectorExceptionHandler;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
@@ -183,7 +183,7 @@ public final class JarTransformer {
                 try {
                     return future.get();
                 } catch (Throwable t) {
-                    ConnectorExceptionHandler.addSuppressed(t);
+                    ConnectorEarlyLoader.addSuppressed(t);
                     return null;
                 }
             })

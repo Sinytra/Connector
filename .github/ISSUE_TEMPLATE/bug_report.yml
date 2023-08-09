@@ -36,7 +36,7 @@ body:
     attributes:
       label: Logs
       description: |
-        If applicabble (crash, error output in console), please provide your crash report or latest.log
+        If applicable (crash, error output in console), please provide your crash report or latest.log
         To upload logs, use an external site to post the crash report, such as [Ubuntu Pastebin](https://paste.ubuntu.com/), [Pastebin](http://pastebin.com/), or [Github Gist](https://gist.github.com/)
   - type: textarea
     id: context

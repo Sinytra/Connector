@@ -55,7 +55,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 
@@ -90,13 +89,25 @@ public final class JarTransformer {
                 }
 
                 LOGGER.debug(TRANSFORM_MARKER, "Creating flat mapping for namespace {}", sourceNamespace);
+                // Intermediary sometimes contains duplicate names for different methods (why?). We exclude those.
+                Set<String> excludedNames = new HashSet<>();
                 Collection<String> prefixes = MAPPING_PREFIXES.get(sourceNamespace);
                 MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
-                Map<String, String> resolved = resolver.getCurrentMap(sourceNamespace).getClasses().stream()
+                Map<String, String> resolved = new HashMap<>();
+                resolver.getCurrentMap(sourceNamespace).getClasses().stream()
                     .flatMap(cls -> Stream.concat(Stream.of(cls), Stream.concat(cls.getFields().stream(), cls.getMethods().stream()))
                         .filter(node -> prefixes.stream().anyMatch(node.getOriginal()::startsWith))
                         .map(node -> Pair.of(node.getOriginal(), node.getMapped())))
-                    .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond, (a, b) -> a));
+                    .forEach(pair -> {
+                        String original = pair.getFirst();
+                        if (resolved.containsKey(original)) {
+                            excludedNames.add(original);
+                            resolved.remove(original);
+                        }
+                        if (!excludedNames.contains(original)) {
+                            resolved.put(original, pair.getSecond());
+                        }
+                    });
                 FLAT_MAPPINGS_CACHE.put(sourceNamespace, resolved);
                 return resolved;
             }

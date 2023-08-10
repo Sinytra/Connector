@@ -207,8 +207,9 @@ public final class RelocatingRenamingTransformer extends RenamingTransformer {
                         int interfacePrefix = name.indexOf("$");
                         if (interfacePrefix > -1 && name.lastIndexOf("$") == interfacePrefix) {
                             String actualName = name.substring(interfacePrefix + 1);
-                            String mapped = this.flatMappings.get(actualName);
-                            return mapped != null ? name.substring(0, interfacePrefix + 1) + mapped : mapMethodName(owner, actualName, descriptor);
+                            String fastMapped = this.flatMappings.get(actualName);
+                            String mapped = fastMapped != null ? fastMapped : mapMethodName(owner, actualName, descriptor);
+                            return name.substring(0, interfacePrefix + 1) + mapped;
                         }
                     }
                     return this.flatMappings.get(name);

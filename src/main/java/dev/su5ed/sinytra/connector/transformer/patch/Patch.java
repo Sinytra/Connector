@@ -36,6 +36,8 @@ public interface Patch {
 
         Builder modifyInjectionPoint(String target);
 
+        Builder modifyInjectionPoint(String value, String target);
+
         Builder modifyParams(Consumer<List<Type>> operator);
 
         Builder modifyParams(Consumer<List<Type>> operator, @Nullable LVTFixer lvtFixer);

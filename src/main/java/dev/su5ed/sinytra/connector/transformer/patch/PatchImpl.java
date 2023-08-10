@@ -184,10 +184,14 @@ class PatchImpl implements Patch {
                 return value instanceof List<?> list ? (AnnotationNode) list.get(0) : (AnnotationNode) value;
             })
             .flatMap(node -> {
-                String value = PatchImpl.<String>findAnnotationValue(node.values, "value").map(AnnotationValueHandle::get).orElse(null);
+                AnnotationValueHandle<String> value = PatchImpl.<String>findAnnotationValue(node.values, "value").orElse(null);
+                String valueStr = value != null ? value.get() : null;
                 AnnotationValueHandle<String> target = PatchImpl.<String>findAnnotationValue(node.values, "target").orElse(null);
-                if (target != null && this.targetInjectionPoints.stream().anyMatch(pred -> pred.test(value, target.get()))) {
-                    return Optional.of(Map.of("target", target));
+                if (target != null && this.targetInjectionPoints.stream().anyMatch(pred -> pred.test(valueStr, target.get()))) {
+                    return Optional.of(Map.of(
+                        "value", value,
+                        "target", target
+                    ));
                 }
                 return Optional.empty();
             });
@@ -221,9 +225,12 @@ class PatchImpl implements Patch {
         }
     }
 
-    record ModifyInjectionPointTransform(String replacementTargetDesc) implements MethodTransform {
+    record ModifyInjectionPointTransform(String value, String replacementTargetDesc) implements MethodTransform {
         @Override
         public boolean apply(ClassNode classNode, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
+            if (this.value != null) {
+                ((AnnotationValueHandle<String>) Objects.requireNonNull(annotationValues.get("value"), "Missing value handle")).set(this.value);
+            }
             AnnotationValueHandle<String> handle = (AnnotationValueHandle<String>) Objects.requireNonNull(annotationValues.get("target"), "Missing target handle, did you specify the target descriptor?");
             LOGGER.info(PATCHER, "Changing mixin method target {}.{} to {}", classNode.name, methodNode.name, this.replacementTargetDesc);
             handle.set(this.replacementTargetDesc);
@@ -264,7 +271,7 @@ class PatchImpl implements Patch {
     }
 
     record ModifyMixinMethodParams(Consumer<List<Type>> operator, @Nullable LVTFixer lvtFixer) implements MethodTransform {
-        private static final Set<String> ACCEPTED_ANNOTATIONS = Set.of(INJECT_ANN, MODIFY_ARG_ANN, MODIFY_VARIABLE_ANN, OVERWRITE_ANN);
+        private static final Set<String> ACCEPTED_ANNOTATIONS = Set.of(INJECT_ANN, MODIFY_ARG_ANN, OVERWRITE_ANN);
 
         @Override
         public boolean apply(ClassNode classNode, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
@@ -425,7 +432,12 @@ class PatchImpl implements Patch {
 
         @Override
         public Builder modifyInjectionPoint(String target) {
-            return transform(new ModifyInjectionPointTransform(target));
+            return modifyInjectionPoint(null, target);
+        }
+
+        @Override
+        public Builder modifyInjectionPoint(String value, String target) {
+            return transform(new ModifyInjectionPointTransform(value, target));
         }
 
         @Override

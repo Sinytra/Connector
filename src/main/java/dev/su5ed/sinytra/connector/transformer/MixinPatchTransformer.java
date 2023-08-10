@@ -77,6 +77,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyTarget("lambda$useOn$5")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/gui/screens/worldselection/WorldOpenFlows")
+            .targetMethod("start(Lnet/minecraft/client/gui/screen/Screen;Ljava/lang/String;ZZ)V")
+            .modifyTarget("doLoadLevel(Lnet/minecraft/client/gui/screens/Screen;Ljava/lang/String;ZZZ)V")
+            .modifyParams(params -> params.add(4, Type.BOOLEAN_TYPE))
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen")
             .targetMethod("renderEffects")
             .targetInjectionPoint("Lcom/google/common/collect/Ordering;sortedCopy(Ljava/lang/Iterable;)Ljava/util/List;")

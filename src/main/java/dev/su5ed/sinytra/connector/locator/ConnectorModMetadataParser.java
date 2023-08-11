@@ -12,6 +12,8 @@ import net.minecraftforge.forgespi.language.IConfigurable;
 import net.minecraftforge.forgespi.language.IModFileInfo;
 import net.minecraftforge.forgespi.locating.IModFile;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,15 @@ public final class ConnectorModMetadataParser {
             .or(() -> Optional.of(contact.asMap())
                 .filter(m -> !m.isEmpty())
                 .map(m -> m.entrySet().iterator().next().getValue()))
+            // Ensure string is valid url
+            .filter(str -> {
+                try {
+                    new URL(str);
+                    return true;
+                } catch (MalformedURLException e) {
+                    return false;
+                }
+            })
             .ifPresent(url -> {
                 modListConfig.add("modUrl", url);
                 modListConfig.add("displayURL", url);

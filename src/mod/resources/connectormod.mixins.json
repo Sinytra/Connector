@@ -14,7 +14,8 @@
     "TagLoaderMixin"
   ],
   "client": [
-    "MinecraftMixin"
+    "MinecraftMixin",
+    "ItemBlockRenderTypesMixin"
   ],
   "server": [
     "MinecraftServerMixin",

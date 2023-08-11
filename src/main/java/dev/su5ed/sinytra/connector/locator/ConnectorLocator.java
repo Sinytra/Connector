@@ -63,12 +63,13 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .toList();
         // Discover fabric mod jars
         List<JarTransformer.TransformableJar> discoveredJars = uncheck(() -> Files.list(FMLPaths.MODSDIR.get()))
-            .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
-            .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
-            .filter(ConnectorLocator::locateFabricModJar)
-            .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
-            .filter(jar -> !ConnectorUtil.DISABLED_MODS.contains(jar.modPath().metadata().modMetadata().getId()))
-            .toList();
+                .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
+                .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
+                .filter(ConnectorLocator::locateFabricModJar)
+                .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
+                .filter(ConnectorLocator::shouldLoadFabricMod)
+                .filter(jar -> !ConnectorUtil.DISABLED_MODS.contains(jar.modPath().metadata().modMetadata().getId()))
+                .toList();
         // Discover fabric nested mod jars
         List<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()
             .flatMap(jar -> {
@@ -96,6 +97,13 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         return moduleSafeJars.stream()
             .map(mod -> createConnectorModFile(mod, this))
             .toList();
+    }
+
+    private static boolean shouldLoadFabricMod(JarTransformer.TransformableJar jar){
+        if(jar.modPath().metadata().modMetadata().containsCustomElement("loadOnConnector")){
+            return jar.modPath().metadata().modMetadata().getCustomValue("loadOnConnector").getAsBoolean();
+        }
+        return true;
     }
 
     private static IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath, IModProvider provider) {

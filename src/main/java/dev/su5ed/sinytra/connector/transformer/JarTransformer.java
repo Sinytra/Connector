@@ -1,15 +1,21 @@
 package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.base.Stopwatch;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.JsonOps;
+import dev.su5ed.sinytra.adapter.patch.MixinRemaper;
+import dev.su5ed.sinytra.adapter.patch.Patch;
+import dev.su5ed.sinytra.adapter.patch.PatchSerialization;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
+import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.MappingResolverImpl;
@@ -18,6 +24,7 @@ import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.fabricmc.loader.impl.metadata.ModMetadataParser;
 import net.fabricmc.loader.impl.metadata.ParseMetadataException;
 import net.fabricmc.loader.impl.metadata.VersionOverrides;
+import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Renamer;
 import net.minecraftforge.fart.api.Transformer;
@@ -78,6 +85,7 @@ public final class JarTransformer {
         .toList();
 
     private static SrgRemappingReferenceMapper remapper;
+    private static List<? extends Patch> adapterPatches;
 
     private static Map<String, String> getFlatMapping(String sourceNamespace) {
         Map<String, String> map = FLAT_MAPPINGS_CACHE.get(sourceNamespace);
@@ -157,6 +165,16 @@ public final class JarTransformer {
             resolver.getMap("intermediary", "srg");
             remapper = new SrgRemappingReferenceMapper(resolver.getCurrentMap("intermediary"));
         }
+        if (adapterPatches == null) {
+            Path path = EmbeddedDependencies.getAdapterData();
+            try (Reader reader = Files.newBufferedReader(path)) {
+                JsonElement json = new Gson().fromJson(reader, JsonElement.class);
+                MixinRemaper.setMatcherRemapper(ASMAPI::mapMethod);
+                adapterPatches = PatchSerialization.deserialize(json, JsonOps.INSTANCE);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
 
         Stopwatch stopwatch = Stopwatch.createStarted();
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Transforming Jars", paths.size());
@@ -204,11 +222,12 @@ public final class JarTransformer {
         }
 
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
+        Map<String, Map<String, String>> refmap = RefmapRemapper.processRefmaps(input, metadata.refmaps(), remapper);
         Renamer.Builder builder = Renamer.builder()
             .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE)))
             .add(remappingTransformer)
-            .add(new MixinPatchTransformer(metadata.mixinClasses()))
-            .add(new RefmapRemapper(metadata.mixinConfigs(), metadata.refmaps(), remapper))
+            .add(new MixinPatchTransformer(metadata.mixinClasses(), refmap, adapterPatches))
+            .add(new RefmapRemapper(metadata.mixinConfigs()))
             .add(new ModMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));

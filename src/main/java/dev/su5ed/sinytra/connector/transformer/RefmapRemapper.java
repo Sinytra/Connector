@@ -1,12 +1,14 @@
 package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.gson.Gson;
+import com.mojang.datafixers.util.Pair;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -14,7 +16,12 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.jar.Manifest;
@@ -26,10 +33,22 @@ public class RefmapRemapper implements Transformer {
     private static final String SRG_MAPPING_ENV = "searge";
 
     private final Map<String, String> configs;
-    private final Collection<String> refmaps;
-    private final SrgRemappingReferenceMapper remapper;
 
-    public RefmapRemapper(Collection<String> configs, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) {
+    public static Map<String, Map<String, String>> processRefmaps(File file, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) throws IOException {
+        Map<String, Map<String, String>> results = new HashMap<>();
+        try (FileSystem fs = FileSystems.newFileSystem(file.toPath())) {
+            for (String refmap : refmaps) {
+                Path path = fs.getPath(refmap);
+                byte[] data = Files.readAllBytes(path);
+                Pair<byte[], Map<String, Map<String, String>>> remapped = remapRefmapInPlace(data, remapper);
+                results.putAll(remapped.getSecond());
+                Files.write(path, remapped.getFirst());
+            }
+        }
+        return results;
+    }
+
+    public RefmapRemapper(Collection<String> configs) {
         this.configs = configs.stream()
             // Some mods (specifically mixinextras) are present on both platforms, and mixin can fail to select the correct configs for
             // each jar due to their names being the same. To avoid conflicts, we assign fabric mixin configs new, unique names.
@@ -39,18 +58,11 @@ public class RefmapRemapper implements Transformer {
                 // Append unique string to file name
                 return parts[0] + "-" + RandomStringUtils.randomAlphabetic(5) + "." + parts[1];
             }));
-        this.refmaps = refmaps;
-        this.remapper = remapper;
     }
 
     @Override
     public ResourceEntry process(ResourceEntry entry) {
-        String name = entry.getName();
-        if (this.refmaps.contains(name)) {
-            byte[] data = remapRefmapInPlace(entry.getData());
-            return ResourceEntry.create(name, entry.getTime(), data);
-        }
-        String rename = this.configs.get(name);
+        String rename = this.configs.get(entry.getName());
         if (rename != null) {
             return ResourceEntry.create(rename, entry.getTime(), entry.getData());
         }
@@ -77,19 +89,19 @@ public class RefmapRemapper implements Transformer {
         return entry;
     }
 
-    private byte[] remapRefmapInPlace(byte[] data) {
+    private static Pair<byte[], Map<String, Map<String, String>>> remapRefmapInPlace(byte[] data, SrgRemappingReferenceMapper remapper) {
         try {
             Reader reader = new InputStreamReader(new ByteArrayInputStream(data));
             SrgRemappingReferenceMapper.SimpleRefmap simpleRefmap = GSON.fromJson(reader, SrgRemappingReferenceMapper.SimpleRefmap.class);
             Map<String, String> replacements = Map.of(INTERMEDIARY_MAPPING_ENV, SRG_MAPPING_ENV);
-            SrgRemappingReferenceMapper.SimpleRefmap remapped = this.remapper.remap(simpleRefmap, replacements);
+            SrgRemappingReferenceMapper.SimpleRefmap remapped = remapper.remap(simpleRefmap, replacements);
 
             try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
                 try (Writer writer = new OutputStreamWriter(byteStream)) {
                     remapped.write(writer);
                     writer.flush();
                 }
-                return byteStream.toByteArray();
+                return Pair.of(byteStream.toByteArray(), remapped.mappings);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

@@ -29,6 +29,7 @@ public final class EmbeddedDependencies {
     // Embedded mod jar name
     private static final String MOD_JIJ_DEP = "Mod";
 
+    private static final String ADAPTER_DATA_PATH = "adapter_data.json";
     private static final String MANIFEST_PATH = "META-INF/MANIFEST.MF";
     // Path to the jar this class is loaded from
     private static final Path SELF_PATH = uncheck(() -> {
@@ -42,6 +43,10 @@ public final class EmbeddedDependencies {
      */
     public static Stream<Path> locateEmbeddedJars() {
         return Stream.of(MOD_JIJ_DEP).map(rethrowFunction(EmbeddedDependencies::getJarInJar));
+    }
+
+    public static Path getAdapterData() {
+        return SELF_PATH.resolve(ADAPTER_DATA_PATH);
     }
 
     /**

@@ -67,8 +67,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
                 .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
                 .filter(ConnectorLocator::locateFabricModJar)
                 .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
-                .filter(ConnectorLocator::shouldLoadFabricMod)
-                .filter(jar -> !ConnectorUtil.DISABLED_MODS.contains(jar.modPath().metadata().modMetadata().getId()))
+                .filter(jar -> ConnectorLocator.shouldLoadFabricMod(jar,loadedModIds))
                 .toList();
         // Discover fabric nested mod jars
         List<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()
@@ -99,9 +98,15 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .toList();
     }
 
-    private static boolean shouldLoadFabricMod(JarTransformer.TransformableJar jar){
+    private static boolean shouldLoadFabricMod(JarTransformer.TransformableJar jar, Collection<String> loadedModIds){
         if(jar.modPath().metadata().modMetadata().containsCustomElement("loadOnConnector")){
             return jar.modPath().metadata().modMetadata().getCustomValue("loadOnConnector").getAsBoolean();
+        }
+        if(loadedModIds.contains(jar.modPath().metadata().modMetadata().getId())){
+            return false;
+        }
+        if(ConnectorUtil.DISABLED_MODS.contains(jar.modPath().metadata().modMetadata().getId())){
+            return false;
         }
         return true;
     }

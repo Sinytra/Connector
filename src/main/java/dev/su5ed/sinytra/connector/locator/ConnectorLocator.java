@@ -67,7 +67,10 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
             .filter(ConnectorLocator::locateFabricModJar)
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
-            .filter(jar -> !ConnectorUtil.DISABLED_MODS.contains(jar.modPath().metadata().modMetadata().getId()))
+            .filter(jar -> {
+                String modid = jar.modPath().metadata().modMetadata().getId();
+                return !ConnectorUtil.DISABLED_MODS.contains(modid) && !loadedModIds.contains(modid);
+            })
             .toList();
         // Discover fabric nested mod jars
         List<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()

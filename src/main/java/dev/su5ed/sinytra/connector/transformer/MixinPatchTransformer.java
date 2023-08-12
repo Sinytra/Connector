@@ -5,6 +5,7 @@ import dev.su5ed.sinytra.adapter.patch.MixinRemaper;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassTransform;
+import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
 import net.minecraftforge.fart.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -27,7 +28,7 @@ public class MixinPatchTransformer implements Transformer {
         // TODO Add mirror mixin method that injects into ForgeHooks#onPlaceItemIntoWorld for server side behavior
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/BoatRenderer")
-            .targetMethod("render")
+            .targetMethod("m_7392_")
             .targetInjectionPoint("INVOKE", "Ljava/util/Map;get(Ljava/lang/Object;)Ljava/lang/Object;")
             .modifyTarget("getModelWithLocation")
             .build(),
@@ -39,18 +40,18 @@ public class MixinPatchTransformer implements Transformer {
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/item/ItemStack")
-            .targetMethod("useOnBlock")
+            .targetMethod("m_41661_")
             .modifyTarget("lambda$useOn$5")
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen")
-            .targetMethod("renderEffects")
+            .targetMethod("m_280113_")
             .targetInjectionPoint("Lcom/google/common/collect/Ordering;sortedCopy(Ljava/lang/Iterable;)Ljava/util/List;")
             .modifyInjectionPoint("Ljava/util/stream/Stream;collect(Ljava/util/stream/Collector;)Ljava/lang/Object;")
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
-            .targetMethod("tryBreakBlock")
+            .targetMethod("m_9280_")
             .targetInjectionPoint("Lnet/minecraft/block/Block;onBreak(Lnet/minecraft/world/World;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;Lnet/minecraft/entity/player/PlayerEntity;)V")
             .modifyTarget("removeBlock")
             .modifyParams(params -> params.add(1, Type.BOOLEAN_TYPE))
@@ -60,15 +61,15 @@ public class MixinPatchTransformer implements Transformer {
         // Attempts at doing so again will fail.
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/EffectInstance")
-            .targetMethod("<init>", "loadEffect")
-            .targetInjectionPoint("NEW", "net/minecraft/util/Identifier")
+            .targetMethod("<init>", "m_172566_")
+            .targetInjectionPoint("NEW", "net/minecraft/resources/ResourceLocation")
             .targetMixinType(Patch.REDIRECT)
             .disable()
             .build(),
         // Forge adds a new boolean shouldSit local variable in the render method. We prepend it to mixin LVT params.
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/LivingEntityRenderer")
-            .targetMethod("render")
+            .targetMethod("m_7392_")
             .modifyParams(params -> {
                 Type ci = Type.getObjectType("org/spongepowered/reloc/asm/mixin/injection/callback/CallbackInfo");
                 for (int i = 0; i < params.size(); i++) {
@@ -84,7 +85,7 @@ public class MixinPatchTransformer implements Transformer {
         // Move arg modifier to the forge method, which replaces all usages of the vanilla one 
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
-            .targetMethod("renderArmorParts")
+            .targetMethod("m_289609_")
             .targetMixinType(Patch.MODIFY_ARG)
             .modifyTarget("renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
             .build(),
@@ -97,10 +98,9 @@ public class MixinPatchTransformer implements Transformer {
         //    the model, so we don't really care about modifying it anymore.
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
-            .targetMethod("renderArmorPiece")
+            .targetMethod("m_117118_")
             .targetMixinType(Patch.MODIFY_ARG)
             .targetAnnotationValues(values -> (Integer) values.get("index").get() == 4)
-            // TODO Normalize all mixin target mappings to Mojmap
             .targetInjectionPoint("INVOKE", "Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/HumanoidModel;ZFFFLjava/lang/String;)V")
             .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
             .modifyParams(params -> {
@@ -129,7 +129,8 @@ public class MixinPatchTransformer implements Transformer {
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
-        new ClassResourcesTransformer()
+        new ClassResourcesTransformer(),
+        new FieldTypeAdapter()
     );
 
     private final Set<String> mixins;

@@ -36,12 +36,17 @@ import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.UncheckedIOException;
+import java.io.Writer;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -70,7 +75,7 @@ public final class JarTransformer {
     private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
     private static final String SOURCE_NAMESPACE = "intermediary";
     // Increment to invalidate cache
-    private static final int CACHE_VERSION = 2;
+    private static final int CACHE_VERSION = 3;
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Marker TRANSFORM_MARKER = MarkerFactory.getMarker("TRANSFORM");
 
@@ -222,11 +227,11 @@ public final class JarTransformer {
         }
 
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
-        Map<String, Map<String, String>> refmap = RefmapRemapper.processRefmaps(input, metadata.refmaps(), remapper);
+        RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input, metadata.refmaps(), remapper);
         Renamer.Builder builder = Renamer.builder()
             .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE)))
             .add(remappingTransformer)
-            .add(new MixinPatchTransformer(metadata.mixinClasses(), refmap, adapterPatches))
+            .add(new MixinPatchTransformer(metadata.mixinClasses(), refmap.merged().mappings, adapterPatches))
             .add(new RefmapRemapper(metadata.mixinConfigs()))
             .add(new ModMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
@@ -239,6 +244,22 @@ public final class JarTransformer {
         } catch (Throwable t) {
             LOGGER.error("Encountered error while transforming jar file " + input.getAbsolutePath(), t);
             throw t;
+        }
+
+        // Write refmaps
+        try (FileSystem fs = FileSystems.newFileSystem(output, Map.of())) {
+            refmap.files().forEach((file, data) -> {
+                Path path = fs.getPath(file);
+                try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
+                    try (Writer writer = new OutputStreamWriter(byteStream)) {
+                        data.write(writer);
+                        writer.flush();
+                    }
+                    Files.write(path, byteStream.toByteArray());
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
         }
 
         stopwatch.stop();

@@ -94,5 +94,13 @@ public class SrgRemappingReferenceMapper {
         public void write(Appendable writer) {
             new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(this, writer);
         }
+        
+        public SimpleRefmap merge(SrgRemappingReferenceMapper.SimpleRefmap other) {
+            Map<String, Map<String, String>> mergeMappings = new HashMap<>(this.mappings);
+            mergeMappings.putAll(other.mappings);
+            Map<String, Map<String, Map<String, String>>> mergeData = new HashMap<>(this.data);
+            mergeData.putAll(other.data);
+            return new SimpleRefmap(mergeMappings, mergeData);
+        }
     }
 }

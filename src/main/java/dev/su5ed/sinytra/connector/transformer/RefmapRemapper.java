@@ -1,10 +1,11 @@
 package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.gson.Gson;
-import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -12,10 +13,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.UncheckedIOException;
-import java.io.Writer;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -28,24 +27,32 @@ import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
 public class RefmapRemapper implements Transformer {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new Gson();
     private static final String INTERMEDIARY_MAPPING_ENV = "named:intermediary";
     private static final String SRG_MAPPING_ENV = "searge";
 
     private final Map<String, String> configs;
 
-    public static Map<String, Map<String, String>> processRefmaps(File file, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) throws IOException {
-        Map<String, Map<String, String>> results = new HashMap<>();
-        try (FileSystem fs = FileSystems.newFileSystem(file.toPath())) {
+    public record RefmapFiles(SrgRemappingReferenceMapper.SimpleRefmap merged, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files) {}
+    
+    public static RefmapFiles processRefmaps(File input, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) throws IOException {
+        SrgRemappingReferenceMapper.SimpleRefmap results = new SrgRemappingReferenceMapper.SimpleRefmap(Map.of(), Map.of());
+        Map<String, SrgRemappingReferenceMapper.SimpleRefmap> refmapFiles = new HashMap<>();
+        try (FileSystem fs = FileSystems.newFileSystem(input.toPath())) {
             for (String refmap : refmaps) {
-                Path path = fs.getPath(refmap);
-                byte[] data = Files.readAllBytes(path);
-                Pair<byte[], Map<String, Map<String, String>>> remapped = remapRefmapInPlace(data, remapper);
-                results.putAll(remapped.getSecond());
-                Files.write(path, remapped.getFirst());
+                Path refmapPath = fs.getPath(refmap);
+                if (Files.exists(refmapPath)) {
+                    byte[] data = Files.readAllBytes(refmapPath);
+                    SrgRemappingReferenceMapper.SimpleRefmap remapped = remapRefmapInPlace(data, remapper);
+                    refmapFiles.put(refmap, remapped);
+                    results.merge(remapped);
+                } else {
+                    LOGGER.warn("Refmap remapper could not find refmap file {}", refmap);
+                }
             }
         }
-        return results;
+        return new RefmapFiles(results, refmapFiles);
     }
 
     public RefmapRemapper(Collection<String> configs) {
@@ -89,22 +96,10 @@ public class RefmapRemapper implements Transformer {
         return entry;
     }
 
-    private static Pair<byte[], Map<String, Map<String, String>>> remapRefmapInPlace(byte[] data, SrgRemappingReferenceMapper remapper) {
-        try {
-            Reader reader = new InputStreamReader(new ByteArrayInputStream(data));
-            SrgRemappingReferenceMapper.SimpleRefmap simpleRefmap = GSON.fromJson(reader, SrgRemappingReferenceMapper.SimpleRefmap.class);
-            Map<String, String> replacements = Map.of(INTERMEDIARY_MAPPING_ENV, SRG_MAPPING_ENV);
-            SrgRemappingReferenceMapper.SimpleRefmap remapped = remapper.remap(simpleRefmap, replacements);
-
-            try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
-                try (Writer writer = new OutputStreamWriter(byteStream)) {
-                    remapped.write(writer);
-                    writer.flush();
-                }
-                return Pair.of(byteStream.toByteArray(), remapped.mappings);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    private static SrgRemappingReferenceMapper.SimpleRefmap remapRefmapInPlace(byte[] data, SrgRemappingReferenceMapper remapper) {
+        Reader reader = new InputStreamReader(new ByteArrayInputStream(data));
+        SrgRemappingReferenceMapper.SimpleRefmap simpleRefmap = GSON.fromJson(reader, SrgRemappingReferenceMapper.SimpleRefmap.class);
+        Map<String, String> replacements = Map.of(INTERMEDIARY_MAPPING_ENV, SRG_MAPPING_ENV);
+        return remapper.remap(simpleRefmap, replacements);
     }
 }

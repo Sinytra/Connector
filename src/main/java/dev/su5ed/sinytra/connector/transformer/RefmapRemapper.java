@@ -46,7 +46,7 @@ public class RefmapRemapper implements Transformer {
                     byte[] data = Files.readAllBytes(refmapPath);
                     SrgRemappingReferenceMapper.SimpleRefmap remapped = remapRefmapInPlace(data, remapper);
                     refmapFiles.put(refmap, remapped);
-                    results.merge(remapped);
+                    results = results.merge(remapped);
                 } else {
                     LOGGER.warn("Refmap remapper could not find refmap file {}", refmap);
                 }

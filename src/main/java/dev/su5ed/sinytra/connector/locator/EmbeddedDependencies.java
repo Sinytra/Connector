@@ -1,6 +1,11 @@
 package dev.su5ed.sinytra.connector.locator;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.mojang.logging.LogUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +17,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
@@ -24,6 +30,7 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
  * based on jar manifest attributes.
  */
 public final class EmbeddedDependencies {
+    private static final Logger LOGGER = LogUtils.getLogger();
     // Manifest attribute name prefix for embedded dependencies
     private static final String JIJ_ATTRIBUTE_PREFIX = "Embedded-Dependencies-";
     // Embedded mod jar name
@@ -37,6 +44,15 @@ public final class EmbeddedDependencies {
         return Path.of(jarLocation.toURI());
     });
     private static final Attributes ATTRIBUTES = readManifestAttributes();
+    private static final Supplier<String> JAR_CACHE_VERSION = Suppliers.memoize(() -> {
+        String ver = EmbeddedDependencies.class.getPackage().getImplementationVersion();
+        if (ver == null) {
+            LOGGER.error("Missing Connector jar version, disabling transformer caching");
+            // Return a random string to still write an input file, so that once we have a proper version available we refresh the cache
+            return RandomStringUtils.randomAlphabetic(5);
+        }
+        return ver;
+    });
 
     /**
      * {@return a stream of paths of all embedded jars}
@@ -47,6 +63,11 @@ public final class EmbeddedDependencies {
 
     public static Path getAdapterData() {
         return SELF_PATH.resolve(ADAPTER_DATA_PATH);
+    }
+
+    @Nullable
+    public static String getJarCacheVersion() {
+        return JAR_CACHE_VERSION.get();
     }
 
     /**

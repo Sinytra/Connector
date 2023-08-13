@@ -13,8 +13,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.UncheckedIOException;
+import java.io.Writer;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -32,10 +34,8 @@ public class RefmapRemapper implements Transformer {
     private static final String INTERMEDIARY_MAPPING_ENV = "named:intermediary";
     private static final String SRG_MAPPING_ENV = "searge";
 
-    private final Map<String, String> configs;
-
     public record RefmapFiles(SrgRemappingReferenceMapper.SimpleRefmap merged, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files) {}
-    
+
     public static RefmapFiles processRefmaps(File input, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) throws IOException {
         SrgRemappingReferenceMapper.SimpleRefmap results = new SrgRemappingReferenceMapper.SimpleRefmap(Map.of(), Map.of());
         Map<String, SrgRemappingReferenceMapper.SimpleRefmap> refmapFiles = new HashMap<>();
@@ -47,7 +47,8 @@ public class RefmapRemapper implements Transformer {
                     SrgRemappingReferenceMapper.SimpleRefmap remapped = remapRefmapInPlace(data, remapper);
                     refmapFiles.put(refmap, remapped);
                     results = results.merge(remapped);
-                } else {
+                }
+                else {
                     LOGGER.warn("Refmap remapper could not find refmap file {}", refmap);
                 }
             }
@@ -55,7 +56,10 @@ public class RefmapRemapper implements Transformer {
         return new RefmapFiles(results, refmapFiles);
     }
 
-    public RefmapRemapper(Collection<String> configs) {
+    private final Map<String, String> configs;
+    private final Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files;
+
+    public RefmapRemapper(Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files) {
         this.configs = configs.stream()
             // Some mods (specifically mixinextras) are present on both platforms, and mixin can fail to select the correct configs for
             // each jar due to their names being the same. To avoid conflicts, we assign fabric mixin configs new, unique names.
@@ -65,11 +69,25 @@ public class RefmapRemapper implements Transformer {
                 // Append unique string to file name
                 return parts[0] + "-" + RandomStringUtils.randomAlphabetic(5) + "." + parts[1];
             }));
+        this.files = files;
     }
 
     @Override
     public ResourceEntry process(ResourceEntry entry) {
-        String rename = this.configs.get(entry.getName());
+        String name = entry.getName();
+        if (this.files.containsKey(name)) {
+            try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
+                try (Writer writer = new OutputStreamWriter(byteStream)) {
+                    this.files.get(name).write(writer);
+                    writer.flush();
+                }
+                byte[] data = byteStream.toByteArray();
+                return ResourceEntry.create(name, entry.getTime(), data);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+        String rename = this.configs.get(name);
         if (rename != null) {
             return ResourceEntry.create(rename, entry.getTime(), entry.getData());
         }

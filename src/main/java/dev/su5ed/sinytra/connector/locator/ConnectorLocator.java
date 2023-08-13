@@ -137,7 +137,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         String parentNameWithoutExt = parentName.split("\\.(?!.*\\.)")[0];
         // Extract JiJ
         Path extracted = tempDir.resolve(parentNameWithoutExt + "$" + path.getFileName().toString());
-        ConnectorUtil.cache("1", path, extracted, () -> Files.copy(path, extracted));
+        ConnectorUtil.cache(path, extracted, () -> Files.copy(path, extracted));
 
         return uncheck(() -> JarTransformer.cacheTransformableJar(extracted.toFile()));
     }

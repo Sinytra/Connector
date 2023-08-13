@@ -4,6 +4,7 @@ import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import cpw.mods.modlauncher.api.ServiceRunner;
+import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.IOException;
@@ -43,18 +44,20 @@ public final class ConnectorUtil {
         CACHE_ENABLED = prop == null || prop.equals("true");
     }
 
-    public static CacheFile getCached(String version, Path input, Path output) {
+    public static CacheFile getCached(Path input, Path output) {
         if (CACHE_ENABLED) {
             Path inputCache = output.getParent().resolve(output.getFileName() + ".input");
             try {
                 byte[] bytes = Files.readAllBytes(input);
-                String checksum = version + "," + Hashing.sha256().hashBytes(bytes);
+                String cacheVersion = EmbeddedDependencies.getJarCacheVersion();
+                String checksum = cacheVersion + "," + Hashing.sha256().hashBytes(bytes);
 
                 if (Files.exists(inputCache) && Files.exists(output)) {
                     String cached = Files.readString(inputCache);
                     if (cached.equals(checksum)) {
                         return new CacheFile(inputCache, checksum, true);
-                    } else {
+                    }
+                    else {
                         Files.delete(output);
                         Files.delete(inputCache);
                     }
@@ -67,8 +70,8 @@ public final class ConnectorUtil {
         return new CacheFile(null, null, false);
     }
 
-    public static void cache(String version, Path input, Path output, ServiceRunner action) {
-        CacheFile cacheFile = getCached(version, input, output);
+    public static void cache(Path input, Path output, ServiceRunner action) {
+        CacheFile cacheFile = getCached(input, output);
         if (!cacheFile.isUpToDate()) {
             try {
                 Files.deleteIfExists(output);
@@ -76,7 +79,7 @@ public final class ConnectorUtil {
                 cacheFile.save();
             } catch (Throwable t) {
                 throw new RuntimeException(t);
-            }   
+            }
         }
     }
 
@@ -113,11 +116,13 @@ public final class ConnectorUtil {
         }
 
         public void save() {
-            try {
-                Files.writeString(this.inputCache, this.inputChecksum);
-                this.isUpToDate = true;
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+            if (this.inputCache != null) {
+                try {
+                    Files.writeString(this.inputCache, this.inputChecksum);
+                    this.isUpToDate = true;
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
             }
         }
     }

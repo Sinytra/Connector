@@ -138,7 +138,10 @@ val fullJar: Jar by tasks.creating(Jar::class) {
         rename("output.json", "adapter_data.json")
     }
     from(modJar)
-    manifest.attributes("Embedded-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
+    manifest {
+        from(tasks.jar.get().manifest)
+        attributes("Embedded-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
+    }
 
     archiveClassifier.set("full")
 }
@@ -264,7 +267,8 @@ tasks {
                 "Implementation-Title" to project.name,
                 "Implementation-Version" to project.version,
                 "Implementation-Vendor" to "Sinytra",
-                "Implementation-Timestamp" to LocalDateTime.now()
+                "Implementation-Timestamp" to LocalDateTime.now(),
+                "Automatic-Module-Name" to "dev.su5ed.sinytra.connector"
             )
         }
     }

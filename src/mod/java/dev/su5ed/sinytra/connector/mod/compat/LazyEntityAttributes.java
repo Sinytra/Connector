@@ -5,7 +5,7 @@ import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraftforge.common.ForgeMod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.Map;
 public class LazyEntityAttributes {
     private static final List<AttributeSupplier> SUPPLIERS = new ArrayList<>();
 
-    public static void addMissingAttributes(FMLCommonSetupEvent event) {
+    public static void addMissingAttributes(EntityAttributeCreationEvent event) {
         for (AttributeSupplier supplier : SUPPLIERS) {
             // Copy builder
             AttributeSupplier.Builder newBuilder = new AttributeSupplier.Builder(supplier);

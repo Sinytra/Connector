@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.Objects;
 
 public class FieldToMethodTransformer implements Transformer {
-    // Extracted from forge's coremods/field_to_method.js
     private static final Map<String, Map<String, String>> REPLACEMENTS = Map.of(
+        // Extracted from forge's coremods/field_to_method.js
         "net.minecraft.world.level.biome.Biome", Map.of(
             "f_47437_", "getModifiedClimateSettings",
             "f_47443_", "getModifiedSpecialEffects"
@@ -35,7 +35,7 @@ public class FieldToMethodTransformer implements Transformer {
             "f_226555_", "getModifiedStructureSettings"
         ),
         "net.minecraft.world.effect.MobEffectInstance", Map.of(
-            "f_19502_", ASMAPI.mapMethod("m_19544_")
+            "f_19502_", "m_19544_"
         ),
         "net.minecraft.world.level.block.LiquidBlock", Map.of(
             "f_54689_", "getFluid"
@@ -48,10 +48,15 @@ public class FieldToMethodTransformer implements Transformer {
             "f_56859_", "getModelState"
         ),
         "net.minecraft.world.level.block.FlowerPotBlock", Map.of(
-            "f_53525_", ASMAPI.mapMethod("m_53560_")
+            "f_53525_", "m_53560_"
         ),
         "net.minecraft.world.item.ItemStack", Map.of(
-            "f_41589_", ASMAPI.mapMethod("m_41720_")
+            "f_41589_", "m_41720_"
+        ),
+        // Additional fields that forge replaces with getters via patches statically
+        "net.minecraft.world.item.MobBucketItem", Map.of(
+            "f_151134_", "getFishType",
+            "f_151135_", "getEmptySound"
         )
     );
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -63,7 +68,7 @@ public class FieldToMethodTransformer implements Transformer {
         ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
         REPLACEMENTS.forEach((cls, replacements) -> {
             IMappingFile.IClass classMap = Objects.requireNonNull(mappings.getClass(cls.replace('.', '/')));
-            replacements.forEach((field, getter) -> builder.put(classMap.remapField(field), getter));
+            replacements.forEach((field, getter) -> builder.put(classMap.remapField(field), ASMAPI.mapMethod(getter)));
         });
         this.mappedReplacements = builder.build();
     }

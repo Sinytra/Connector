@@ -10,8 +10,6 @@ import dev.su5ed.sinytra.connector.transformer.JarTransformer.FabricModPath;
 import net.minecraftforge.forgespi.locating.IModFile;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -30,7 +28,6 @@ import java.util.stream.Stream;
 
 public class SplitPackageMerger {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Marker MERGER = MarkerFactory.getMarker("MERGER");
 
     /**
      * Detect and resolve split package conflicts in jars.
@@ -61,7 +58,7 @@ public class SplitPackageMerger {
         AtomicInteger totalJars = new AtomicInteger(0);
         pkgSources.forEach((pkg, sources) -> {
             if (sources.size() > 1) {
-                LOGGER.debug(MERGER, "Found split package {} in jars {}", pkg, sources.stream().map(info -> info.getFirst().name()).collect(Collectors.joining(",")));
+                LOGGER.debug("Found split package {} in jars {}", pkg, sources.stream().map(info -> info.getFirst().name()).collect(Collectors.joining(",")));
                 sources.forEach(source -> {
                     if (plainPaths.remove(source.getSecond())) {
                         totalJars.getAndIncrement();
@@ -71,7 +68,7 @@ public class SplitPackageMerger {
                 });
             }
         });
-        LOGGER.debug(MERGER, "Found {} split packages across {} jars", mergePkgs.keySet().size(), totalJars.get());
+        LOGGER.debug("Found {} split packages across {} jars", mergePkgs.keySet().size(), totalJars.get());
 
         // Name -> Jar merge info
         Map<String, JarMergeInfo> jarMap = new HashMap<>();
@@ -107,7 +104,7 @@ public class SplitPackageMerger {
                     FabricModPath modPath = pair.getSecond();
                     plainPaths.remove(modPath);
                     JarMergeInfo info = jarMap.computeIfAbsent(jar.name(), str -> new JarMergeInfo(jar, modPath.metadata()));
-                    LOGGER.debug(MERGER, "Excluding existing package {} from jar {}", pkg, jar.name());
+                    LOGGER.debug("Excluding existing package {} from jar {}", pkg, jar.name());
                     info.excludedPackages().add(pkg);
                 }
             }

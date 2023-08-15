@@ -123,7 +123,11 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
     @Override
     public Collection<String> getProvides() {
         Set<String> provides = new HashSet<>(this.wrapped.getProvides());
-        provides.add(this.wrapped.getId()); // Add original modid to mod lookup
+        String original = this.wrapped.getId();
+        if (!getId().equals(original)) {
+            // Add original modid to mod lookup
+            provides.add(original);
+        }
         return provides;
     }
 

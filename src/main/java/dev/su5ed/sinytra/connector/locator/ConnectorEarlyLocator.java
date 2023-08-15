@@ -43,7 +43,8 @@ public class ConnectorEarlyLocator extends AbstractJarFileModLocator {
             dependencyLocatorList.sort(Comparator.comparingInt(loc -> loc instanceof ConnectorLocator ? 1 : 0));
         } catch (Throwable t) {
             LOGGER.error("Error sorting FML dependency locators", t);
-            ConnectorEarlyLoader.addSuppressed(t);
+            // We can't throw here as that would prevent the connector mod from loading and lead to fabric loader being loaded twice instead
+            ConnectorEarlyLoader.addGenericLoadingException(t, "Error sorting FML dependency locators");
         }
         injectLogMarkers();
 
@@ -70,7 +71,6 @@ public class ConnectorEarlyLocator extends AbstractJarFileModLocator {
 
         // Add a marker filter to the logger's configuration
         config.addFilter(MarkerFilter.createFilter("MIXINPATCH", parseLogMarker("connector.logging.marker.mixinpatch"), Filter.Result.NEUTRAL));
-        config.addFilter(MarkerFilter.createFilter("MERGER", parseLogMarker("connector.logging.marker.merger"), Filter.Result.NEUTRAL));
 
         // Reconfigure the logger with the updated configuration
         logger.getContext().updateLoggers();

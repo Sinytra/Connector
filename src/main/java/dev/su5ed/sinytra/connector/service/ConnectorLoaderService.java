@@ -3,9 +3,12 @@ package dev.su5ed.sinytra.connector.service;
 import cpw.mods.modlauncher.LaunchPluginHandler;
 import cpw.mods.modlauncher.Launcher;
 import cpw.mods.modlauncher.api.IEnvironment;
+import cpw.mods.modlauncher.api.IModuleLayerManager;
 import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import net.minecraftforge.fml.loading.LoadingModList;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -40,6 +43,12 @@ public class ConnectorLoaderService implements ITransformationService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public List<Resource> completeScan(IModuleLayerManager layerManager) {
+        LoadingModList.get().getErrors().addAll(ConnectorEarlyLoader.getLoadingExceptions());
+        return List.of();
     }
 
     @Override

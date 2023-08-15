@@ -176,39 +176,39 @@ public final class JarTransformer {
 
         Stopwatch stopwatch = Stopwatch.createStarted();
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Transforming Jars", paths.size());
-        ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
-        ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
-        Transformer remappingTransformer = RelocatingRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
-        List<Future<FabricModPath>> futures = paths.stream()
-            .map(jar -> executorService.submit(() -> {
-                FabricModPath path = jar.transform(remappingTransformer);
-                progress.increment();
-                return path;
-            }))
-            .toList();
-        executorService.shutdown();
         try {
+            ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
+            ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
+            Transformer remappingTransformer = RelocatingRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
+            List<Future<FabricModPath>> futures = paths.stream()
+                .map(jar -> executorService.submit(() -> {
+                    FabricModPath path = jar.transform(remappingTransformer);
+                    progress.increment();
+                    return path;
+                }))
+                .toList();
+            executorService.shutdown();
             if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
                 throw new RuntimeException("Timed out waiting for jar remap");
             }
+            List<FabricModPath> results = futures.stream()
+                .map(future -> {
+                    try {
+                        return future.get();
+                    } catch (Throwable t) {
+                        throw ConnectorEarlyLoader.createGenericLoadingException(t, "Error transforming jar");
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
+            stopwatch.stop();
+            LOGGER.debug(TRANSFORM_MARKER, "Processed all jars in {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
+            return results;
         } catch (InterruptedException ignored) {
-            // Dunny what I should do with this
+            return List.of();
+        } finally {
+            progress.complete();
         }
-        List<FabricModPath> results = futures.stream()
-            .map(future -> {
-                try {
-                    return future.get();
-                } catch (Throwable t) {
-                    ConnectorEarlyLoader.addSuppressed(t);
-                    return null;
-                }
-            })
-            .filter(Objects::nonNull)
-            .toList();
-        progress.complete();
-        stopwatch.stop();
-        LOGGER.debug(TRANSFORM_MARKER, "Processed all jars in {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
-        return results;
     }
 
     private static void transformJar(File input, Path output, FabricModFileMetadata metadata, Transformer remappingTransformer) throws IOException {

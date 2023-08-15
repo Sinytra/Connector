@@ -1,6 +1,5 @@
 package dev.su5ed.sinytra.connector.mod;
 
-import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.mod.compat.FluidHandlerCompat;
 import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -20,11 +19,6 @@ public class ConnectorMod {
     }
 
     public ConnectorMod() {
-        Throwable loadingException = ConnectorEarlyLoader.getLoadingException();
-        if (loadingException != null) {
-            throw new RuntimeException("Connector early loading failed", loadingException);
-        }
-
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         bus.addListener(ConnectorMod::onClientSetup);
         ModList modList = ModList.get();

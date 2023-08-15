@@ -33,10 +33,9 @@ public class ConnectorLoader {
      * later during FML load.
      *
      * @see ConnectorEarlyLoader#CONNECTOR_MODS
-     * @see ConnectorEarlyLoader#loadingException
      */
     public static void load() {
-        if (ConnectorEarlyLoader.getLoadingException() != null) {
+        if (ConnectorEarlyLoader.hasEncounteredException()) {
             LOGGER.error("Skipping early mod loading due to previous error");
             return;
         }
@@ -62,8 +61,7 @@ public class ConnectorLoader {
 
             loading = false;
         } catch (Throwable t) {
-            LOGGER.error("Encountered error during early mod loading", t);
-            ConnectorEarlyLoader.addSuppressed(t);
+            throw ConnectorEarlyLoader.createGenericLoadingException(t, "Encountered error during early mod loading");
         }
         progress.complete();
     }

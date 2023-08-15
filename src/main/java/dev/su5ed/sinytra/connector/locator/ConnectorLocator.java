@@ -9,6 +9,7 @@ import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.sinytra.connector.transformer.JarTransformer;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
+import net.minecraftforge.fml.loading.EarlyLoadingException;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
 import net.minecraftforge.fml.loading.StringUtils;
@@ -53,6 +54,23 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
 
     @Override
     public List<IModFile> scanMods(Iterable<IModFile> loadedMods) {
+        if (ConnectorEarlyLoader.hasEncounteredException()) {
+            LOGGER.error("Skipping mod scan due to previously encountered error");
+            return List.of();
+        }
+        try {
+            return locateFabricMods(loadedMods);
+        } catch (EarlyLoadingException e) {
+            // Let these pass through
+            throw e;
+        } catch (Throwable t) {
+            // Rethrow other exceptions
+            StartupNotificationManager.addModMessage("CONNECTOR LOCATOR ERROR");
+            throw ConnectorEarlyLoader.createGenericLoadingException(t, "Fabric mod discovery failed");
+        }
+    }
+
+    private List<IModFile> locateFabricMods(Iterable<IModFile> loadedMods) {
         LOGGER.debug(SCAN, "Scanning mods dir {} for mods", FMLPaths.MODSDIR.get());
         List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
         Path tempDir = ConnectorUtil.CONNECTOR_FOLDER.resolve("temp");
@@ -80,22 +98,22 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
                 return discoverNestedJarsRecursive(tempDir, secureJar, metadata.getJars());
             })
             .toList();
-        // Get renamer library classpath
-        List<Path> renameLibs = StreamSupport.stream(loadedMods.spliterator(), false).map(modFile -> modFile.getSecureJar().getRootPath()).toList();
         // Remove duplicates and existing mods
         List<JarTransformer.TransformableJar> uniqueNestedJars = handleDuplicateMods(Objects.requireNonNull(discoveredNestedJars), loadedModIds);
         // Merge outer and nested jar lists
         List<JarTransformer.TransformableJar> allJars = Stream.concat(discoveredJars.stream(), uniqueNestedJars.stream()).toList();
+        // Get renamer library classpath
+        List<Path> renameLibs = StreamSupport.stream(loadedMods.spliterator(), false).map(modFile -> modFile.getSecureJar().getRootPath()).toList();
         // Run jar transformations (or get existing outputs from cache)
         List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(allJars, renameLibs);
-        // Deal with split packages (thanks modules)
-        List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed, loadedMods);
-        // Handle jar transformation errors
-        if (ConnectorEarlyLoader.getLoadingException() != null) {
+        // Skip last step to save time if an error occured during transformation
+        if (ConnectorEarlyLoader.hasEncounteredException()) {
             StartupNotificationManager.addModMessage("JAR TRANSFORMATION ERROR");
-            LOGGER.error("Cancelling Connector jar discovery due to previous error", ConnectorEarlyLoader.getLoadingException());
+            LOGGER.error("Cancelling jar discovery due to previous error");
             return List.of();
         }
+        // Deal with split packages (thanks modules)
+        List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed, loadedMods);
         return moduleSafeJars.stream()
             .map(mod -> createConnectorModFile(mod, this))
             .toList();

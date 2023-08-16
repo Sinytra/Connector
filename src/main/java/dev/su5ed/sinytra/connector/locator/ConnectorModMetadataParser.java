@@ -69,7 +69,6 @@ public final class ConnectorModMetadataParser {
         modListConfig.add("credits", metadata.getContributors().stream()
             .map(Person::getName)
             .collect(Collectors.joining(", ")));
-        // TODO Dependencies
         config.add("mods", List.of(modListConfig));
         switch (metadata.getEnvironment()) {
             case CLIENT -> config.add("displayTest", "IGNORE_ALL_VERSION");

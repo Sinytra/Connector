@@ -102,6 +102,8 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         List<JarTransformer.TransformableJar> uniqueNestedJars = handleDuplicateMods(Objects.requireNonNull(discoveredNestedJars), loadedModIds);
         // Merge outer and nested jar lists
         List<JarTransformer.TransformableJar> allJars = Stream.concat(discoveredJars.stream(), uniqueNestedJars.stream()).toList();
+        // Ensure we have all required dependencies before transforming
+        DependencyResolver.resolveDependencies(allJars, loadedMods);
         // Get renamer library classpath
         List<Path> renameLibs = StreamSupport.stream(loadedMods.spliterator(), false).map(modFile -> modFile.getSecureJar().getRootPath()).toList();
         // Run jar transformations (or get existing outputs from cache)

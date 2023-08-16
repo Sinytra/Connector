@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.jar.Attributes;
+import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
 
@@ -37,7 +38,6 @@ public final class EmbeddedDependencies {
     private static final String MOD_JIJ_DEP = "Mod";
 
     private static final String ADAPTER_DATA_PATH = "adapter_data.json";
-    private static final String MANIFEST_PATH = "META-INF/MANIFEST.MF";
     // Path to the jar this class is loaded from
     private static final Path SELF_PATH = uncheck(() -> {
         URL jarLocation = ConnectorLocator.class.getProtectionDomain().getCodeSource().getLocation();
@@ -91,7 +91,7 @@ public final class EmbeddedDependencies {
     }
 
     private static Attributes readManifestAttributes() {
-        Path manifestPath = SELF_PATH.resolve(MANIFEST_PATH);
+        Path manifestPath = SELF_PATH.resolve(JarFile.MANIFEST_NAME);
         Manifest manifest;
         try (InputStream is = Files.newInputStream(manifestPath)) {
             manifest = new Manifest(is);

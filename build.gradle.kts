@@ -242,6 +242,9 @@ dependencies {
     minecraft(group = "net.minecraftforge", name = "forge", version = "$versionMc-$versionForge")
 
     shade(group = "dev.su5ed.sinytra", name = "fabric-loader", version = versionFabricLoader) { isTransitive = false }
+    // Fabric loader dependencies
+    shade("org.ow2.sat4j:org.ow2.sat4j.core:2.3.6")
+    shade("org.ow2.sat4j:org.ow2.sat4j.pb:2.3.6")
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
     shade(group = "dev.su5ed.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool)
     shade(group = "dev.su5ed.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }

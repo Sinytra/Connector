@@ -33,8 +33,8 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
 public final class DependencyResolver {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
-    private static final DependencyOverrides DEPENDENCY_OVERRIDES = new DependencyOverrides(FMLPaths.CONFIGDIR.get());
+    public static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
+    public static final DependencyOverrides DEPENDENCY_OVERRIDES = new DependencyOverrides(FMLPaths.CONFIGDIR.get());
 
     public static void resolveDependencies(List<JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
         // Fabric candidates

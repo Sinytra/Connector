@@ -15,15 +15,14 @@ import dev.su5ed.sinytra.adapter.patch.PatchSerialization;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
+import dev.su5ed.sinytra.connector.locator.DependencyResolver;
 import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.MappingResolverImpl;
-import net.fabricmc.loader.impl.metadata.DependencyOverrides;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.fabricmc.loader.impl.metadata.ModMetadataParser;
 import net.fabricmc.loader.impl.metadata.ParseMetadataException;
-import net.fabricmc.loader.impl.metadata.VersionOverrides;
 import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Renamer;
@@ -44,7 +43,6 @@ import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -248,7 +246,7 @@ public final class JarTransformer {
             ConnectorLoaderModMetadata metadata;
             Set<String> configs;
             try (InputStream ins = jarFile.getInputStream(jarFile.getEntry(ConnectorUtil.FABRIC_MOD_JSON))) {
-                LoaderModMetadata rawMetadata = ModMetadataParser.parseMetadata(ins, "", Collections.emptyList(), new VersionOverrides(), new DependencyOverrides(Paths.get("randomMissing")), false);
+                LoaderModMetadata rawMetadata = ModMetadataParser.parseMetadata(ins, "", Collections.emptyList(), DependencyResolver.VERSION_OVERRIDES, DependencyResolver.DEPENDENCY_OVERRIDES, false);
                 metadata = new ConnectorLoaderModMetadata(rawMetadata);
 
                 configs = new HashSet<>(metadata.getMixinConfigs(FabricLoader.getInstance().getEnvironmentType()));

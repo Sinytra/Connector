@@ -53,7 +53,7 @@ public final class DependencyResolver {
             ModResolver.resolve(allCandidates, envType, Map.of());
             LOGGER.info("Dependency resolution completed successfully");
         } catch (ModResolutionException e) {
-            throw ConnectorEarlyLoader.createLoadingException(e, e.getMessage().replaceAll("\n\t", "\n  "));
+            throw ConnectorEarlyLoader.createLoadingException(e, e.getMessage().replaceAll("\t", "  "));
         }
     }
 

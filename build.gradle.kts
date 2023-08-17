@@ -112,7 +112,10 @@ val modJar: Jar by tasks.creating(Jar::class) {
         from(createJarJarMetadata)
         from(dummyFabricLoaderLangJar)
     }
-    manifest.attributes("ConnectorMixinConfigs" to "connectormod.mixins.json")
+    manifest.attributes(
+        "Implementation-Version" to project.version,
+        "ConnectorMixinConfigs" to "connectormod.mixins.json"
+    )
     archiveClassifier.set("mod")
 }
 val remappedDepsJar: ShadowJar by tasks.creating(ShadowJar::class) {

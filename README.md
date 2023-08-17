@@ -5,6 +5,7 @@
 [![CurseForge](https://cf.way2muchnoise.eu/title/sinytra-connector.svg)](https://legacy.curseforge.com/minecraft/mc-mods/sinytra-connector)
 [![Modrinth](https://img.shields.io/modrinth/dt/u58R1TMW?color=00AF5C&label=modrinth&style=flat&logo=modrinth)](https://modrinth.com/mod/connector)
 [![ForgifiedFabricAPI](https://raw.githubusercontent.com/Sinytra/.github/main/badges/forgified-fabric-api/compacter.svg)](https://github.com/Sinytra/ForgifiedFabricAPI)
+[![Discord](https://discordapp.com/api/guilds/1141048834177388746/widget.png?style=shield)](https://discord.gg/mamk7z3TKZ)
 
 > [!WARNING]  
 > Connector is currently in beta state, and many mods may not work as expected, or might be broken completely.  

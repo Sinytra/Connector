@@ -2,6 +2,7 @@ package dev.su5ed.sinytra.connector.mod;
 
 import dev.su5ed.sinytra.connector.mod.compat.FluidHandlerCompat;
 import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
+import dev.su5ed.sinytra.connector.mod.compat.ModMenuCompat;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
@@ -29,6 +30,8 @@ public class ConnectorMod {
         if (modList.isLoaded("fabric_object_builder_api_v1")) {
             bus.addListener(EventPriority.HIGHEST, LazyEntityAttributes::addMissingAttributes);
         }
+
+        ModMenuCompat.init();
     }
 
     private static void onClientSetup(FMLClientSetupEvent event) {

@@ -105,6 +105,10 @@ Connector is distributed on the following platforms:
 Sinytra Connector is, and will always remain, licensed under the MIT license. All files in this repository should be
 treated as such unless otherwise explicitly stated.
 
+## Credits
+
+- Includes the [ModMenu API](https://github.com/TerraformersMC/ModMenu/tree/91460879c6d0693b14d1632baccea56bf3619f2e/src/main/java/com/terraformersmc/modmenu/api), licensed under the MIT license
+
 ## Contributing
 
 Before you decide to make major changes, you might want to discuss them with us beforehand, so that you're not wasting

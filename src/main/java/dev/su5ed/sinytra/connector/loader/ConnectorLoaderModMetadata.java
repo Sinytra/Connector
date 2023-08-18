@@ -123,8 +123,12 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
     @Override
     public Collection<String> getProvides() {
         Set<String> provides = new HashSet<>(this.wrapped.getProvides());
+        String normalized = getId();
+        // Remove normalized modid from provided ids to prevent duplicates
+        provides.remove(normalized);
+        // If we modified the modid, provide the original
         String original = this.wrapped.getId();
-        if (!getId().equals(original)) {
+        if (!normalized.equals(original)) {
             // Add original modid to mod lookup
             provides.add(original);
         }

@@ -1,7 +1,7 @@
 # Sinytra Connector
 
 [![Build](https://github.com/Sinytra/Connector/actions/workflows/build.yml/badge.svg)](https://github.com/Sinytra/Connector/actions/workflows/build.yml)
-[![GitHub Releases](https://img.shields.io/github/v/release/Sinytra/Connector?style=flat&label=Release&include_prereleases)](https://github.com/Sinytra/Connector/releases/latest)
+[![GitHub Releases](https://img.shields.io/github/v/release/Sinytra/Connector?style=flat&label=Release&include_prereleases&sort=semver)](https://github.com/Sinytra/Connector/releases/latest)
 [![CurseForge](https://cf.way2muchnoise.eu/title/sinytra-connector.svg)](https://legacy.curseforge.com/minecraft/mc-mods/sinytra-connector)
 [![Modrinth](https://img.shields.io/modrinth/dt/u58R1TMW?color=00AF5C&label=modrinth&style=flat&logo=modrinth)](https://modrinth.com/mod/connector)
 [![ForgifiedFabricAPI](https://raw.githubusercontent.com/Sinytra/.github/main/badges/forgified-fabric-api/compacter.svg)](https://github.com/Sinytra/ForgifiedFabricAPI)

@@ -1,7 +1,5 @@
 package dev.su5ed.sinytra.connector.locator;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
@@ -29,12 +27,10 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
@@ -98,16 +94,14 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
                 return discoverNestedJarsRecursive(tempDir, secureJar, metadata.getJars());
             })
             .toList();
-        // Remove duplicates and existing mods
-        List<JarTransformer.TransformableJar> uniqueNestedJars = handleDuplicateMods(Objects.requireNonNull(discoveredNestedJars), loadedModIds);
-        // Merge outer and nested jar lists
-        List<JarTransformer.TransformableJar> allJars = Stream.concat(discoveredJars.stream(), uniqueNestedJars.stream()).toList();
+        // Remove mods loaded by FML
+        List<JarTransformer.TransformableJar> uniqueJars = handleDuplicateMods(discoveredJars, discoveredNestedJars, loadedModIds);
         // Ensure we have all required dependencies before transforming
-        DependencyResolver.resolveDependencies(allJars, loadedMods);
+        List<JarTransformer.TransformableJar> candidates = DependencyResolver.resolveDependencies(uniqueJars, loadedMods);
         // Get renamer library classpath
         List<Path> renameLibs = StreamSupport.stream(loadedMods.spliterator(), false).map(modFile -> modFile.getSecureJar().getRootPath()).toList();
         // Run jar transformations (or get existing outputs from cache)
-        List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(allJars, renameLibs);
+        List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(candidates, renameLibs);
         // Skip last step to save time if an error occured during transformation
         if (ConnectorEarlyLoader.hasEncounteredException()) {
             StartupNotificationManager.addModMessage("JAR TRANSFORMATION ERROR");
@@ -167,25 +161,19 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     }
 
     // Removes any duplicates from located connector mods, as well as mods that are already located by FML.
-    private static List<JarTransformer.TransformableJar> handleDuplicateMods(List<JarTransformer.TransformableJar> mods, Collection<String> loadedModIds) {
-        Multimap<String, JarTransformer.TransformableJar> byId = HashMultimap.create();
-        for (JarTransformer.TransformableJar jar : mods) {
-            String id = jar.modPath().metadata().modMetadata().getId();
-            if (!loadedModIds.contains(id)) {
-                byId.put(id, jar);
-            }
-            else {
-                LOGGER.info(SCAN, "Removing duplicate mod {} from file {}", id, jar.modPath().path().toAbsolutePath());
-            }
-        }
-        List<JarTransformer.TransformableJar> list = new ArrayList<>();
-        byId.asMap().forEach((modid, candidates) -> {
-            JarTransformer.TransformableJar mostRecent = candidates.stream()
-                .max(Comparator.comparing(m -> m.modPath().metadata().modMetadata().getVersion()))
-                .orElseThrow();
-            list.add(mostRecent);
-        });
-        return list;
+    private static List<JarTransformer.TransformableJar> handleDuplicateMods(List<JarTransformer.TransformableJar> rootMods, List<JarTransformer.TransformableJar> nestedMods, Collection<String> loadedModIds) {
+        return Stream.concat(rootMods.stream(), nestedMods.stream())
+            .filter(jar -> {
+                String id = jar.modPath().metadata().modMetadata().getId();
+                if (!loadedModIds.contains(id)) {
+                    return true;
+                }
+                else {
+                    LOGGER.info(SCAN, "Removing duplicate mod {} in file {}", id, jar.modPath().path().toAbsolutePath());
+                    return false;
+                }
+            })
+            .toList();
     }
 
     @Override

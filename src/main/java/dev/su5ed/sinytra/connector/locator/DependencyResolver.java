@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -36,10 +37,15 @@ public final class DependencyResolver {
     public static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
     public static final DependencyOverrides DEPENDENCY_OVERRIDES = new DependencyOverrides(FMLPaths.CONFIGDIR.get());
 
-    public static void resolveDependencies(List<JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
+    public static List<JarTransformer.TransformableJar> resolveDependencies(List<JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
+        Map<ModCandidate, JarTransformer.TransformableJar> candidateToJar = new HashMap<>();
         // Fabric candidates
         Stream<ModCandidate> candidates = jars.stream()
-            .map(jar -> ModCandidate.createPlain(List.of(jar.modPath().path()), jar.modPath().metadata().modMetadata(), false, List.of()));
+            .map(jar -> {
+                ModCandidate candidate = ModCandidate.createPlain(List.of(jar.modPath().path()), jar.modPath().metadata().modMetadata(), false, List.of());
+                candidateToJar.put(candidate, jar);
+                return candidate;
+            });
         // Forge dependencies
         Stream<ModCandidate> forgeCandidates = StreamSupport.stream(loadedMods.spliterator(), false)
             .flatMap(modFile -> modFile.getModFileInfo() != null ? modFile.getModInfos().stream() : Stream.empty())
@@ -50,8 +56,13 @@ public final class DependencyResolver {
 
         EnvType envType = FabricLoader.getInstance().getEnvironmentType();
         try {
-            ModResolver.resolve(allCandidates, envType, Map.of());
-            LOGGER.info("Dependency resolution completed successfully");
+            List<ModCandidate> resolved = ModResolver.resolve(allCandidates, envType, Map.of());
+            List<JarTransformer.TransformableJar> candidateJars = resolved.stream()
+                .map(candidateToJar::get)
+                .filter(Objects::nonNull)
+                .toList();
+            LOGGER.info("Dependency resolution found {} candidates to load", candidateJars.size());
+            return candidateJars;
         } catch (ModResolutionException e) {
             throw ConnectorEarlyLoader.createLoadingException(e, e.getMessage().replaceAll("\t", "  "));
         }

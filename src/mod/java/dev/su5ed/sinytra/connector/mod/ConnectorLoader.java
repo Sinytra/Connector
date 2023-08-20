@@ -56,9 +56,6 @@ public class ConnectorLoader {
                 EntrypointUtils.invoke("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
             }
 
-            // Freeze registries again
-            freezeRegistries();
-
             loading = false;
         } catch (Throwable t) {
             throw ConnectorEarlyLoader.createGenericLoadingException(t, "Encountered error during early mod loading");
@@ -72,10 +69,5 @@ public class ConnectorLoader {
         for (Registry<?> registry : BuiltInRegistries.REGISTRY) {
             ((MappedRegistry<?>) registry).unfreeze();
         }
-    }
-
-    private static void freezeRegistries() {
-        BuiltInRegistries.REGISTRY.freeze();
-        BuiltInRegistries.REGISTRY.forEach(Registry::freeze);
     }
 }

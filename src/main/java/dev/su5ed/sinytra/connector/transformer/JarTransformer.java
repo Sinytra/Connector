@@ -178,23 +178,26 @@ public final class JarTransformer {
             ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
             ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
             Transformer remappingTransformer = RelocatingRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
-            List<Future<FabricModPath>> futures = paths.stream()
-                .map(jar -> executorService.submit(() -> {
-                    FabricModPath path = jar.transform(remappingTransformer);
-                    progress.increment();
-                    return path;
-                }))
+            List<Pair<File, Future<FabricModPath>>> futures = paths.stream()
+                .map(jar -> {
+                    Future<FabricModPath> future = executorService.submit(() -> {
+                        FabricModPath path = jar.transform(remappingTransformer);
+                        progress.increment();
+                        return path;
+                    });
+                    return Pair.of(jar.input(), future);
+                })
                 .toList();
             executorService.shutdown();
             if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
                 throw new RuntimeException("Timed out waiting for jar remap");
             }
             List<FabricModPath> results = futures.stream()
-                .map(future -> {
+                .map(pair -> {
                     try {
-                        return future.get();
+                        return pair.getSecond().get();
                     } catch (Throwable t) {
-                        throw ConnectorEarlyLoader.createGenericLoadingException(t, "Error transforming jar");
+                        throw ConnectorEarlyLoader.createGenericLoadingException(t, "Error transforming jar " + pair.getFirst().getAbsolutePath());
                     }
                 })
                 .filter(Objects::nonNull)

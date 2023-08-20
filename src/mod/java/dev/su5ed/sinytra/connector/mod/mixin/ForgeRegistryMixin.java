@@ -3,6 +3,7 @@ package dev.su5ed.sinytra.connector.mod.mixin;
 import com.mojang.serialization.Lifecycle;
 import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
 import net.minecraft.core.Holder;
+import net.minecraft.core.MappedRegistry;
 import net.minecraftforge.registries.ForgeRegistry;
 import net.minecraftforge.registries.GameData;
 import net.minecraftforge.registries.IForgeRegistry;
@@ -18,7 +19,16 @@ public abstract class ForgeRegistryMixin<V> implements IForgeRegistry<V> {
     @Inject(target = @Desc(value = "getDelegateOrThrow", args = Object.class, ret = Holder.Reference.class), at = @At("HEAD"), cancellable = true, remap = false)
     private void getDelegateOrThrow(V value, CallbackInfoReturnable<Holder.Reference<V>> cir) {
         if (ConnectorLoader.isLoading()) {
-            cir.setReturnValue(getDelegate(value).orElseGet(() -> GameData.getWrapper(getRegistryKey(), Lifecycle.stable()).createIntrusiveHolder(value)));
+            cir.setReturnValue(getDelegate(value).orElseGet(() -> {
+                MappedRegistry<V> registry = GameData.getWrapper(getRegistryKey(), Lifecycle.stable());
+                try {
+                    // Create intrusive holder on the registry to bind the key later
+                    return registry.createIntrusiveHolder(value);
+                } catch (IllegalStateException e) {
+                    // Fallback if the registry does not support intrusive holders
+                    return Holder.Reference.createIntrusive(registry.holderOwner(), value);
+                }
+            }));
         }
     }
 }

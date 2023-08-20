@@ -132,6 +132,10 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     private static boolean locateFabricModJar(Path path) {
         SecureJar secureJar = SecureJar.from(path);
         String name = secureJar.name();
+        if (secureJar.moduleDataProvider().findFile(ConnectorUtil.MODS_TOML).isPresent()) {
+            LOGGER.debug(SCAN, "Skipping jar {} as it contains a mods.toml file", path);
+            return false;
+        }
         if (secureJar.moduleDataProvider().findFile(ConnectorUtil.FABRIC_MOD_JSON).isPresent()) {
             LOGGER.debug(SCAN, "Found {} mod: {}", ConnectorUtil.FABRIC_MOD_JSON, path);
             return true;

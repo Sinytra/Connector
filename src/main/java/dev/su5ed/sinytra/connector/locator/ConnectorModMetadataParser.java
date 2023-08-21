@@ -1,6 +1,7 @@
 package dev.su5ed.sinytra.connector.locator;
 
 import com.electronwill.nightconfig.core.Config;
+import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import net.fabricmc.loader.api.metadata.ContactInformation;
@@ -11,6 +12,7 @@ import net.minecraftforge.fml.loading.moddiscovery.NightConfigWrapper;
 import net.minecraftforge.forgespi.language.IConfigurable;
 import net.minecraftforge.forgespi.language.IModFileInfo;
 import net.minecraftforge.forgespi.locating.IModFile;
+import org.slf4j.Logger;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -18,10 +20,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public final class ConnectorModMetadataParser {
     private static final String DEFAULT_LICENSE = "All Rights Reserved";
+    // From ModInfo
+    private static final Pattern VALID_VERSION = Pattern.compile("^\\d+.*");
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     public static IModFileInfo createForgeMetadata(IModFile modFile, ConnectorLoaderModMetadata metadata) {
         String modid = metadata.getId();
@@ -40,7 +46,13 @@ public final class ConnectorModMetadataParser {
 
         Config modListConfig = config.createSubConfig();
         modListConfig.add("modId", modid);
-        modListConfig.add("version", metadata.getNormalizedVersion());
+        String version = metadata.getNormalizedVersion();
+        // Validate version string. If it's invalid, we'll let FML assign a default version instead
+        if (VALID_VERSION.matcher(version).matches()) {
+            modListConfig.add("version", version);
+        } else {
+            LOGGER.warn("Ignoring invalid version for mod {} in file {}", modid, modFile.getFilePath());
+        }
         modListConfig.add("displayName", metadata.getName());
         modListConfig.add("description", metadata.getDescription());
         metadata.getIconPath(-1).ifPresent(icon -> modListConfig.add("logoFile", icon));

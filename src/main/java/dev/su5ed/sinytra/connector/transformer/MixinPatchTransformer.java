@@ -68,6 +68,15 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/client/renderer/EffectInstance")
             .targetMethod("<init>", "m_172566_")
             .targetInjectionPoint("NEW", "net/minecraft/resources/ResourceLocation")
+            .targetInjectionPoint("NEW", "(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;")
+            .targetMixinType(Patch.REDIRECT)
+            .disable()
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/PostChain")
+            .targetMethod("m_110030_")
+            .targetInjectionPoint("NEW", "net/minecraft/resources/ResourceLocation")
+            .targetInjectionPoint("NEW", "(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;")
             .targetMixinType(Patch.REDIRECT)
             .disable()
             .build(),

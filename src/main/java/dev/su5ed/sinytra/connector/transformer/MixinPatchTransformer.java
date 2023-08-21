@@ -27,6 +27,11 @@ public class MixinPatchTransformer implements Transformer {
     private static final List<Patch> PATCHES = List.of(
         // TODO Add mirror mixin method that injects into ForgeHooks#onPlaceItemIntoWorld for server side behavior
         Patch.builder()
+            .targetClass("net/minecraft/world/item/enchantment/EnchantmentHelper")
+            .targetInjectionPoint("Lnet/minecraft/world/item/Item;m_6473_()I")
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;getEnchantmentValue()I")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/BoatRenderer")
             .targetMethod("m_7392_")
             .targetInjectionPoint("INVOKE", "Ljava/util/Map;get(Ljava/lang/Object;)Ljava/lang/Object;")

@@ -24,17 +24,17 @@ import java.util.Set;
  * to accomodate FML constraints, such as the modid and mod version.
  */
 public class ConnectorLoaderModMetadata implements LoaderModMetadata {
+    private static final String NORMALIZER_SUFFIX = "_nojpms";
+
     private final LoaderModMetadata wrapped;
+    private final String normalModid;
 
     public ConnectorLoaderModMetadata(LoaderModMetadata wrapped) {
         this.wrapped = wrapped;
-    }
-
-    /**
-     * Adjust modid to accomodate Java Module System requirements
-     */
-    private static String normalizeModid(String modid) {
-        return modid.replace('-', '_');
+        // Adjust modid to accomodate Java Module System requirements
+        String replaced = this.wrapped.getId().replace('-', '_');
+        // If modid is amongst reserved keywords, add a suffix
+        this.normalModid = ConnectorUtil.isJavaReservedKeyword(replaced) ? replaced + NORMALIZER_SUFFIX : replaced;
     }
 
     /**
@@ -50,7 +50,7 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
 
     @Override
     public String getId() {
-        return normalizeModid(this.wrapped.getId());
+        return this.normalModid;
     }
 
     @Override

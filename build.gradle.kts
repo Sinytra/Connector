@@ -53,6 +53,7 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     exclude("*.json")
     exclude("module-info.class")
     exclude("LICENSE.txt")
+    relocate("com.llamalad7.mixinextras", "com.llamalad7.mixinextras.reloc")
 
     dependencies {
         exclude(dependency("org.ow2.asm:"))

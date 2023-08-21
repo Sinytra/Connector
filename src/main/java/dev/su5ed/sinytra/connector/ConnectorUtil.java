@@ -37,6 +37,64 @@ public final class ConnectorUtil {
         // It is redundant and no longer required, as mentioned in https://gist.github.com/LlamaLad7/ec597b6d02d39b8a2e35559f9fcce42f#initialization
         "com.llamalad7.mixinextras.MixinExtrasBootstrap::init"
     );
+    // keywords, boolean and null literals, not allowed in identifiers
+    // See jdk.internal.module.Checks#RESERVED
+    private static final Set<String> RESERVED = Set.of(
+        "abstract",
+        "assert",
+        "boolean",
+        "break",
+        "byte",
+        "case",
+        "catch",
+        "char",
+        "class",
+        "const",
+        "continue",
+        "default",
+        "do",
+        "double",
+        "else",
+        "enum",
+        "extends",
+        "final",
+        "finally",
+        "float",
+        "for",
+        "goto",
+        "if",
+        "implements",
+        "import",
+        "instanceof",
+        "int",
+        "interface",
+        "long",
+        "native",
+        "new",
+        "package",
+        "private",
+        "protected",
+        "public",
+        "return",
+        "short",
+        "static",
+        "strictfp",
+        "super",
+        "switch",
+        "synchronized",
+        "this",
+        "throw",
+        "throws",
+        "transient",
+        "try",
+        "void",
+        "volatile",
+        "while",
+        "true",
+        "false",
+        "null",
+        "_"
+    );
 
     private static final boolean CACHE_ENABLED;
 
@@ -82,6 +140,10 @@ public final class ConnectorUtil {
                 throw new RuntimeException(t);
             }
         }
+    }
+    
+    public static boolean isJavaReservedKeyword(String str) {
+        return RESERVED.contains(str);
     }
 
     public static Gson prettyGson() {

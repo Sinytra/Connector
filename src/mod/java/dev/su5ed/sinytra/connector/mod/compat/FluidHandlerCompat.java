@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.fluids.FluidType;
@@ -31,11 +32,13 @@ public final class FluidHandlerCompat {
         Map<Fluid, FluidRenderHandler> registryHandlers = ObfuscationReflectionHelper.getPrivateValue(FluidRenderHandlerRegistryImpl.class, (FluidRenderHandlerRegistryImpl) FluidRenderHandlerRegistry.INSTANCE, "handlers");
         Map<FluidType, FluidRenderHandler> forgeHandlers = new HashMap<>();
         for (Map.Entry<ResourceKey<Fluid>, Fluid> entry : ForgeRegistries.FLUIDS.getEntries()) {
-            ResourceKey<Fluid> key = entry.getKey();
-            if (!ConnectorEarlyLoader.isConnectorMod(key.location().getNamespace())) {
-                Fluid fluid = entry.getValue();
-                FluidRenderHandler handler = forgeHandlers.computeIfAbsent(fluid.getFluidType(), ForgeFluidRenderHandler::new);
-                registryHandlers.put(fluid, handler);
+            Fluid fluid = entry.getValue();
+            if (fluid != Fluids.EMPTY) {
+                ResourceKey<Fluid> key = entry.getKey();
+                if (!ConnectorEarlyLoader.isConnectorMod(key.location().getNamespace())) {
+                    FluidRenderHandler handler = forgeHandlers.computeIfAbsent(fluid.getFluidType(), ForgeFluidRenderHandler::new);
+                    registryHandlers.put(fluid, handler);
+                }
             }
         }
     }

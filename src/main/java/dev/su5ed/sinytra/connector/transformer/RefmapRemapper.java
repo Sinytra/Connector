@@ -23,8 +23,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
@@ -58,6 +60,8 @@ public class RefmapRemapper implements Transformer {
 
     private final Map<String, String> configs;
     private final Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files;
+
+    private boolean hasManifest;
 
     public RefmapRemapper(Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files) {
         this.configs = configs.stream()
@@ -96,22 +100,37 @@ public class RefmapRemapper implements Transformer {
 
     @Override
     public ManifestEntry process(ManifestEntry entry) {
+        this.hasManifest = true;
         if (!this.configs.isEmpty()) {
             Manifest manifest = new Manifest();
             try (InputStream is = new ByteArrayInputStream(entry.getData())) {
                 manifest.read(is);
-
-                manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs.values()));
-
-                try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
-                    manifest.write(byteStream);
-                    return ManifestEntry.create(entry.getTime(), byteStream.toByteArray());
-                }
+                return modifyManifest(manifest, entry.getTime());
             } catch (IOException e) {
-                throw new UncheckedIOException(e);
+                throw new UncheckedIOException("Error writing manifest", e);
             }
         }
         return entry;
+    }
+
+    @Override
+    public Collection<? extends Entry> getExtras() {
+        if (!this.configs.isEmpty() && !this.hasManifest) {
+            Manifest manifest = new Manifest();
+            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+            return List.of(modifyManifest(manifest, ConnectorUtil.ZIP_TIME));
+        }
+        return List.of();
+    }
+
+    private ManifestEntry modifyManifest(Manifest manifest, long time) {
+        manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs.values()));
+        try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
+            manifest.write(byteStream);
+            return ManifestEntry.create(time, byteStream.toByteArray());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Error writing generated manifest", e);
+        }
     }
 
     private static SrgRemappingReferenceMapper.SimpleRefmap remapRefmapInPlace(byte[] data, SrgRemappingReferenceMapper remapper) {

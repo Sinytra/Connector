@@ -65,7 +65,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_9280_")
             .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V")
             .modifyTarget("removeBlock")
-            .modifyParams(params -> params.add(1, Type.BOOLEAN_TYPE))
+            .modifyParams(builder -> builder.insert(1, Type.BOOLEAN_TYPE))
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
             .build(),
         // Disable potential duplicate attempts at making shaders IDs namespace aware - Forge already does this for us.
@@ -87,22 +87,23 @@ public class MixinPatchTransformer implements Transformer {
             .disable()
             .build(),
         // Forge adds a new boolean shouldSit local variable in the render method. We prepend it to mixin LVT params.
-        Patch.builder()
-            .targetClass("net/minecraft/client/renderer/entity/LivingEntityRenderer")
-            .targetMethod("m_7392_")
-            .modifyParams(params -> {
-                Type ci = Type.getObjectType("org/spongepowered/reloc/asm/mixin/injection/callback/CallbackInfo");
-                for (int i = 0; i < params.size(); i++) {
-                    Type param = params.get(i);
-                    // Add after CallbackInfo param
-                    if (param.equals(ci) && params.size() >= i + 2) {
-                        params.add(i + 1, Type.BOOLEAN_TYPE);
-                        break;
-                    }
-                }
-            })
-            .build(),
-        // Move arg modifier to the forge method, which replaces all usages of the vanilla one 
+        // TODO LVT patches
+//        Patch.builder()
+//            .targetClass("net/minecraft/client/renderer/entity/LivingEntityRenderer")
+//            .targetMethod("m_7392_")
+//            .modifyParams(params -> {
+//                Type ci = Type.getObjectType("org/spongepowered/reloc/asm/mixin/injection/callback/CallbackInfo");
+//                for (int i = 0; i < params.size(); i++) {
+//                    Type param = params.get(i);
+//                    // Add after CallbackInfo param
+//                    if (param.equals(ci) && params.size() >= i + 2) {
+//                        params.add(i + 1, Type.BOOLEAN_TYPE);
+//                        break;
+//                    }
+//                }
+//            })
+//            .build(),
+        // Move arg modifier to the forge method, which replaces all usages of the vanilla one
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
             .targetMethod("m_289609_")
@@ -123,15 +124,13 @@ public class MixinPatchTransformer implements Transformer {
             .targetAnnotationValues(values -> (Integer) values.get("index").get() == 4)
             .targetInjectionPoint("INVOKE", "Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;m_289609_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/HumanoidModel;ZFFFLjava/lang/String;)V")
             .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
-            .modifyParams(params -> {
-                if (params.get(0).getInternalName().equals("net/minecraft/client/model/HumanoidModel")) {
-                    params.set(0, Type.getObjectType("net/minecraft/client/model/Model"));
-                }
-            }, (index, insn, list) -> {
-                if (index == 1) {
-                    list.insert(insn, new TypeInsnNode(Opcodes.CHECKCAST, "net/minecraft/client/model/HumanoidModel"));
-                }
-            })
+            .modifyParams(builder -> builder
+                .replace(0, Type.getObjectType("net/minecraft/client/model/Model"))
+                .lvtFixer((index, insn, list) -> {
+                    if (index == 1) {
+                        list.insert(insn, new TypeInsnNode(Opcodes.CHECKCAST, "net/minecraft/client/model/HumanoidModel"));
+                    }
+                }))
             .transform((classNode, methodNode, annotation, annotationValues, context) -> {
                 methodNode.desc = "(Lnet/minecraft/client/model/Model;)Lnet/minecraft/client/model/Model;";
                 methodNode.signature = null;

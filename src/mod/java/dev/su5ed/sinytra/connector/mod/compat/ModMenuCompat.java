@@ -26,8 +26,8 @@ public class ModMenuCompat {
                 ModMenuApi entry = container.getEntrypoint();
                 modFactories.put(modId, entry.getModConfigScreenFactory());
                 providedFactories.add(entry.getProvidedConfigScreenFactories());
-            } catch (Exception e) {
-                LOGGER.error("Failed to load ModMenuApi entrypoint for {}", modId, e);
+            } catch (Throwable t) {
+                LOGGER.error("Failed to load ModMenuApi entrypoint for {}", modId, t);
             }
         });
 

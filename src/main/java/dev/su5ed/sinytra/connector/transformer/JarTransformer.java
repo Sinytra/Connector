@@ -9,8 +9,9 @@ import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
-import dev.su5ed.sinytra.adapter.patch.MixinRemaper;
+import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import dev.su5ed.sinytra.adapter.patch.Patch;
+import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.PatchSerialization;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
@@ -34,6 +35,8 @@ import net.minecraftforge.fml.loading.progress.StartupNotificationManager;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
+import org.spongepowered.asm.launch.MixinLaunchPluginLegacy;
+import org.spongepowered.asm.service.MixinService;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,6 +44,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UncheckedIOException;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -63,6 +68,8 @@ import java.util.jar.Manifest;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 
+import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
+
 public final class JarTransformer {
     private static final String MAPPED_SUFFIX = "_mapped_" + FMLEnvironment.naming + "_" + FMLLoader.versionInfo().mcVersion();
     private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
@@ -79,9 +86,19 @@ public final class JarTransformer {
     private static final List<Path> RENAMER_LIBS = Stream.of(FMLLoader.getLaunchHandler().getMinecraftPaths())
         .flatMap(paths -> Stream.concat(paths.minecraftPaths().stream(), paths.otherArtifacts().stream()))
         .toList();
+    private static final VarHandle TRANSFORMER_LOADER_FIELD = uncheck(() -> MethodHandles.privateLookupIn(MixinLaunchPluginLegacy.class, MethodHandles.lookup()).findVarHandle(MixinLaunchPluginLegacy.class, "transformerLoader", ILaunchPluginService.ITransformerLoader.class));
 
     private static SrgRemappingReferenceMapper remapper;
     private static List<? extends Patch> adapterPatches;
+
+    private static void setMixinClassProvider(ILaunchPluginService.ITransformerLoader loader) {
+        try {
+            MixinLaunchPluginLegacy plugin = (MixinLaunchPluginLegacy) MixinService.getService().getBytecodeProvider();
+            TRANSFORMER_LOADER_FIELD.set(plugin, loader);
+        } catch (Throwable t) {
+            throw new RuntimeException(t);
+        }
+    }
 
     private static Map<String, String> getFlatMapping(String sourceNamespace) {
         Map<String, String> map = FLAT_MAPPINGS_CACHE.get(sourceNamespace);
@@ -165,7 +182,7 @@ public final class JarTransformer {
             Path path = EmbeddedDependencies.getAdapterData();
             try (Reader reader = Files.newBufferedReader(path)) {
                 JsonElement json = new Gson().fromJson(reader, JsonElement.class);
-                MixinRemaper.setMatcherRemapper(ASMAPI::mapMethod);
+                PatchEnvironment.setMatcherRemapper(ASMAPI::mapMethod);
                 adapterPatches = PatchSerialization.deserialize(json, JsonOps.INSTANCE);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
@@ -175,8 +192,11 @@ public final class JarTransformer {
         Stopwatch stopwatch = Stopwatch.createStarted();
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Transforming Jars", paths.size());
         try {
-            ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
             ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
+            ILaunchPluginService.ITransformerLoader loader = name -> classProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
+            setMixinClassProvider(loader);
+
+            ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
             Transformer remappingTransformer = RelocatingRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
             List<Pair<File, Future<FabricModPath>>> futures = paths.stream()
                 .map(jar -> {
@@ -208,6 +228,7 @@ public final class JarTransformer {
         } catch (InterruptedException ignored) {
             return List.of();
         } finally {
+            setMixinClassProvider(null);
             progress.complete();
         }
     }

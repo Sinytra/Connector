@@ -1,8 +1,9 @@
 package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableList;
-import dev.su5ed.sinytra.adapter.patch.MixinRemaper;
 import dev.su5ed.sinytra.adapter.patch.Patch;
+import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
+import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassTransform;
 import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
@@ -52,7 +53,8 @@ public class MixinPatchTransformer implements Transformer {
         Patch.builder()
             .targetClass("net/minecraft/world/item/ItemStack")
             .targetMethod("m_41661_")
-            .modifyTarget("lambda$useOn$5")
+            .modifyTarget("lambda$useOn$3")
+            .modifyParams(builder -> builder.insert(1, Type.getObjectType("net/minecraft/world/item/context/UseOnContext")))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen")
@@ -86,23 +88,6 @@ public class MixinPatchTransformer implements Transformer {
             .targetMixinType(Patch.REDIRECT)
             .disable()
             .build(),
-        // Forge adds a new boolean shouldSit local variable in the render method. We prepend it to mixin LVT params.
-        // TODO LVT patches
-//        Patch.builder()
-//            .targetClass("net/minecraft/client/renderer/entity/LivingEntityRenderer")
-//            .targetMethod("m_7392_")
-//            .modifyParams(params -> {
-//                Type ci = Type.getObjectType("org/spongepowered/reloc/asm/mixin/injection/callback/CallbackInfo");
-//                for (int i = 0; i < params.size(); i++) {
-//                    Type param = params.get(i);
-//                    // Add after CallbackInfo param
-//                    if (param.equals(ci) && params.size() >= i + 2) {
-//                        params.add(i + 1, Type.BOOLEAN_TYPE);
-//                        break;
-//                    }
-//                }
-//            })
-//            .build(),
         // Move arg modifier to the forge method, which replaces all usages of the vanilla one
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
@@ -145,6 +130,9 @@ public class MixinPatchTransformer implements Transformer {
                 methodNode.instructions.insert(insns);
                 return true;
             })
+            .build(),
+        Patch.builder()
+            .transform(new DynamicLVTPatch())
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
@@ -153,13 +141,13 @@ public class MixinPatchTransformer implements Transformer {
     );
 
     private final Set<String> mixins;
-    private final MixinRemaper refmap;
+    private final PatchEnvironment refmap;
     private final List<? extends Patch> patches;
 
     public MixinPatchTransformer(Set<String> mixins, Map<String, Map<String, String>> refmap, List<? extends Patch> adapterPatches) {
         this.mixins = mixins;
-        this.refmap = new MixinRemaper(refmap);
-        this.patches = ImmutableList.<Patch>builder().addAll(PATCHES).addAll(adapterPatches).build();
+        this.refmap = new PatchEnvironment(refmap);
+        this.patches = ImmutableList.<Patch>builder().addAll(adapterPatches).addAll(PATCHES).build();
     }
 
     @Override

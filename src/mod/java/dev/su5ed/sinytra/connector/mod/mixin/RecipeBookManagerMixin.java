@@ -25,10 +25,12 @@ public class RecipeBookManagerMixin {
         //Since we replaced RecipeBookCategories.AGGREGATE_CATEGORIES,
         //we need to add entries that might have been added by fabric mods.
         RecipeBookCategories.AGGREGATE_CATEGORIES.forEach((category, categories) -> {
-            List<RecipeBookCategories> categoriesList = AGGREGATE_CATEGORIES.computeIfAbsent(category, categories1 -> new ArrayList<>());
-            categories.removeIf(categoriesList::contains);
+            List<RecipeBookCategories> eventCategories = AGGREGATE_CATEGORIES.computeIfAbsent(category, categories1 -> new ArrayList<>());
+            //We need to make categories mutable, so we can remove them. Just in case mods return an immutable list.
+            List<RecipeBookCategories> mutableCategories = new ArrayList<>(categories);
+            mutableCategories.removeIf(eventCategories::contains);
             //We, unfortunately, can't easily respect insertion order here.
-            categoriesList.addAll(categories);
+            eventCategories.addAll(mutableCategories);
         });
 
         //Set the reference to the new map.

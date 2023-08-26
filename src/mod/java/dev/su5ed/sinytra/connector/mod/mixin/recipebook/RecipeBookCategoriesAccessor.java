@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.mod.mixin;
+package dev.su5ed.sinytra.connector.mod.mixin.recipebook;
 
 import net.minecraft.client.RecipeBookCategories;
 import org.spongepowered.asm.mixin.Mixin;

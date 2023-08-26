@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.mod.mixin;
+package dev.su5ed.sinytra.connector.mod.mixin.recipebook;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

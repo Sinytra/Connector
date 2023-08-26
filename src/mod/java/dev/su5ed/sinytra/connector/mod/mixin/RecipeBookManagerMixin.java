@@ -11,7 +11,6 @@ import java.util.*;
 
 @Mixin(value = RecipeBookManager.class, remap = false)
 public class RecipeBookManagerMixin {
-
     @Mutable
     @Shadow
     @Final
@@ -36,5 +35,4 @@ public class RecipeBookManagerMixin {
         //Set the reference to the new map.
         RecipeBookCategoriesAccessor.setAGGREGATE_CATEGORIES(AGGREGATE_CATEGORIES);
     }
-
 }

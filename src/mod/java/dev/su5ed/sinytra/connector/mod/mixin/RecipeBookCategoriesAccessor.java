@@ -16,5 +16,4 @@ public interface RecipeBookCategoriesAccessor {
     static void setAGGREGATE_CATEGORIES(Map<RecipeBookCategories, List<RecipeBookCategories>> map) {
         throw new UnsupportedOperationException();
     }
-
 }

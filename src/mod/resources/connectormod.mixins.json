@@ -12,7 +12,8 @@
     "tags.TagEntryAccessor",
     "tags.TagLoaderMixin",
     "registries.ForgeRegistryMixin",
-    "registries.BootstrapMixin"
+    "registries.BootstrapMixin",
+    "registries.RegistryDataLoaderMixin"
   ],
   "client": [
     "ItemBlockRenderTypesMixin",

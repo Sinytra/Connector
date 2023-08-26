@@ -295,6 +295,9 @@ tasks {
         if (name == "addMixinsToJar") {
             enabled = false
         }
+        if (name == "reobfModJar") {
+            mustRunAfter(modJar)
+        }
     }
 }
 

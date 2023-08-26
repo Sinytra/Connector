@@ -1,8 +1,6 @@
-package dev.su5ed.sinytra.connector.mod.mixin;
+package dev.su5ed.sinytra.connector.mod.mixin.registries;
 
-import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.main.GameConfig;
 import net.minecraftforge.registries.GameData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,11 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MinecraftMixin {
     @Unique
     private static final Logger CONNECTOR_LOGGER = LoggerFactory.getLogger(MinecraftMixin.class);
-
-    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Ljava/lang/Thread;currentThread()Ljava/lang/Thread;"), remap = false)
-    private void earlyInit(GameConfig gameConfig, CallbackInfo ci) {
-        ConnectorLoader.load();
-    }
 
     @Inject(at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;gameThread:Ljava/lang/Thread;", shift = At.Shift.AFTER, ordinal = 0), method = "run")
     private void onStart(CallbackInfo ci) {

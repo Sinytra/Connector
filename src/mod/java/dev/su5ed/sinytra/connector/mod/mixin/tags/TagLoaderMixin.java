@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.mod.mixin;
+package dev.su5ed.sinytra.connector.mod.mixin.tags;
 
 import dev.su5ed.sinytra.connector.mod.compat.TagConverter;
 import net.minecraft.resources.ResourceLocation;

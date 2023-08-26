@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.mod.mixin;
+package dev.su5ed.sinytra.connector.mod.mixin.boot;
 
 import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
 import net.minecraft.server.Main;

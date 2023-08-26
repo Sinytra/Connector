@@ -3,7 +3,7 @@ package dev.su5ed.sinytra.connector.mod.compat;
 import com.google.common.base.Stopwatch;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
-import dev.su5ed.sinytra.connector.mod.mixin.TagEntryAccessor;
+import dev.su5ed.sinytra.connector.mod.mixin.tags.TagEntryAccessor;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagEntry;
 import net.minecraft.tags.TagLoader;

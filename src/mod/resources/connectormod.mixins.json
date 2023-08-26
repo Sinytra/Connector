@@ -5,24 +5,26 @@
   "package": "dev.su5ed.sinytra.connector.mod.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "TagEntryAccessor",
     "AttributeSupplierAccessor",
-    "BootstrapMixin",
     "ForgeHooksMixin",
-    "ForgeRegistryMixin",
     "LivingEntityMixin",
-    "TagLoaderMixin"
+    "PoiTypesMixin",
+    "tags.TagEntryAccessor",
+    "tags.TagLoaderMixin",
+    "registries.ForgeRegistryMixin",
+    "registries.BootstrapMixin"
   ],
   "client": [
-    "MinecraftMixin",
     "ItemBlockRenderTypesMixin",
+    "boot.MinecraftMixin",
     "recipebook.RecipeBookManagerMixin",
     "recipebook.RecipeBookCategoriesMixin",
-    "recipebook.RecipeBookCategoriesAccessor"
+    "recipebook.RecipeBookCategoriesAccessor",
+    "registries.MinecraftMixin"
   ],
   "server": [
-    "MinecraftServerMixin",
-    "ServerMainMixin"
+    "boot.ServerMainMixin",
+    "registries.MinecraftServerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

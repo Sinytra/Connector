@@ -15,7 +15,10 @@
   ],
   "client": [
     "MinecraftMixin",
-    "ItemBlockRenderTypesMixin"
+    "ItemBlockRenderTypesMixin",
+    "recipebook.RecipeBookManagerMixin",
+    "recipebook.RecipeBookCategoriesMixin",
+    "recipebook.RecipeBookCategoriesAccessor"
   ],
   "server": [
     "MinecraftServerMixin",

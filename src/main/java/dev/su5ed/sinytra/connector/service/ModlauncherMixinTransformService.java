@@ -91,7 +91,10 @@ public class ModlauncherMixinTransformService implements ITransformationService 
         if (!FMLEnvironment.production) {
             MixinEnvironment.getDefaultEnvironment().getRemappers().add(new MixinModlauncherRemapper());
         }
-        return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(new GeneratedMixinClassesSecureJar())));
+        return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(
+            new GeneratedMixinClassesSecureJar(),
+            new FabricASMFixer.FabricASMGeneratedClassesSecureJar()
+        )));
     }
 
     @Override

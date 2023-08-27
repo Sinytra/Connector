@@ -23,5 +23,6 @@ public class ConnectorPreLaunchPlugin implements ILaunchPluginService {
     @Override
     public void initializeLaunch(ITransformerLoader transformerLoader, NamedPath[] specialPaths) {
         ConnectorEarlyLoader.setup();
+        FabricASMFixer.injectMinecraftModuleReader();
     }
 }

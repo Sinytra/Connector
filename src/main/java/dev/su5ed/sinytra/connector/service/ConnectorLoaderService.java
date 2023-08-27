@@ -9,8 +9,10 @@ import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import net.minecraftforge.fml.loading.LoadingModList;
+import net.minecraftforge.fml.unsafe.UnsafeHacks;
 
 import java.lang.reflect.Field;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +32,7 @@ public class ConnectorLoaderService implements ITransformationService {
     @Override
     public void onLoad(IEnvironment env, Set<String> otherServices) {
         List<ILaunchPluginService> injectPlugins = List.of(new ConnectorMixinLaunchPlugin(), new ConnectorPreLaunchPlugin());
-        
+
         try {
             Field launchPluginsField = Launcher.class.getDeclaredField("launchPlugins");
             launchPluginsField.setAccessible(true);
@@ -38,8 +40,15 @@ public class ConnectorLoaderService implements ITransformationService {
             Field pluginsField = LaunchPluginHandler.class.getDeclaredField("plugins");
             pluginsField.setAccessible(true);
             Map<String, ILaunchPluginService> plugins = (Map<String, ILaunchPluginService>) pluginsField.get(launchPluginHandler);
-            // Ew hacks
-            injectPlugins.forEach(plugin -> plugins.put(plugin.name(), plugin));
+            // Sort launch plugins
+            LinkedHashMap<String, ILaunchPluginService> sortedPlugins = new LinkedHashMap<>();
+            // Mixin must come first
+            sortedPlugins.put("mixin", plugins.remove("mixin"));
+            // Our plugins come after mixin
+            injectPlugins.forEach(plugin -> sortedPlugins.put(plugin.name(), plugin));
+            // The rest goes to the end
+            sortedPlugins.putAll(plugins);
+            UnsafeHacks.setField(pluginsField, launchPluginHandler, sortedPlugins);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

@@ -1,3 +1,4 @@
 {
-  "injectCreativeModeTabCtr": "META-INF/asm/injectCreativeModeTabCtr.js"
+  "injectCreativeModeTabCtr": "META-INF/asm/injectCreativeModeTabCtr.js",
+  "injectFabricASM": "META-INF/asm/injectFabricASM.js"
 }

@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public final class RelocatingRenamingTransformer extends RenamingTransformer {
+    private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$]+;$";
     private static final Map<String, String> RELOCATE = Map.of(
         "org/spongepowered/", "org/spongepowered/reloc/",
         "com/llamalad7/mixinextras/", "com/llamalad7/mixinextras/reloc/"
@@ -227,18 +228,30 @@ public final class RelocatingRenamingTransformer extends RenamingTransformer {
         @Override
         public Object mapValue(Object value) {
             if (value instanceof String str) {
-                for (Map.Entry<String, String> entry : RELOCATE.entrySet()) {
-                    String pKey = entry.getKey().replace('/', '.');
-                    if (str.startsWith(pKey)) {
-                        return str.replace(pKey, entry.getValue().replace('/', '.'));
-                    }
+                boolean desc = str.matches(CLASS_DESC_PATTERN);
+                String relocating = desc ? str.substring(1, str.length() - 1) : str;
+                String relocated = relocate(relocating, !desc);
+                if (relocated != null) {
+                    return desc ? 'L' + relocated + ';' : relocated;
                 }
+
                 String mapped = this.flatMappings.get(str);
                 if (mapped != null) {
                     return mapped;
                 }
             }
             return super.mapValue(value);
+        }
+
+        @Nullable
+        private static String relocate(String str, boolean normalize) {
+            for (Map.Entry<String, String> entry : RELOCATE.entrySet()) {
+                String pKey = normalize ? entry.getKey().replace('/', '.') : entry.getKey();
+                if (str.startsWith(pKey)) {
+                    return str.replace(pKey, normalize ? entry.getValue().replace('/', '.') : entry.getValue());
+                }
+            }
+            return null;
         }
     }
 

@@ -3,11 +3,10 @@ package dev.su5ed.sinytra.connector.service;
 import cpw.mods.jarhandling.SecureJar;
 import org.spongepowered.asm.util.Constants;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.module.ModuleDescriptor;
 import java.net.URI;
-import java.nio.file.Files;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.security.CodeSigner;
 import java.util.List;
@@ -19,7 +18,6 @@ import java.util.jar.Manifest;
 public class GeneratedMixinClassesSecureJar implements SecureJar {
     private static class GeneratedMixinClassesModuleDataProvider implements ModuleDataProvider {
         private ModuleDescriptor descriptor;
-        private URI location;
 
         @Override
         public String name() {
@@ -39,14 +37,11 @@ public class GeneratedMixinClassesSecureJar implements SecureJar {
 
         @Override
         public URI uri() {
-            if (location == null) {
-                try {
-                    location = Files.createTempDirectory(name()).toUri();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+            try {
+                return new URI("file:///~nonexistent");
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
             }
-            return location;
         }
 
         @Override
@@ -69,7 +64,7 @@ public class GeneratedMixinClassesSecureJar implements SecureJar {
             return new CodeSigner[0];
         }
     }
-    
+
     private final ModuleDataProvider moduleDataProvider = new GeneratedMixinClassesModuleDataProvider();
 
     @Override

@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassTransform;
 import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
@@ -110,6 +111,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("INVOKE", "Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;m_289609_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/HumanoidModel;ZFFFLjava/lang/String;)V")
             .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
             .modifyParams(builder -> builder
+                .targetType(ModifyMethodParams.TargetType.ALL)
                 .replace(0, Type.getObjectType("net/minecraft/client/model/Model"))
                 .lvtFixer((index, insn, list) -> {
                     if (index == 1) {

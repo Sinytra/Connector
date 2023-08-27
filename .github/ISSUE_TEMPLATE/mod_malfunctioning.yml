@@ -27,7 +27,7 @@ body:
       placeholder: "https://example.com"
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: description
     attributes:
       label: Describe the bug
@@ -47,12 +47,12 @@ body:
         2.
         3.
         ...
-  - type: input
+  - type: textarea
     id: intended-behavior
     attributes:
       label: Intended behavior
       description: "The expected behavior."
-  - type: input
+  - type: textarea
     id: actual-behavior
     attributes:
       label: Actual behavior

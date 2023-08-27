@@ -27,7 +27,7 @@ body:
       placeholder: "https://example.com"
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: description
     attributes:
       label: Describe the bug

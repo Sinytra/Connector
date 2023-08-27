@@ -11,7 +11,7 @@ body:
         Thank you for taking your time to give us suggestions! You gotta make sure these before reporting...
         - This feature does not exist in the latest build.
         - This suggestion wasn't already reported or being closed.
-  - type: input
+  - type: textarea
     id: description
     attributes:
       label: Describe the feature

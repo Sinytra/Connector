@@ -11,19 +11,19 @@ body:
         Thank you for taking your time to report this bug! You gotta make sure these before reporting...
         - You are running the latest version of Connector and its dependencies.
         - This bug wasn't already reported or being closed.
-  - type: input
+  - type: textarea
     id: description
     attributes:
       label: Describe the bug
       description: "A clear and concise description of what the bug is."
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: intended-behavior
     attributes:
       label: Intended behavior
       description: "The expected behavior."
-  - type: input
+  - type: textarea
     id: actual-behavior
     attributes:
       label: Actual behavior

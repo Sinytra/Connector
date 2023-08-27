@@ -1,6 +1,6 @@
-name: Bug Report
-description: Report an issue you've encountered.
-labels: [bug]
+name: Mod Crash
+description: Report mod(pack)s that crashes the game.
+labels: [compat, crash]
 body:
   - type: markdown
     attributes:
@@ -8,9 +8,25 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking your time to report this bug! You gotta make sure these before reporting...
+        Thank you for taking your time to report this incompatibility! You gotta make sure these before reporting...
         - You are running the latest version of Connector and its dependencies.
         - This bug wasn't already reported or being closed.
+  - type: input
+    id: mod
+    attributes: 
+      label: Mod Name
+      description: "Name of the problematic mod."
+      placeholder: "Mod Name"
+    validations:
+      required: true
+  - type: input
+    id: homepage
+    attributes: 
+      label: Mod Homepage
+      description: "A link to the mod's homepage. This can be its CurseForge, Modrinth, Github repository or something else."
+      placeholder: "https://example.com"
+    validations:
+      required: true
   - type: input
     id: description
     attributes:
@@ -18,37 +34,29 @@ body:
       description: "A clear and concise description of what the bug is."
     validations:
       required: true
-  - type: input
-    id: intended-behavior
-    attributes:
-      label: Intended behavior
-      description: "The expected behavior."
-  - type: input
-    id: actual-behavior
-    attributes:
-      label: Actual behavior
-      description: "What actually happens to your game."
   - type: textarea
-    id: repro
+    id: steps
     attributes:
       label: Steps to reproduce
       description: |
         How do you trigger this bug? Please walk us through it step by step.
-        If applicable, add screenshots to help explain your problem.
+        If applicable, add screenshots to help explain your problem. In case the mod crashes the game without
+        ever loading, feel free to skip this step.
       value: |
         1.
         2.
         3.
         ...
-    validations:
-      required: true
   - type: input
     id: logs
     attributes:
       label: Logs
       description: |
-        If applicable (crash, error output in console), please provide your crash report or latest.log
+        If applicable (crash, error output in console), please provide your crash report.
+        Otherwise, we recommend uploading the debug.log found in your `.minecraft/logs` directory.
         To upload logs, use an external site to post the crash report, such as [Ubuntu Pastebin](https://paste.ubuntu.com/), [Pastebin](http://pastebin.com/), or [Github Gist](https://gist.github.com/)
+    validations:
+      required: true
   - type: textarea
     id: context
     attributes:

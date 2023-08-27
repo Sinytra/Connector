@@ -1,6 +1,6 @@
-name: Mod Incompatibility
-description: Report an incompatible mod
-labels: [compat]
+name: Mod Malfunctioning
+description: Report malfunctioning mod(pack)s.
+labels: [compat, malfunction]
 body:
   - type: markdown
     attributes:
@@ -8,14 +8,15 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking your time to report this incompatibility!
-        Make sure you are running the latest version of Connector and its dependencies before reporting.
+        Thank you for taking your time to report this incompatibility! You gotta make sure these before reporting...
+        - You are running the latest version of Connector and its dependencies.
+        - This bug wasn't already reported or being closed.
   - type: input
     id: mod
     attributes: 
       label: Mod Name
-      description: "Name of the problematic mod"
-      placeholder: "Examplemod"
+      description: "Name of the problematic mod."
+      placeholder: "Mod Name"
     validations:
       required: true
   - type: input
@@ -46,6 +47,16 @@ body:
         2.
         3.
         ...
+  - type: input
+    id: intended-behavior
+    attributes:
+      label: Intended behavior
+      description: "The expected behavior."
+  - type: input
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: "What actually happens to your game."
   - type: input
     id: logs
     attributes:

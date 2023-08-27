@@ -1,6 +1,6 @@
-name: Bug Report
-description: Report an issue you've encountered.
-labels: [bug]
+name: Suggestion
+description: Feel free to give us suggestions!
+labels: [enhancement]
 body:
   - type: markdown
     attributes:
@@ -8,9 +8,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking your time to report this bug! You gotta make sure these before reporting...
-        - You are running the latest version of Connector and its dependencies.
-        - This bug wasn't already reported or being closed.
+        Thank you for taking your time to give us suggestions! You gotta make sure these before reporting...
+        - This feature does not exist in the latest build.
+        - This suggestion wasn't already reported or being closed.
   - type: input
     id: description
     attributes:

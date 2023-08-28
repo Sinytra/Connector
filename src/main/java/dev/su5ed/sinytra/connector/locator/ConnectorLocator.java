@@ -1,5 +1,7 @@
 package dev.su5ed.sinytra.connector.locator;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
@@ -86,18 +88,18 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
                 return !ConnectorUtil.DISABLED_MODS.contains(modid) && !loadedModIds.contains(modid);
             })
             .toList();
+        Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren = HashMultimap.create();
         // Discover fabric nested mod jars
         List<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()
             .flatMap(jar -> {
-                SecureJar secureJar = SecureJar.from(jar.input().toPath());
                 ConnectorLoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return discoverNestedJarsRecursive(tempDir, secureJar, metadata.getJars());
+                return discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren);
             })
             .toList();
         // Remove mods loaded by FML
         List<JarTransformer.TransformableJar> uniqueJars = handleDuplicateMods(discoveredJars, discoveredNestedJars, loadedModIds);
         // Ensure we have all required dependencies before transforming
-        List<JarTransformer.TransformableJar> candidates = DependencyResolver.resolveDependencies(uniqueJars, loadedMods);
+        List<JarTransformer.TransformableJar> candidates = DependencyResolver.resolveDependencies(uniqueJars, parentToChildren, loadedMods);
         // Get renamer library classpath
         List<Path> renameLibs = StreamSupport.stream(loadedMods.spliterator(), false).map(modFile -> modFile.getSecureJar().getRootPath()).toList();
         // Run jar transformations (or get existing outputs from cache)
@@ -138,14 +140,16 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         return false;
     }
 
-    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, SecureJar secureJar, Collection<NestedJarEntry> jars) {
+    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, JarTransformer.TransformableJar parent, Collection<NestedJarEntry> jars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren) {
+        SecureJar secureJar = SecureJar.from(parent.input().toPath());
         return jars.stream()
             .map(entry -> secureJar.getPath(entry.getFile()))
             .filter(Files::exists)
             .flatMap(path -> {
                 JarTransformer.TransformableJar jar = uncheck(() -> prepareNestedJar(tempDir, secureJar.getPrimaryPath().getFileName().toString(), path));
                 ConnectorLoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, SecureJar.from(jar.input().toPath()), metadata.getJars()));
+                parentToChildren.put(parent, jar);
+                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren));
             });
     }
 

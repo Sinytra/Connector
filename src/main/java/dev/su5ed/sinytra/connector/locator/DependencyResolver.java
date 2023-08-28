@@ -1,5 +1,8 @@
 package dev.su5ed.sinytra.connector.locator;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.transformer.JarTransformer;
@@ -21,8 +24,9 @@ import org.slf4j.Logger;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,28 +41,23 @@ public final class DependencyResolver {
     public static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
     public static final DependencyOverrides DEPENDENCY_OVERRIDES = new DependencyOverrides(FMLPaths.CONFIGDIR.get());
 
-    public static List<JarTransformer.TransformableJar> resolveDependencies(List<JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
-        Map<ModCandidate, JarTransformer.TransformableJar> candidateToJar = new HashMap<>();
+    public static List<JarTransformer.TransformableJar> resolveDependencies(Collection<JarTransformer.TransformableJar> keys, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
+        BiMap<JarTransformer.TransformableJar, ModCandidate> jarToCandidate = HashBiMap.create();
         // Fabric candidates
-        Stream<ModCandidate> candidates = jars.stream()
-            .map(jar -> {
-                ModCandidate candidate = ModCandidate.createPlain(List.of(jar.modPath().path()), jar.modPath().metadata().modMetadata(), false, List.of());
-                candidateToJar.put(candidate, jar);
-                return candidate;
-            });
+        List<ModCandidate> candidates = createCandidatesRecursive(keys, jars, jarToCandidate);
         // Forge dependencies
         Stream<ModCandidate> forgeCandidates = StreamSupport.stream(loadedMods.spliterator(), false)
             .flatMap(modFile -> modFile.getModFileInfo() != null ? modFile.getModInfos().stream() : Stream.empty())
             .map(modInfo -> ModCandidate.createPlain(List.of(modInfo.getOwningFile().getFile().getFilePath()), new BuiltinMetadataWrapper(new FMLModMetadata(modInfo)), false, List.of()));
         Stream<ModCandidate> builtinCandidates = Stream.of(createJavaMod(), createFabricLoaderMod());
         // Merge
-        List<ModCandidate> allCandidates = Stream.of(candidates, forgeCandidates, builtinCandidates).flatMap(Function.identity()).toList();
+        List<ModCandidate> allCandidates = Stream.of(candidates.stream(), forgeCandidates, builtinCandidates).flatMap(Function.identity()).toList();
 
         EnvType envType = FabricLoader.getInstance().getEnvironmentType();
         try {
             List<ModCandidate> resolved = ModResolver.resolve(allCandidates, envType, Map.of());
             List<JarTransformer.TransformableJar> candidateJars = resolved.stream()
-                .map(candidateToJar::get)
+                .map(jarToCandidate.inverse()::get)
                 .filter(Objects::nonNull)
                 .toList();
             LOGGER.info("Dependency resolution found {} candidates to load", candidateJars.size());
@@ -66,6 +65,24 @@ public final class DependencyResolver {
         } catch (ModResolutionException e) {
             throw ConnectorEarlyLoader.createLoadingException(e, e.getMessage().replaceAll("\t", "  "));
         }
+    }
+
+    private static List<ModCandidate> createCandidatesRecursive(Collection<JarTransformer.TransformableJar> candidateJars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentsToChildren, Map<JarTransformer.TransformableJar, ModCandidate> jarToCandidate) {
+        List<ModCandidate> candidates = new ArrayList<>();
+        for (JarTransformer.TransformableJar candidateJar : candidateJars) {
+            ModCandidate candidate = jarToCandidate.computeIfAbsent(candidateJar, j -> {
+                Collection<JarTransformer.TransformableJar> children = parentsToChildren.containsKey(candidateJar) ? parentsToChildren.get(candidateJar) : List.of();
+                List<ModCandidate> childCandidates = createCandidatesRecursive(children, parentsToChildren, jarToCandidate);
+                List<Path> paths = parentsToChildren.containsValue(candidateJar) ? null : List.of(candidateJar.modPath().path());
+                ModCandidate parent = ModCandidate.createPlain(paths, candidateJar.modPath().metadata().modMetadata(), false, childCandidates);
+                for (ModCandidate childCandidate : childCandidates) {
+                    childCandidate.addParent(parent);
+                }
+                return parent;
+            });
+            candidates.add(candidate);
+        }
+        return candidates;
     }
 
     private static ModCandidate createJavaMod() {

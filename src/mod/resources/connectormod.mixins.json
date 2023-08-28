@@ -9,6 +9,7 @@
     "ForgeHooksMixin",
     "LivingEntityMixin",
     "PoiTypesMixin",
+    "ItemOverridesMixin",
     "tags.TagEntryAccessor",
     "tags.TagLoaderMixin",
     "registries.ForgeRegistryMixin",

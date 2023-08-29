@@ -2,7 +2,6 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.base.Stopwatch;
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -62,6 +61,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -246,8 +246,8 @@ public final class JarTransformer {
         Renamer.Builder builder = Renamer.builder()
             .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE)))
             .add(remappingTransformer)
-            .add(new MixinPatchTransformer(metadata.mixinClasses(), refmap.merged().mappings, adapterPatches))
-            .add(new RefmapRemapper(metadata.mixinConfigs(), refmap.files()))
+            .add(new MixinPatchTransformer(metadata.mixinPackages(), refmap.merged().mappings, adapterPatches))
+            .add(new RefmapRemapper(metadata.mixinConfigs(), refmap.files(), metadata.makeUniqueConfigNames()))
             .add(new ModMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));
@@ -280,37 +280,43 @@ public final class JarTransformer {
             boolean containsAT = jarFile.getEntry(AccessWidenerTransformer.AT_PATH) != null;
 
             Set<String> refmaps = new HashSet<>();
-            Set<String> classes = new HashSet<>();
+            Set<String> mixinPackages = new HashSet<>();
             for (String configName : configs) {
                 ZipEntry entry = jarFile.getEntry(configName);
                 if (entry != null) {
-                    try (Reader reader = new InputStreamReader(jarFile.getInputStream(entry))) {
-                        JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-                        if (json.has("refmap")) {
-                            String refmap = json.get("refmap").getAsString();
-                            refmaps.add(refmap);
-                        }
-                        if (json.has("package")) {
-                            String pkg = json.get("package").getAsString();
-                            String pkgPath = pkg.replace('.', '/') + '/';
-                            Set.of("mixins", "client", "server").stream()
-                                .flatMap(str -> {
-                                    JsonArray array = json.getAsJsonArray(str);
-                                    return Optional.ofNullable(array).stream()
-                                        .flatMap(arr -> arr.asList().stream()
-                                            .map(JsonElement::getAsString));
-                                })
-                                .map(side -> pkgPath + side.replace('.', '/'))
-                                .forEach(classes::add);
-                        }
-                    } catch (IOException e) {
-                        LOGGER.error("Error reading mixin config entry {} in file {}", entry.getName(), input.getAbsolutePath());
-                        throw new UncheckedIOException(e);
-                    }
+                    readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages);
                 }
             }
+            // Find additional configs that may not be listed in mod metadata
+            AtomicBoolean hasAdditionalConfigs = new AtomicBoolean(false);
+            jarFile.stream()
+                .forEach(entry -> {
+                    String name = entry.getName();
+                    if ((name.endsWith(".mixins.json") || name.startsWith("mixins.") && name.endsWith(".json")) && configs.add(name)) {
+                        readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages);
+                        hasAdditionalConfigs.set(true);   
+                    }
+                });
             Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
-            return new FabricModFileMetadata(metadata, configs, refmaps, classes, manifestAttributes, containsAT);
+            return new FabricModFileMetadata(metadata, configs, refmaps, mixinPackages, manifestAttributes, containsAT, !hasAdditionalConfigs.get());
+        }
+    }
+
+    private static void readMixinConfigPackages(File input, JarFile jarFile, ZipEntry entry, Set<String> refmaps, Set<String> packages) {
+        try (Reader reader = new InputStreamReader(jarFile.getInputStream(entry))) {
+            JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+            if (json.has("refmap")) {
+                String refmap = json.get("refmap").getAsString();
+                refmaps.add(refmap);
+            }
+            if (json.has("package")) {
+                String pkg = json.get("package").getAsString();
+                String pkgPath = pkg.replace('.', '/') + '/';
+                packages.add(pkgPath);
+            }
+        } catch (IOException e) {
+            LOGGER.error("Error reading mixin config entry {} in file {}", entry.getName(), input.getAbsolutePath());
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -318,7 +324,7 @@ public final class JarTransformer {
 
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
 
-    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinClasses, Attributes manifestAttributes, boolean containsAT) {}
+    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT, boolean makeUniqueConfigNames) {}
 
     public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
         public FabricModPath transform(Transformer remappingTransformer) throws IOException {

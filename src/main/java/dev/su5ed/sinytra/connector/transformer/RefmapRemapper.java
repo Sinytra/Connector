@@ -63,15 +63,18 @@ public class RefmapRemapper implements Transformer {
 
     private boolean hasManifest;
 
-    public RefmapRemapper(Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files) {
+    public RefmapRemapper(Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files, boolean makeUniqueConfigNames) {
         this.configs = configs.stream()
             // Some mods (specifically mixinextras) are present on both platforms, and mixin can fail to select the correct configs for
             // each jar due to their names being the same. To avoid conflicts, we assign fabric mixin configs new, unique names.
             .collect(Collectors.toMap(Function.identity(), name -> {
-                // Split file name and extension
-                String[] parts = name.split("\\.(?!.*\\.)");
-                // Append unique string to file name
-                return parts[0] + "-" + RandomStringUtils.randomAlphabetic(5) + "." + parts[1];
+                if (makeUniqueConfigNames) {
+                    // Split file name and extension
+                    String[] parts = name.split("\\.(?!.*\\.)");
+                    // Append unique string to file name
+                    return parts[0] + "-" + RandomStringUtils.randomAlphabetic(5) + "." + parts[1];
+                }
+                return name;
             }));
         this.files = files;
     }
@@ -90,10 +93,6 @@ public class RefmapRemapper implements Transformer {
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
-        }
-        String rename = this.configs.get(name);
-        if (rename != null) {
-            return ResourceEntry.create(rename, entry.getTime(), entry.getData());
         }
         return entry;
     }

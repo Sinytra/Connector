@@ -10,6 +10,8 @@
     "LivingEntityMixin",
     "PoiTypesMixin",
     "ItemOverridesMixin",
+    "network.ConnectionTypeMixin",
+    "network.HandshakeHandlerMixin",
     "tags.TagEntryAccessor",
     "tags.TagLoaderMixin",
     "registries.ForgeRegistryMixin",

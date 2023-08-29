@@ -33,6 +33,15 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("Lnet/minecraft/world/item/Item;m_6473_()I")
             .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;getEnchantmentValue()I")
             .build(),
+        // Redirect HUD rendering calls to Forge's replacement class
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280421_")
+            .targetInjectionPoint("Lnet/minecraft/client/Options;f_92063_:Z")
+            .modifyTarget("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
+            .modifyInjectionPoint("TAIL", "")
+            .modifyTargetClasses(classes -> classes.add(Type.getObjectType("net/minecraftforge/client/gui/overlay/ForgeGui")))
+            .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/GameRenderer")
             .targetMethod("m_109093_(FJZ)V")
@@ -130,7 +139,7 @@ public class MixinPatchTransformer implements Transformer {
                 insns.add(new InsnNode(Opcodes.ARETURN));
                 insns.add(cont);
                 methodNode.instructions.insert(insns);
-                return true;
+                return Patch.Result.APPLY;
             })
             .build(),
         Patch.builder()
@@ -142,21 +151,29 @@ public class MixinPatchTransformer implements Transformer {
         new FieldTypeAdapter()
     );
 
-    private final Set<String> mixins;
+    private final Set<String> mixinPackages;
     private final PatchEnvironment refmap;
     private final List<? extends Patch> patches;
 
-    public MixinPatchTransformer(Set<String> mixins, Map<String, Map<String, String>> refmap, List<? extends Patch> adapterPatches) {
-        this.mixins = mixins;
+    public MixinPatchTransformer(Set<String> mixinPackages, Map<String, Map<String, String>> refmap, List<? extends Patch> adapterPatches) {
+        this.mixinPackages = mixinPackages;
         this.refmap = new PatchEnvironment(refmap);
         this.patches = ImmutableList.<Patch>builder().addAll(adapterPatches).addAll(PATCHES).build();
+    }
+
+    private boolean isInMixinPackage(String className) {
+        for (String pkg : this.mixinPackages) {
+            if (className.startsWith(pkg)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public ClassEntry process(ClassEntry entry) {
         String className = entry.getClassName();
-        boolean needsWriting = false;
-        boolean computeFrames = false;
+        Patch.Result patchResult = Patch.Result.PASS;
 
         ClassReader reader = new ClassReader(entry.getData());
         ClassNode node = new ClassNode();
@@ -165,19 +182,18 @@ public class MixinPatchTransformer implements Transformer {
         for (ClassTransform transform : CLASS_TRANSFORMS) {
             ClassTransform.Result result = transform.apply(node);
             if (result.applied()) {
-                needsWriting = true;
-                computeFrames |= result.computeFrames();
+                patchResult = patchResult.or(result.computeFrames() ? Patch.Result.COMPUTE_FRAMES : Patch.Result.APPLY);
             }
         }
 
-        if (this.mixins.contains(className)) {
+        if (isInMixinPackage(className)) {
             for (Patch patch : this.patches) {
-                needsWriting |= patch.apply(node, this.refmap);
+                patchResult = patchResult.or(patch.apply(node, this.refmap));
             }
         }
 
-        if (needsWriting) {
-            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | (computeFrames ? ClassWriter.COMPUTE_FRAMES : 0));
+        if (patchResult != Patch.Result.PASS) {
+            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | (patchResult == Patch.Result.COMPUTE_FRAMES ? ClassWriter.COMPUTE_FRAMES : 0));
             node.accept(writer);
             return ClassEntry.create(entry.getName(), entry.getTime(), writer.toByteArray());
         }

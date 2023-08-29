@@ -19,20 +19,18 @@ public class RecipeBookManagerMixin {
     @Inject(at = @At("TAIL"), method = "init", remap = false)
     private static void init(CallbackInfo ci) {
         //Make lists mutable.
-        AGGREGATE_CATEGORIES.replaceAll((category, categories) -> new ArrayList<>(categories));
+        RecipeBookCategoriesAccessor.setAGGREGATE_CATEGORIES(new HashMap<>(RecipeBookCategories.AGGREGATE_CATEGORIES));
+        RecipeBookCategories.AGGREGATE_CATEGORIES.replaceAll((category, categories) -> new ArrayList<>(categories));
 
         //Since we replaced RecipeBookCategories.AGGREGATE_CATEGORIES,
         //we need to add entries that might have been added by fabric mods.
-        RecipeBookCategories.AGGREGATE_CATEGORIES.forEach((category, categories) -> {
-            List<RecipeBookCategories> eventCategories = AGGREGATE_CATEGORIES.computeIfAbsent(category, categories1 -> new ArrayList<>());
+        AGGREGATE_CATEGORIES.forEach((category, categories) -> {
+            List<RecipeBookCategories> bookCategories = RecipeBookCategories.AGGREGATE_CATEGORIES.computeIfAbsent(category, categories1 -> new ArrayList<>());
             //We need to make categories mutable, so we can remove them. Just in case mods return an immutable list.
             List<RecipeBookCategories> mutableCategories = new ArrayList<>(categories);
-            mutableCategories.removeIf(eventCategories::contains);
+            mutableCategories.removeIf(bookCategories::contains);
             //We, unfortunately, can't easily respect insertion order here.
-            eventCategories.addAll(mutableCategories);
+            bookCategories.addAll(mutableCategories);
         });
-
-        //Set the reference to the new map.
-        RecipeBookCategoriesAccessor.setAGGREGATE_CATEGORIES(AGGREGATE_CATEGORIES);
     }
 }

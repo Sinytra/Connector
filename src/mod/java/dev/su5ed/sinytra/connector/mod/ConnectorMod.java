@@ -24,7 +24,7 @@ public class ConnectorMod {
         bus.addListener(ConnectorMod::onClientSetup);
         ModList modList = ModList.get();
         if (FMLLoader.getDist().isClient() && modList.isLoaded("fabric_rendering_fluids_v1")) {
-            bus.addListener(FluidHandlerCompat::onClientSetup);
+            FluidHandlerCompat.init(bus);
         }
 
         if (modList.isLoaded("fabric_object_builder_api_v1")) {

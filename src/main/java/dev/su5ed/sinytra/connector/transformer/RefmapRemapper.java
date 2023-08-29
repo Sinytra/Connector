@@ -94,6 +94,10 @@ public class RefmapRemapper implements Transformer {
                 throw new UncheckedIOException(e);
             }
         }
+        String rename = this.configs.get(name);
+        if (rename != null) {
+            return ResourceEntry.create(rename, entry.getTime(), entry.getData());
+        }
         return entry;
     }
 

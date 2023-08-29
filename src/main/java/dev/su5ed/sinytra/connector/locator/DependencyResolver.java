@@ -44,7 +44,7 @@ public final class DependencyResolver {
     public static List<JarTransformer.TransformableJar> resolveDependencies(Collection<JarTransformer.TransformableJar> keys, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
         BiMap<JarTransformer.TransformableJar, ModCandidate> jarToCandidate = HashBiMap.create();
         // Fabric candidates
-        List<ModCandidate> candidates = createCandidatesRecursive(keys, jars, jarToCandidate);
+        List<ModCandidate> candidates = createCandidatesRecursive(keys, keys, jars, jarToCandidate);
         // Forge dependencies
         Stream<ModCandidate> forgeCandidates = StreamSupport.stream(loadedMods.spliterator(), false)
             .flatMap(modFile -> modFile.getModFileInfo() != null ? modFile.getModInfos().stream() : Stream.empty())
@@ -67,20 +67,22 @@ public final class DependencyResolver {
         }
     }
 
-    private static List<ModCandidate> createCandidatesRecursive(Collection<JarTransformer.TransformableJar> candidateJars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentsToChildren, Map<JarTransformer.TransformableJar, ModCandidate> jarToCandidate) {
+    private static List<ModCandidate> createCandidatesRecursive(Collection<JarTransformer.TransformableJar> candidateJars, Collection<JarTransformer.TransformableJar> jarsToLoad, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentsToChildren, Map<JarTransformer.TransformableJar, ModCandidate> jarToCandidate) {
         List<ModCandidate> candidates = new ArrayList<>();
         for (JarTransformer.TransformableJar candidateJar : candidateJars) {
-            ModCandidate candidate = jarToCandidate.computeIfAbsent(candidateJar, j -> {
-                Collection<JarTransformer.TransformableJar> children = parentsToChildren.containsKey(candidateJar) ? parentsToChildren.get(candidateJar) : List.of();
-                List<ModCandidate> childCandidates = createCandidatesRecursive(children, parentsToChildren, jarToCandidate);
-                List<Path> paths = parentsToChildren.containsValue(candidateJar) ? null : List.of(candidateJar.modPath().path());
-                ModCandidate parent = ModCandidate.createPlain(paths, candidateJar.modPath().metadata().modMetadata(), false, childCandidates);
-                for (ModCandidate childCandidate : childCandidates) {
-                    childCandidate.addParent(parent);
-                }
-                return parent;
-            });
-            candidates.add(candidate);
+            if (jarsToLoad.contains(candidateJar)) {
+                ModCandidate candidate = jarToCandidate.computeIfAbsent(candidateJar, j -> {
+                    Collection<JarTransformer.TransformableJar> children = parentsToChildren.containsKey(candidateJar) ? parentsToChildren.get(candidateJar) : List.of();
+                    List<ModCandidate> childCandidates = createCandidatesRecursive(children, jarsToLoad, parentsToChildren, jarToCandidate);
+                    List<Path> paths = parentsToChildren.containsValue(candidateJar) ? null : List.of(candidateJar.modPath().path());
+                    ModCandidate parent = ModCandidate.createPlain(paths, candidateJar.modPath().metadata().modMetadata(), false, childCandidates);
+                    for (ModCandidate childCandidate : childCandidates) {
+                        childCandidate.addParent(parent);
+                    }
+                    return parent;
+                });
+                candidates.add(candidate);
+            }
         }
         return candidates;
     }
@@ -99,7 +101,7 @@ public final class DependencyResolver {
             .setName("Fabric Loader")
             .build();
         GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(Collections.singletonList(Path.of(uncheck(() -> FabricLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI()))), metadata);
-        
+
         return ModCandidate.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES);
     }
 }

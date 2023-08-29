@@ -49,10 +49,12 @@ public final class TagConverter {
                     ResourceLocation entryName = tagEntry.entry().getId();
                     if (isFabricTag(entryName)) {
                         ResourceLocation newEntryName = getNormalizedTagName(entryName.getPath(), existing);
-                        TagEntry newEntry = TagEntryAccessor.create(newEntryName, tagEntry.entry().isTag(), tagEntry.entry().isRequired());
-                        newEntries.add(new TagLoader.EntryWithSource(newEntry, tagEntry.source()));
+                        if (!newName.equals(newEntryName)) {
+                            TagEntry newEntry = TagEntryAccessor.create(newEntryName, tagEntry.entry().isTag(), tagEntry.entry().isRequired());
+                            newEntries.add(new TagLoader.EntryWithSource(newEntry, tagEntry.source()));
+                        }
                     }
-                    else {
+                    else if (!newName.equals(entryName)) {
                         newEntries.add(tagEntry);
                     }
                 }

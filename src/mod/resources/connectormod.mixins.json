@@ -9,7 +9,6 @@
     "ForgeHooksMixin",
     "LivingEntityMixin",
     "PoiTypesMixin",
-    "ItemOverridesMixin",
     "network.ConnectionTypeMixin",
     "network.HandshakeHandlerMixin",
     "tags.TagEntryAccessor",
@@ -20,6 +19,7 @@
   ],
   "client": [
     "ItemBlockRenderTypesMixin",
+    "ItemOverridesMixin",
     "boot.MinecraftMixin",
     "recipebook.RecipeBookManagerMixin",
     "recipebook.RecipeBookCategoriesMixin",

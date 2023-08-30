@@ -7,6 +7,7 @@ import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassTransform;
+import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
 import net.minecraftforge.fart.api.Transformer;
 import org.objectweb.asm.ClassReader;
@@ -148,7 +149,8 @@ public class MixinPatchTransformer implements Transformer {
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
         new ClassResourcesTransformer(),
-        new FieldTypeAdapter()
+        new FieldTypeAdapter(),
+        new EnvironmentStripperTransformer()
     );
 
     private final Set<String> mixinPackages;

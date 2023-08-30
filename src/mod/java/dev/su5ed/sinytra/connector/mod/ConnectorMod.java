@@ -23,15 +23,16 @@ public class ConnectorMod {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         bus.addListener(ConnectorMod::onClientSetup);
         ModList modList = ModList.get();
-        if (FMLLoader.getDist().isClient() && modList.isLoaded("fabric_rendering_fluids_v1")) {
-            FluidHandlerCompat.init(bus);
+        if (FMLLoader.getDist().isClient()) {
+            ModMenuCompat.init();
+            if (modList.isLoaded("fabric_rendering_fluids_v1")) {
+                FluidHandlerCompat.init(bus);
+            }
         }
 
         if (modList.isLoaded("fabric_object_builder_api_v1")) {
             bus.addListener(EventPriority.HIGHEST, LazyEntityAttributes::addMissingAttributes);
         }
-
-        ModMenuCompat.init();
     }
 
     private static void onClientSetup(FMLClientSetupEvent event) {

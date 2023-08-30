@@ -1,5 +1,7 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
+import dev.su5ed.sinytra.adapter.patch.ClassTransform;
+import dev.su5ed.sinytra.adapter.patch.Patch;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;
@@ -17,7 +19,7 @@ public class EnvironmentStripperTransformer implements ClassTransform {
     private static final EnvType CURRENT_ENV = FabricLoader.getInstance().getEnvironmentType();
 
     @Override
-    public Result apply(ClassNode classNode) {
+    public Patch.Result apply(ClassNode classNode) {
         boolean applied = false;
         for (Iterator<MethodNode> it = classNode.methods.iterator(); it.hasNext(); ) {
             MethodNode method = it.next();
@@ -35,7 +37,7 @@ public class EnvironmentStripperTransformer implements ClassTransform {
 //                applied = true;
 //            }
 //        }
-        return new Result(applied, false);
+        return applied ? Patch.Result.APPLY : Patch.Result.PASS;
     }
 
     // We strip annotations ahead of time to avoid class resolution issues leading to CNFEs

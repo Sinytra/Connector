@@ -1,12 +1,12 @@
 package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableList;
+import dev.su5ed.sinytra.adapter.patch.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
-import dev.su5ed.sinytra.connector.transformer.patch.ClassTransform;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
 import net.minecraftforge.fart.api.Transformer;
@@ -15,6 +15,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
@@ -33,6 +34,22 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/world/item/enchantment/EnchantmentHelper")
             .targetInjectionPoint("Lnet/minecraft/world/item/Item;m_6473_()I")
             .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;getEnchantmentValue()I")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/Minecraft")
+            .targetMethod("lambda$new$1")
+            .modifyTarget("lambda$new$4(Lcom/mojang/realmsclient/client/RealmsClient;Lnet/minecraft/server/packs/resources/ReloadInstance;Lnet/minecraft/client/main/GameConfig;)V")
+            .modifyParams(builder -> builder
+                .insert(0, Type.getObjectType("com/mojang/realmsclient/client/RealmsClient"))
+                .insert(1, Type.getObjectType("net/minecraft/server/packs/resources/ReloadInstance"))
+                .insert(2, Type.getObjectType("net/minecraft/client/main/GameConfig")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/level/block/FireBlock")
+            .redirectShadowMethod(
+                "Lnet/minecraft/world/level/block/FireBlock;m_221150_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;I)V",
+                "Lnet/minecraft/world/level/block/FireBlock;tryCatchFire(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V",
+                (insn, list) -> list.insertBefore(insn, new FieldInsnNode(Opcodes.GETSTATIC, "net/minecraft/core/Direction", "NORTH", "Lnet/minecraft/core/Direction;")))
             .build(),
         // Redirect HUD rendering calls to Forge's replacement class
         Patch.builder()
@@ -182,10 +199,7 @@ public class MixinPatchTransformer implements Transformer {
         reader.accept(node, 0);
 
         for (ClassTransform transform : CLASS_TRANSFORMS) {
-            ClassTransform.Result result = transform.apply(node);
-            if (result.applied()) {
-                patchResult = patchResult.or(result.computeFrames() ? Patch.Result.COMPUTE_FRAMES : Patch.Result.APPLY);
-            }
+            patchResult = patchResult.or(transform.apply(node));
         }
 
         if (isInMixinPackage(className)) {

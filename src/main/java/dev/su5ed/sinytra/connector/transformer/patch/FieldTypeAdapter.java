@@ -1,6 +1,8 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
 import com.mojang.logging.LogUtils;
+import dev.su5ed.sinytra.adapter.patch.ClassTransform;
+import dev.su5ed.sinytra.adapter.patch.Patch;
 import net.minecraftforge.coremod.api.ASMAPI;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -55,17 +57,17 @@ public class FieldTypeAdapter implements ClassTransform {
     }
 
     @Override
-    public Result apply(ClassNode classNode) {
-        boolean modified = false;
+    public Patch.Result apply(ClassNode classNode) {
+        boolean applied = false;
         for (MethodNode method : classNode.methods) {
             for (AbstractInsnNode insn : method.instructions) {
                 if (insn instanceof FieldInsnNode finsn) {
                     for (FieldTypeFixup fixup : FIXUPS) {
-                        modified |= fixup.apply(method, finsn);
+                        applied |= fixup.apply(method, finsn);
                     }
                 }
             }
         }
-        return new Result(modified, false);
+        return applied ? Patch.Result.APPLY : Patch.Result.PASS;
     }
 }

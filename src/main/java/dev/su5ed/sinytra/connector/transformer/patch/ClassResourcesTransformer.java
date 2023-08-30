@@ -1,5 +1,7 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
+import dev.su5ed.sinytra.adapter.patch.ClassTransform;
+import dev.su5ed.sinytra.adapter.patch.Patch;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -20,7 +22,7 @@ public class ClassResourcesTransformer implements ClassTransform {
     record Replacement(MethodInsnNode methodInsn, AbstractInsnNode paramInsn) {}
 
     @Override
-    public Result apply(ClassNode classNode) {
+    public Patch.Result apply(ClassNode classNode) {
         boolean applied = false;
         for (MethodNode method : classNode.methods) {
             List<Replacement> replacements = new ArrayList<>();
@@ -39,7 +41,7 @@ public class ClassResourcesTransformer implements ClassTransform {
                 applied = true;
             }
         }
-        return new Result(applied, false);
+        return applied ? Patch.Result.APPLY : Patch.Result.PASS;
     }
 
     private static class ScanningSourceInterpreter extends SourceInterpreter {

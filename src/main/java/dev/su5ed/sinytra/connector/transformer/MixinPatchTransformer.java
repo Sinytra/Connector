@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import dev.su5ed.sinytra.adapter.patch.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
-import dev.su5ed.sinytra.adapter.patch.PatchInstance;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
@@ -41,15 +40,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/world/entity/LivingEntity")
             .targetMethod("m_7023_(Lnet/minecraft/world/phys/Vec3;)V")
             .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_49958_()F")
-            .targetMixinType(Patch.MODIFY_VAR)
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;getFriction(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;)F")
-            .modifyAnnotationValues(annotation -> {
-                if (PatchInstance.findAnnotationValue(annotation.values, "ordinal").isEmpty()) {
-                    annotation.values.add("ordinal");
-                    annotation.values.add(0);
-                }
-                return false;
-            })
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/Minecraft")

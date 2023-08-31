@@ -148,7 +148,7 @@ public class MixinPatchTransformer implements Transformer {
                 .replace(9, Type.getObjectType("net/minecraft/resources/ResourceLocation"))
                 .lvtFixer((index, insn, list) -> {
                     if (index == 10) {
-                        list.insert(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, "dev/su5ed/sinytra/connector/mod/compat/CompatUtil", "getArmorBasePath", "(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/String;"));
+                        list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/resources/ResourceLocation", "toString", "()Ljava/lang/String;"));
                     }
                 }))
             .build(),

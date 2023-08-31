@@ -18,6 +18,7 @@
     "registries.RegistryDataLoaderMixin"
   ],
   "client": [
+    "HumanoidArmorLayerMixin",
     "ItemBlockRenderTypesMixin",
     "ItemOverridesMixin",
     "boot.MinecraftMixin",

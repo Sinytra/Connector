@@ -61,6 +61,16 @@ public class FieldToMethodTransformer implements Transformer {
                 "f_151134_", "getFishType",
                 "f_151135_", "getEmptySound"
         ));
+        // Custom getters added by Connector
+        builder.put("net.minecraft.client.particle.ParticleEngine", Map.of(
+                "f_107293_", "connector$getProviders"
+        ));
+        builder.put("net.minecraft.client.color.block.BlockColors", Map.of(
+                "f_92571_",  "connector$getBlockColors"
+        ));
+        builder.put("net.minecraft.client.color.item.ItemColors", Map.of(
+                "f_92674_",  "connector$getItemColors"
+        ));
         REPLACEMENTS = builder.buildOrThrow();
     }
     private static final Logger LOGGER = LogUtils.getLogger();

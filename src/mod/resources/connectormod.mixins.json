@@ -24,7 +24,10 @@
     "recipebook.RecipeBookManagerMixin",
     "recipebook.RecipeBookCategoriesMixin",
     "recipebook.RecipeBookCategoriesAccessor",
-    "registries.MinecraftMixin"
+    "registries.MinecraftMixin",
+    "fieldtypes.ParticleEngineMixin",
+    "fieldtypes.BlockColorsMixin",
+    "fieldtypes.ItemColorsMixin"
   ],
   "server": [
     "boot.ServerMainMixin",

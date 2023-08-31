@@ -21,6 +21,7 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
@@ -137,6 +138,25 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_289609_")
             .targetMixinType(Patch.MODIFY_ARG)
             .modifyTarget("renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
+            .targetMethod("m_289609_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/HumanoidModel;ZFFFLjava/lang/String;)V")
+            .modifyTarget("renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
+            .modifyParams(builder -> builder
+                .replace(4, Type.getObjectType("net/minecraft/client/model/Model"))
+                .replace(9, Type.getObjectType("net/minecraft/resources/ResourceLocation"))
+                .lvtFixer((index, insn, list) -> {
+                    if (index == 10) {
+                        list.insert(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, "dev/su5ed/sinytra/connector/mod/compat/CompatUtil", "getArmorBasePath", "(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/String;"));
+                    }
+                }))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
+            .targetMethod("m_289604_(Lnet/minecraft/world/item/ArmorMaterial;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/armortrim/ArmorTrim;Lnet/minecraft/client/model/HumanoidModel;Z)V")
+            .modifyTarget("renderTrim(Lnet/minecraft/world/item/ArmorMaterial;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/armortrim/ArmorTrim;Lnet/minecraft/client/model/Model;Z)V")
+            .modifyParams(builder -> builder.replace(5, Type.getObjectType("net/minecraft/client/model/Model")))
             .build(),
         // For mods who wish to override HumanoidArmorLayer parts. On Fabric, the usual approach seems to be modifying the model (4th) arg of renderModel in HumanoidArmorLayer#renderArmorPiece.
         // To make this kind of modification forge-compatible, we:

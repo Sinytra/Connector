@@ -9,6 +9,7 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
+import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.PatchSerialization;
@@ -74,6 +75,7 @@ public final class JarTransformer {
     private static final String MAPPED_SUFFIX = "_mapped_" + FMLEnvironment.naming + "_" + FMLLoader.versionInfo().mcVersion();
     private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
     private static final String SOURCE_NAMESPACE = "intermediary";
+    private static final String OBF_NAMESPACE = "srg";
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Marker TRANSFORM_MARKER = MarkerFactory.getMarker("TRANSFORM");
 
@@ -90,6 +92,11 @@ public final class JarTransformer {
 
     private static SrgRemappingReferenceMapper remapper;
     private static List<? extends Patch> adapterPatches;
+    private static LVTOffsets lvtOffsetsData;
+
+    public static LVTOffsets getLvtOffsetsData() {
+        return Objects.requireNonNull(lvtOffsetsData, "LVT Offset Data not yet initialized");
+    }
 
     private static void setMixinClassProvider(ILaunchPluginService.ITransformerLoader loader) {
         try {
@@ -174,16 +181,25 @@ public final class JarTransformer {
         // Pregenerate mappings
         if (remapper == null) {
             MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
-            resolver.getMap("srg", "intermediary");
-            resolver.getMap("intermediary", "srg");
-            remapper = new SrgRemappingReferenceMapper(resolver.getCurrentMap("intermediary"));
+            resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
+            resolver.getMap(SOURCE_NAMESPACE, OBF_NAMESPACE);
+            remapper = new SrgRemappingReferenceMapper(resolver.getCurrentMap(SOURCE_NAMESPACE));
         }
         if (adapterPatches == null) {
-            Path path = EmbeddedDependencies.getAdapterData();
-            try (Reader reader = Files.newBufferedReader(path)) {
+            Path patchDataPath = EmbeddedDependencies.getAdapterData(EmbeddedDependencies.ADAPTER_PATCH_DATA);
+            try (Reader reader = Files.newBufferedReader(patchDataPath)) {
                 JsonElement json = new Gson().fromJson(reader, JsonElement.class);
                 PatchEnvironment.setMatcherRemapper(ASMAPI::mapMethod);
                 adapterPatches = PatchSerialization.deserialize(json, JsonOps.INSTANCE);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+        if (lvtOffsetsData == null) {
+            Path patchDataPath = EmbeddedDependencies.getAdapterData(EmbeddedDependencies.ADAPTER_LVT_OFFSETS);
+            try (Reader reader = Files.newBufferedReader(patchDataPath)) {
+                JsonElement json = new Gson().fromJson(reader, JsonElement.class);
+                lvtOffsetsData = LVTOffsets.fromJson(json);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

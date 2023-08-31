@@ -50,7 +50,7 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     exclude("assets/fabricloader/**")
     exclude("META-INF/**")
     exclude("ui/**")
-    exclude("*.json")
+    exclude("*.json", "*.html", "*.version")
     exclude("module-info.class")
     exclude("LICENSE.txt")
     relocate("com.llamalad7.mixinextras", "com.llamalad7.mixinextras.reloc")
@@ -138,8 +138,8 @@ val fullJar: Jar by tasks.creating(Jar::class) {
     mustRunAfter("reobfModJar")
     from(zipTree(remappedDepsJar.archiveFile))
     from(zipTree(provider { adapterData.singleFile })) {
-        exclude("META-INF")
-        rename("output.json", "adapter_data.json")
+        into("adapter_data")
+        include("*.json")
     }
     from(modJar)
     manifest {

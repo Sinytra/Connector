@@ -176,7 +176,7 @@ public class MixinPatchTransformer implements Transformer {
             })
             .build(),
         Patch.builder()
-            .transform(new DynamicLVTPatch())
+            .transform(new DynamicLVTPatch(JarTransformer::getLvtOffsetsData))
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(

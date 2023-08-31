@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.Unique;
 
 import java.util.Map;
 
+@SuppressWarnings("unused")
 @Mixin(ItemColors.class)
 public class ItemColorsMixin {
     @Shadow

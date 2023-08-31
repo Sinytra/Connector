@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.Unique;
 
 import java.util.Map;
 
+@SuppressWarnings("unused")
 @Mixin(ParticleEngine.class)
 public class ParticleEngineMixin {
     @Shadow

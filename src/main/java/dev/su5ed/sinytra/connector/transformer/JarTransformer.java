@@ -46,6 +46,8 @@ import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -259,11 +261,13 @@ public final class JarTransformer {
 
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input, metadata.refmaps(), remapper);
+        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(metadata.mixinPackages(), refmap.merged().mappings, adapterPatches);
+        RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.mixinConfigs(), refmap.files(), metadata.makeUniqueConfigNames());
         Renamer.Builder builder = Renamer.builder()
             .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE)))
             .add(remappingTransformer)
-            .add(new MixinPatchTransformer(metadata.mixinPackages(), refmap.merged().mappings, adapterPatches))
-            .add(new RefmapRemapper(metadata.mixinConfigs(), refmap.files(), metadata.makeUniqueConfigNames()))
+            .add(patchTransformer)
+            .add(refmapRemapper)
             .add(new ModMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));
@@ -272,6 +276,9 @@ public final class JarTransformer {
         }
         try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());
+            try (FileSystem zipFile = FileSystems.newFileSystem(output)) {
+                patchTransformer.finalize(zipFile.getPath("/"), refmapRemapper.getNewConfigNames(), refmap.merged());
+            }
         } catch (Throwable t) {
             LOGGER.error("Encountered error while transforming jar file " + input.getAbsolutePath(), t);
             throw t;

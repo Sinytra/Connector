@@ -79,6 +79,10 @@ public class RefmapRemapper implements Transformer {
         this.files = files;
     }
 
+    public Collection<String> getNewConfigNames() {
+        return configs.values();
+    }
+
     @Override
     public ResourceEntry process(ResourceEntry entry) {
         String name = entry.getName();

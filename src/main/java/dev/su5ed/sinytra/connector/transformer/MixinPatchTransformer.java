@@ -1,11 +1,20 @@
 package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableList;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.adapter.patch.ClassTransform;
+import dev.su5ed.sinytra.adapter.patch.MixinClassGenerator;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
+import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
@@ -23,7 +32,17 @@ import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import org.slf4j.Logger;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,6 +60,13 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_7023_(Lnet/minecraft/world/phys/Vec3;)V")
             .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_49958_()F")
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;getFriction(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;)F")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
+            .targetMethod("m_214168_(Lnet/minecraft/core/BlockPos;Lnet/minecraft/network/protocol/game/ServerboundPlayerActionPacket$Action;Lnet/minecraft/core/Direction;II)V")
+            .targetInjectionPoint("Lnet/minecraft/world/phys/Vec3;m_82557_(Lnet/minecraft/world/phys/Vec3;)D")
+            .modifyTarget("canReach(Lnet/minecraft/core/BlockPos;D)Z")
+            .extractMixin("net/minecraftforge/common/extensions/IForgePlayer")
             .build(),
         // There exists a variable in this method that is an exact copy of the previous one. It gets removed by forge binpatches that follow recompiled java code.
         Patch.builder()
@@ -202,15 +228,92 @@ public class MixinPatchTransformer implements Transformer {
         new FieldTypeAdapter(),
         new EnvironmentStripperTransformer()
     );
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     private final Set<String> mixinPackages;
-    private final PatchEnvironment refmap;
+    private final PatchEnvironment environment;
     private final List<? extends Patch> patches;
 
-    public MixinPatchTransformer(Set<String> mixinPackages, Map<String, Map<String, String>> refmap, List<? extends Patch> adapterPatches) {
+    public MixinPatchTransformer(Set<String> mixinPackages, Map<String, Map<String, String>> environment, List<? extends Patch> adapterPatches) {
         this.mixinPackages = mixinPackages;
-        this.refmap = new PatchEnvironment(refmap);
+        this.environment = new PatchEnvironment(environment);
         this.patches = ImmutableList.<Patch>builder().addAll(adapterPatches).addAll(PATCHES).build();
+    }
+
+    public void finalize(Path zipRoot, Collection<String> configs, SrgRemappingReferenceMapper.SimpleRefmap refmap) {
+        Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.getClassGenerator().getGeneratedMixinClasses();
+        if (generatedMixinClasses.isEmpty()) {
+            return;
+        }
+        for (String config : configs) {
+            Path entry = zipRoot.resolve(config);
+            if (Files.exists(entry)) {
+                try (Reader reader = Files.newBufferedReader(entry)) {
+                    JsonElement element = JsonParser.parseReader(reader);
+                    JsonObject json = element.getAsJsonObject();
+                    if (json.has("package")) {
+                        String pkg = json.get("package").getAsString();
+                        Map<String, MixinClassGenerator.GeneratedClass> mixins = getMixinsInPackage(pkg, generatedMixinClasses);
+                        if (!mixins.isEmpty()) {
+                            JsonArray jsonMixins = json.has("mixins") ? json.get("mixins").getAsJsonArray() : new JsonArray();
+                            LOGGER.info("Adding {} mixins to config {}", mixins.size(), config);
+                            mixins.keySet().forEach(jsonMixins::add);
+                            json.add("mixins", jsonMixins);
+
+                            String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
+                            Files.writeString(entry, output, StandardCharsets.UTF_8);
+
+                            // Update refmap
+                            if (json.has("refmap")) {
+                                for (MixinClassGenerator.GeneratedClass generatedClass : mixins.values()) {
+                                    moveRefmapMappings(generatedClass.originalName(), generatedClass.generatedName(), json.get("refmap").getAsString(), zipRoot, refmap);
+                                }
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            }
+        }
+    }
+
+    private void moveRefmapMappings(String oldClass, String newClass, String refmap, Path root, SrgRemappingReferenceMapper.SimpleRefmap oldRefmap) throws IOException {
+        Map<String, String> mappingsEntry = oldRefmap.mappings.get(oldClass);
+        if (mappingsEntry == null) {
+            return;
+        }
+        Map<String, String> dataMappingsEntry = oldRefmap.data.get("searge").get(oldClass);
+        if (dataMappingsEntry == null) {
+            return;
+        }
+        Path path = root.resolve(refmap);
+        if (Files.notExists(path)) {
+            return;
+        }
+        try (Reader reader = Files.newBufferedReader(path)) {
+            SrgRemappingReferenceMapper.SimpleRefmap configRefmap = new Gson().fromJson(reader, SrgRemappingReferenceMapper.SimpleRefmap.class);
+
+            configRefmap.mappings.put(newClass, mappingsEntry);
+            configRefmap.data.get("searge").put(newClass, dataMappingsEntry);
+
+            String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(configRefmap);
+            Files.writeString(path, output, StandardCharsets.UTF_8);
+        }
+    }
+
+    private Map<String, MixinClassGenerator.GeneratedClass> getMixinsInPackage(String mixinPackage, Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses) {
+        Map<String, MixinClassGenerator.GeneratedClass> classes = new HashMap<>();
+        for (Map.Entry<String, MixinClassGenerator.GeneratedClass> entry : generatedMixinClasses.entrySet()) {
+            String name = entry.getKey();
+            String className = name.replace('/', '.');
+            if (className.startsWith(mixinPackage)) {
+                String specificPart = className.substring(mixinPackage.length() + 1);
+                classes.put(specificPart, entry.getValue());
+                generatedMixinClasses.remove(name);
+            }
+        }
+        return classes;
     }
 
     private boolean isInMixinPackage(String className) {
@@ -237,7 +340,7 @@ public class MixinPatchTransformer implements Transformer {
 
         if (isInMixinPackage(className)) {
             for (Patch patch : this.patches) {
-                patchResult = patchResult.or(patch.apply(node, this.refmap));
+                patchResult = patchResult.or(patch.apply(node, this.environment));
             }
         }
 
@@ -247,5 +350,17 @@ public class MixinPatchTransformer implements Transformer {
             return ClassEntry.create(entry.getName(), entry.getTime(), writer.toByteArray());
         }
         return entry;
+    }
+
+    @Override
+    public Collection<? extends Entry> getExtras() {
+        List<Entry> entries = new ArrayList<>();
+        this.environment.getClassGenerator().getGeneratedMixinClasses().forEach((name, cls) -> {
+            ClassWriter writer = new ClassWriter(0);
+            cls.node().accept(writer);
+            byte[] bytes = writer.toByteArray();
+            entries.add(ClassEntry.create(name + ".class", ConnectorUtil.ZIP_TIME, bytes));
+        });
+        return entries;
     }
 }

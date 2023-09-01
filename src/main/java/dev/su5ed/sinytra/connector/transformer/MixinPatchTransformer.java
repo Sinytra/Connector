@@ -42,6 +42,13 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_49958_()F")
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;getFriction(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;)F")
             .build(),
+        // There exists a variable in this method that is an exact copy of the previous one. It gets removed by forge binpatches that follow recompiled java code.
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/LightTexture")
+            .targetMethod("m_109881_")
+            .targetInjectionPoint("Lnet/minecraft/client/renderer/LightTexture;m_252983_(Lorg/joml/Vector3f;)V")
+            .modifyParams(builder -> builder.substitute(17, 16))
+            .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/Minecraft")
             .targetMethod("m_285666_")

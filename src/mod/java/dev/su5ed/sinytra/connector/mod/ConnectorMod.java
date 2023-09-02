@@ -31,7 +31,7 @@ public class ConnectorMod {
         }
 
         if (modList.isLoaded("fabric_object_builder_api_v1")) {
-            bus.addListener(EventPriority.HIGHEST, LazyEntityAttributes::addMissingAttributes);
+            bus.addListener(EventPriority.HIGHEST, LazyEntityAttributes::initializeLazyAttributes);
         }
     }
 

@@ -13,6 +13,7 @@ import dev.su5ed.sinytra.adapter.patch.MixinClassGenerator;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
@@ -103,14 +104,19 @@ public class MixinPatchTransformer implements Transformer {
                 "Lnet/minecraft/world/level/block/FireBlock;tryCatchFire(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V",
                 (insn, list) -> list.insertBefore(insn, new FieldInsnNode(Opcodes.GETSTATIC, "net/minecraft/core/Direction", "NORTH", "Lnet/minecraft/core/Direction;")))
             .build(),
-        // Redirect HUD rendering calls to Forge's replacement class
+        // Move HUD rendering calls at Options.renderDebug to a lambda in Forge's vanilla gui overlay enum class
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
-            .targetMethod("m_280421_")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
             .targetInjectionPoint("Lnet/minecraft/client/Options;f_92063_:Z")
-            .modifyTarget("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
-            .modifyInjectionPoint("TAIL", "")
-            .modifyTargetClasses(classes -> classes.add(Type.getObjectType("net/minecraftforge/client/gui/overlay/ForgeGui")))
+            .modifyTarget("lambda$static$18(Lnet/minecraftforge/client/gui/overlay/ForgeGui;Lnet/minecraft/client/gui/GuiGraphics;FII)V")
+            .modifyInjectionPoint("HEAD", "")
+            .modifyMethodAccess(new ModifyMethodAccess.AccessChange(true, Opcodes.ACC_STATIC))
+            .modifyParams(builder -> builder
+                .replace(0, Type.getObjectType("net/minecraftforge/client/gui/overlay/ForgeGui"))
+                .insert(3, Type.INT_TYPE)
+                .insert(4, Type.INT_TYPE))
+            .modifyTargetClasses(classes -> classes.add(Type.getObjectType("net/minecraftforge/client/gui/overlay/VanillaGuiOverlay")))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/GameRenderer")

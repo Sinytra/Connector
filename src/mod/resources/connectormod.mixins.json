@@ -12,6 +12,7 @@
     "CreativeModeInventoryScreenMixin",
     "network.ConnectionTypeMixin",
     "network.HandshakeHandlerMixin",
+    "network.NetworkFiltersMixin",
     "tags.TagEntryAccessor",
     "tags.TagLoaderMixin",
     "registries.ForgeRegistryMixin",

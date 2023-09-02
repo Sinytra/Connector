@@ -53,7 +53,6 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     exclude("*.json", "*.html", "*.version")
     exclude("module-info.class")
     exclude("LICENSE.txt")
-    relocate("com.llamalad7.mixinextras", "com.llamalad7.mixinextras.reloc")
 
     dependencies {
         exclude(dependency("org.ow2.asm:"))
@@ -125,9 +124,10 @@ val remappedDepsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     from(tasks.jar)
     from(depsJar.archiveFile)
     mergeServiceFiles() // Relocate services
-    relocate("org.spongepowered.asm", "org.spongepowered.reloc.asm")
-    relocate("org.spongepowered.include", "org.spongepowered.reloc.include")
-    relocate("org.spongepowered.tools", "org.spongepowered.reloc.tools")
+    relocate("org.spongepowered", "org.spongepowered.reloc")
+    relocate("shadowignore.org.spongepowered", "org.spongepowered")
+    relocate("com.llamalad7.mixinextras", "com.llamalad7.mixinextras.reloc")
+    relocate("shadowignore.com.llamalad7.mixinextras", "com.llamalad7.mixinextras")
     relocate("net.minecraftforge.fart", "net.minecraftforge.reloc.fart")
     relocate("net.minecraftforge.srgutils", "net.minecraftforge.reloc.srgutils")
     relocate("net.fabricmc.accesswidener", "net.fabricmc.reloc.accesswidener")

@@ -28,10 +28,11 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public final class RelocatingRenamingTransformer extends RenamingTransformer {
-    private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$]+;$";
+    private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$_]+;$";
+    private static final String METHOD_DESC_PATTERN = "^(?<desc>\\((?:\\[*[ZCBSIFJD]|\\[*L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$";
     private static final Map<String, String> RELOCATE = Map.of(
-        "org/spongepowered/", "org/spongepowered/reloc/",
-        "com/llamalad7/mixinextras/", "com/llamalad7/mixinextras/reloc/"
+        "shadowignore/org/spongepowered/", "shadowignore/org/spongepowered/reloc/",
+        "shadowignore/com/llamalad7/mixinextras/", "shadowignore/com/llamalad7/mixinextras/reloc/"
     );
 
     public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, Map<String, String> flatMappings) {
@@ -168,13 +169,17 @@ public final class RelocatingRenamingTransformer extends RenamingTransformer {
             this.flatMappings = flatMappings;
         }
 
-        @Override
-        public String map(final String key) {
+        private String mapNoRelocate(String key) {
             String fastMapped = this.flatMappings.get(key);
             if (fastMapped != null) {
                 return fastMapped;
             }
-            String remapped = super.map(key);
+            return super.map(key);
+        }
+
+        @Override
+        public String map(final String key) {
+            String remapped = mapNoRelocate(key);
             return key.equals(remapped) ? relocateValue(key) : remapped;
         }
 
@@ -228,19 +233,31 @@ public final class RelocatingRenamingTransformer extends RenamingTransformer {
         @Override
         public Object mapValue(Object value) {
             if (value instanceof String str) {
-                boolean desc = str.matches(CLASS_DESC_PATTERN);
-                String relocating = desc ? str.substring(1, str.length() - 1) : str;
-                String relocated = relocate(relocating, !desc);
-                if (relocated != null) {
-                    return desc ? 'L' + relocated + ';' : relocated;
+                if (str.matches(CLASS_DESC_PATTERN)) {
+                    String mapped = mapStringValue(str.substring(1, str.length() - 1), true);
+                    if (mapped != null) {
+                        return 'L' + mapped + ';';
+                    }
                 }
-
-                String mapped = this.flatMappings.get(str);
-                if (mapped != null) {
-                    return mapped;
+                else if (str.matches(METHOD_DESC_PATTERN)) {
+                    return mapMethodDesc(str);
+                }
+                else {
+                    String mapped = mapStringValue(str, false);
+                    if (mapped != null) {
+                        return mapped;
+                    }
                 }
             }
             return super.mapValue(value);
+        }
+
+        private String mapStringValue(String value, boolean desc) {
+            String relocated = relocate(value, !desc);
+            if (relocated != null) {
+                return relocated;
+            }
+            return this.flatMappings.get(value);
         }
 
         @Nullable

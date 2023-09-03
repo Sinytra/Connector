@@ -19,6 +19,7 @@ import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
+import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -117,6 +118,38 @@ public class MixinPatchTransformer implements Transformer {
                 .insert(3, Type.INT_TYPE)
                 .insert(4, Type.INT_TYPE))
             .modifyTargetClasses(classes -> classes.add(Type.getObjectType("net/minecraftforge/client/gui/overlay/VanillaGuiOverlay")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/entity/player/Player")
+            .targetMethod("m_7909_(F)V")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.WRAP_OPERATION)
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canPerformAction(Lnet/minecraftforge/common/ToolAction;)Z")
+            .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraftforge/common/ToolAction")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/level/block/PowderSnowBlock")
+            .targetMethod("m_154255_(Lnet/minecraft/world/entity/Entity;)Z")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.WRAP_OPERATION)
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canWalkOnPowderedSnow(Lnet/minecraft/world/entity/LivingEntity;)Z")
+            .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraft/world/entity/LivingEntity")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/ItemInHandRenderer")
+            .targetMethod("m_117184_")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.MODIFY_ARG)
+            .modifyMixinType(Patch.REDIRECT, builder -> builder
+                .sameTarget()
+                .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;"))
+            .modifyParams(builder -> builder
+                .replace(0, Type.getObjectType("net/minecraft/world/item/ItemStack"))
+                .lvtFixer((index, insn, list) -> {
+                    if (index == 1) {
+                        list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/item/ItemStack", ASMAPI.mapMethod("m_41720_"), "()Lnet/minecraft/world/item/Item;"));
+                    }
+                }))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/GameRenderer")

@@ -15,6 +15,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "7.1.2" apply false
     id("org.spongepowered.mixin") version "0.7.+"
     id("me.modmuss50.mod-publish-plugin") version "0.3.+"
+    id("net.neoforged.gradleutils") version "2.0.+"
 }
 
 val versionConnector: String by project
@@ -34,8 +35,14 @@ val publishBranch: String by project
 val forgifiedFabricApiCurseForge: String by project
 val forgifiedFabricApiModrinth: String by project
 
-version = "$versionConnector+$versionMc"
+val CI: Provider<String> = providers.environmentVariable("CI")
+
 group = "dev.su5ed.sinytra"
+version = "$versionConnector+$versionMc"
+// Append git commit hash for dev versions
+if (!CI.isPresent) {
+    version = "$version+dev-${gradleutils.gitInfo["hash"]}"
+}
 println("Project version: $version")
 
 val mod: SourceSet by sourceSets.creating
@@ -306,7 +313,7 @@ publishMods {
     changelog.set(providers.environmentVariable("CHANGELOG").orElse("# $version"))
     type.set(providers.environmentVariable("PUBLISH_RELEASE_TYPE").orElse("alpha").map(ReleaseType::of))
     modLoaders.add("forge")
-    dryRun.set(!providers.environmentVariable("CI").isPresent)
+    dryRun.set(!CI.isPresent)
 
     github {
         accessToken.set(providers.environmentVariable("GITHUB_TOKEN"))

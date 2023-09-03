@@ -112,6 +112,8 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         }
         // Deal with split packages (thanks modules)
         List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed, loadedMods);
+        // Handle forge mod split packages
+        ForgeModPackageFilter.filterPackages(loadedMods);
         return moduleSafeJars.stream()
             .map(mod -> createConnectorModFile(mod, this))
             .toList();

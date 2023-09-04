@@ -85,7 +85,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
             .filter(jar -> {
                 String modid = jar.modPath().metadata().modMetadata().getId();
-                return !ConnectorUtil.DISABLED_MODS.contains(modid) && !loadedModIds.contains(modid);
+                return !shouldIgnoreMod(modid, loadedModIds);
             })
             .toList();
         Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren = HashMultimap.create();
@@ -93,7 +93,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         List<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()
             .flatMap(jar -> {
                 ConnectorLoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren);
+                return shouldIgnoreMod(metadata.getId(), loadedModIds) ? Stream.empty() : discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds);
             })
             .toList();
         // Remove mods loaded by FML
@@ -142,7 +142,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         return false;
     }
 
-    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, JarTransformer.TransformableJar parent, Collection<NestedJarEntry> jars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren) {
+    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, JarTransformer.TransformableJar parent, Collection<NestedJarEntry> jars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren, Collection<String> loadedModIds) {
         SecureJar secureJar = SecureJar.from(parent.input().toPath());
         return jars.stream()
             .map(entry -> secureJar.getPath(entry.getFile()))
@@ -150,8 +150,11 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .flatMap(path -> {
                 JarTransformer.TransformableJar jar = uncheck(() -> prepareNestedJar(tempDir, secureJar.getPrimaryPath().getFileName().toString(), path));
                 ConnectorLoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
+                if (shouldIgnoreMod(metadata.getId(), loadedModIds)) {
+                    return Stream.empty();
+                }
                 parentToChildren.put(parent, jar);
-                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren));
+                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds));
             });
     }
 
@@ -180,6 +183,10 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
                 }
             })
             .toList();
+    }
+
+    private static boolean shouldIgnoreMod(String id, Collection<String> loadedModIds) {
+        return ConnectorUtil.DISABLED_MODS.contains(id) || loadedModIds.contains(id);
     }
 
     @Override

@@ -35,7 +35,8 @@ public final class ConnectorUtil {
         // Mixinextras initializes itself from within its own mixin config plugin.
         // Attempting to initialize it from an entrypoint at the GAME layer will result in an "attempted duplicate class definition" error
         // It is redundant and no longer required, as mentioned in https://gist.github.com/LlamaLad7/ec597b6d02d39b8a2e35559f9fcce42f#initialization
-        "com.llamalad7.mixinextras.MixinExtrasBootstrap::init"
+        "shadowignore.com.llamalad7.mixinextras.MixinExtrasBootstrap",
+        "shadowignore.com.llamalad7.mixinextras.MixinExtrasBootstrap::init"
     );
     // keywords, boolean and null literals, not allowed in identifiers
     // See jdk.internal.module.Checks#RESERVED

@@ -59,6 +59,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Ljava/lang/Thread;currentThread()Ljava/lang/Thread;")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/server/Main")
+            .targetMethod("main([Ljava/lang/String;)V")
+            .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
+            .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/renderer/ShaderInstance")
             .targetMethod("<init>")
             .targetInjectionPoint("Lnet/minecraft/resources/ResourceLocation;<init>(Ljava/lang/String;)V")

@@ -9,7 +9,6 @@
     "ForgeHooksMixin",
     "LivingEntityMixin",
     "PoiTypesMixin",
-    "CreativeModeInventoryScreenMixin",
     "network.ConnectionTypeMixin",
     "network.HandshakeHandlerMixin",
     "network.NetworkFiltersMixin",
@@ -20,6 +19,7 @@
     "registries.RegistryDataLoaderMixin"
   ],
   "client": [
+    "CreativeModeInventoryScreenMixin",
     "HumanoidArmorLayerMixin",
     "ItemBlockRenderTypesMixin",
     "ItemOverridesMixin",

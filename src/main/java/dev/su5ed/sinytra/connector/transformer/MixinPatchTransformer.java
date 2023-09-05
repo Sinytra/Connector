@@ -134,6 +134,14 @@ public class MixinPatchTransformer implements Transformer {
             .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraftforge/common/ToolAction")))
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/renderer/entity/FishingHookRenderer")
+            .targetMethod("render(Lnet/minecraft/world/entity/projectile/FishingHook;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.WRAP_OPERATION)
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canPerformAction(Lnet/minecraftforge/common/ToolAction;)Z")
+            .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraftforge/common/ToolAction")))
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/level/block/PowderSnowBlock")
             .targetMethod("m_154255_(Lnet/minecraft/world/entity/Entity;)Z")
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")

@@ -55,6 +55,7 @@ public final class FluidHandlerCompat {
         event.register(ForgeRegistries.Keys.FLUID_TYPES, helper -> FABRIC_FLUID_TYPES_BY_NAME.forEach(helper::register));
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     private static class FabricFluidType extends FluidType {
         private final Fluid fluid;
         private final FluidRenderHandler renderHandler;
@@ -69,12 +70,12 @@ public final class FluidHandlerCompat {
 
         @Override
         public Component getDescription() {
-            return this.name;
+            return this.name.copy();
         }
 
         @Override
         public Component getDescription(FluidStack stack) {
-            return getDescription();
+            return FluidVariantAttributes.getName(FluidVariant.of(stack.getFluid(), stack.getTag()));
         }
 
         @Override

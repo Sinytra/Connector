@@ -1,6 +1,7 @@
 package dev.su5ed.sinytra.connector.mod;
 
 import dev.su5ed.sinytra.connector.mod.compat.FluidHandlerCompat;
+import dev.su5ed.sinytra.connector.mod.compat.FluidRendererCompat;
 import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
 import dev.su5ed.sinytra.connector.mod.compat.ModMenuCompat;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -22,11 +23,14 @@ public class ConnectorMod {
     public ConnectorMod() {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         bus.addListener(ConnectorMod::onClientSetup);
+        FluidHandlerCompat.init(bus);
+
         ModList modList = ModList.get();
         if (FMLLoader.getDist().isClient()) {
             bus.addListener(ModMenuCompat::init);
+            
             if (modList.isLoaded("fabric_rendering_fluids_v1")) {
-                FluidHandlerCompat.init(bus);
+                bus.addListener(FluidRendererCompat::onClientSetup);
             }
         }
 

@@ -1,6 +1,6 @@
 name: Mod Crash
 description: Report one or more mod(pack)s that crashes the game.
-labels: [compat, crash]
+labels: [compat, crash, pending]
 body:
   - type: markdown
     attributes:

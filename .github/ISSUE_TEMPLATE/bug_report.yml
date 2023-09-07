@@ -1,6 +1,6 @@
 name: Bug Report
 description: Report an issue you've encountered.
-labels: [bug]
+labels: [bug, pending]
 body:
   - type: markdown
     attributes:

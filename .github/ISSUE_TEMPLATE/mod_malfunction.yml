@@ -1,6 +1,6 @@
 name: Mod Malfunction
 description: Report one or more malfunctioning mod(pack)s.
-labels: [compat, malfunction]
+labels: [compat, malfunction, pending]
 body:
   - type: markdown
     attributes:

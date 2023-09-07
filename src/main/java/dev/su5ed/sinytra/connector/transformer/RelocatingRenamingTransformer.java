@@ -31,8 +31,7 @@ public final class RelocatingRenamingTransformer extends RenamingTransformer {
     private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$_]+;$";
     private static final String METHOD_DESC_PATTERN = "^(?<desc>\\((?:\\[*[ZCBSIFJD]|\\[*L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$";
     private static final Map<String, String> RELOCATE = Map.of(
-        "shadowignore/org/spongepowered/", "shadowignore/org/spongepowered/reloc/",
-        "shadowignore/com/llamalad7/mixinextras/", "shadowignore/com/llamalad7/mixinextras/reloc/"
+        "shadowignore/org/spongepowered/", "org/spongepowered/"
     );
 
     public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, Map<String, String> flatMappings) {

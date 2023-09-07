@@ -31,7 +31,7 @@ public class ConnectorLoaderService implements ITransformationService {
     @SuppressWarnings("unchecked")
     @Override
     public void onLoad(IEnvironment env, Set<String> otherServices) {
-        List<ILaunchPluginService> injectPlugins = List.of(new ConnectorMixinLaunchPlugin(), new ConnectorPreLaunchPlugin());
+        List<ILaunchPluginService> injectPlugins = List.of(new ConnectorPreLaunchPlugin());
 
         try {
             Field launchPluginsField = Launcher.class.getDeclaredField("launchPlugins");

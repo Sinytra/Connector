@@ -214,7 +214,7 @@ minecraft {
             property("forge.logging.console.level", "debug")
             property("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE,COREMOD")
             property("connector.logging.markers", "MIXINPATCH,MERGER")
-            property("mixin.debug", "true")
+            property("mixin.debug.export", "true")
 //            property("connector.cache.enabled", "false")
             workingDirectory = project.file("run").canonicalPath
 

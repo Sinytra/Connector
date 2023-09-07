@@ -9,8 +9,8 @@
 
 > [!WARNING]  
 > Connector is currently in beta state, and many mods may not work as expected, or might be broken completely.  
-> Please refer to our [Mod Compatibility Thread](https://github.com/Sinytra/Connector/discussions/12) and
-> [Issue Tracker](https://github.com/Sinytra/Connector/issues) for ongoing compatibility issues.  
+> Please refer to our [Issue Tracker](https://github.com/Sinytra/Connector/issues) for ongoing compatibility issues.  
+> [Mod Compatibility Thread](https://github.com/Sinytra/Connector/discussions/12) is **no longer** recommended, and it is used to keep track of old compat issues only.  
 > When reporting bugs, please make sure you are using the latest release of Connector and Forgified Fabric API,
 > as well as **Forge 47.1.3** on Minecraft 1.20.1
 

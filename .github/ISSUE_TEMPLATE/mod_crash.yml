@@ -1,5 +1,5 @@
 name: Mod Crash
-description: Report mod(pack)s that crashes the game.
+description: Report one or more mod(pack)s that crashes the game.
 labels: [compat, crash]
 body:
   - type: markdown
@@ -8,9 +8,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking your time to report this incompatibility! You gotta make sure these before reporting...
+        Thank you for taking your time to report this incompatibility! Before opening an issue, please make sure that:
         - You are running the latest version of Connector and its dependencies.
-        - This bug wasn't already reported or being closed.
+        - This bug wasn't already reported, fixed in the dev build or closed as not planned.
   - type: input
     id: mod
     attributes: 
@@ -54,7 +54,8 @@ body:
       description: |
         If applicable (crash, error output in console), please provide your crash report.
         Otherwise, we recommend uploading the debug.log found in your `.minecraft/logs` directory.
-        To upload logs, use an external site to post the crash report, such as [**MCLogs (Recommended)**](https://mclo.gs/), [Ubuntu Pastebin](https://paste.ubuntu.com/), or [Pastebin](http://pastebin.com/)
+        To upload logs, use an external site to upload the crash report, such as [**MCLogs (Recommended)**](https://mclo.gs/), [Paste.GG](https://paste.gg/), or [Pastebin](http://pastebin.com/)
+        You can upload additional files here.
     validations:
       required: true
   - type: textarea

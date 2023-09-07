@@ -8,9 +8,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking your time to give us suggestions! You gotta make sure these before reporting...
+        Thank you for taking your time to give us suggestions! Before opening an issue, please make sure that:
         - This feature does not exist in the latest build.
-        - This suggestion wasn't already reported or being closed.
+        - This suggestion wasn't already reported, fixed in the dev build or closed as not planned.
   - type: textarea
     id: description
     attributes:

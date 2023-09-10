@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
@@ -25,10 +24,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
-import java.util.stream.Collectors;
 
 public class RefmapRemapper implements Transformer {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -58,29 +55,14 @@ public class RefmapRemapper implements Transformer {
         return new RefmapFiles(results, refmapFiles);
     }
 
-    private final Map<String, String> configs;
+    private final Collection<String> configs;
     private final Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files;
 
     private boolean hasManifest;
 
-    public RefmapRemapper(Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files, boolean makeUniqueConfigNames) {
-        this.configs = configs.stream()
-            // Some mods (specifically mixinextras) are present on both platforms, and mixin can fail to select the correct configs for
-            // each jar due to their names being the same. To avoid conflicts, we assign fabric mixin configs new, unique names.
-            .collect(Collectors.toMap(Function.identity(), name -> {
-                if (makeUniqueConfigNames) {
-                    // Split file name and extension
-                    String[] parts = name.split("\\.(?!.*\\.)");
-                    // Append unique string to file name
-                    return parts[0] + "-" + RandomStringUtils.randomAlphabetic(5) + "." + parts[1];
-                }
-                return name;
-            }));
+    public RefmapRemapper(Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files) {
+        this.configs = configs;
         this.files = files;
-    }
-
-    public Collection<String> getNewConfigNames() {
-        return configs.values();
     }
 
     @Override
@@ -97,10 +79,6 @@ public class RefmapRemapper implements Transformer {
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
-        }
-        String rename = this.configs.get(name);
-        if (rename != null) {
-            return ResourceEntry.create(rename, entry.getTime(), entry.getData());
         }
         return entry;
     }
@@ -131,7 +109,7 @@ public class RefmapRemapper implements Transformer {
     }
 
     private ManifestEntry modifyManifest(Manifest manifest, long time) {
-        manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs.values()));
+        manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs));
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             manifest.write(byteStream);
             return ManifestEntry.create(time, byteStream.toByteArray());

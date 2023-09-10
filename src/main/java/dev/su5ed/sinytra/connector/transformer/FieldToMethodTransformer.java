@@ -104,7 +104,7 @@ public class FieldToMethodTransformer implements Transformer {
         for (MethodNode method : cls.methods) {
             for (ListIterator<AbstractInsnNode> iterator = method.instructions.iterator(); iterator.hasNext(); ) {
                 AbstractInsnNode insn = iterator.next();
-                if (insn instanceof FieldInsnNode fieldInsn) {
+                if (insn instanceof FieldInsnNode fieldInsn && (fieldInsn.getOpcode() == Opcodes.GETFIELD || fieldInsn.getOpcode() == Opcodes.GETSTATIC)) {
                     for (Map.Entry<String, String> entry : this.mappedReplacements.entrySet()) {
                         String source = entry.getKey();
                         if (source.equals(fieldInsn.name)) {

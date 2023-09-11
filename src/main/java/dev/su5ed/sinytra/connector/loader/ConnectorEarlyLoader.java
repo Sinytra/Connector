@@ -67,7 +67,7 @@ public class ConnectorEarlyLoader {
     }
 
     public static EarlyLoadingException createLoadingException(Throwable original, String message, Object... args) {
-        return new EarlyLoadingException(original.getMessage(), original, List.of(new EarlyLoadingException.ExceptionData(message, args)));
+        return new EarlyLoadingException(ConnectorUtil.stripColor(original.getMessage()), original, List.of(new EarlyLoadingException.ExceptionData(message, args)));
     }
 
     /**

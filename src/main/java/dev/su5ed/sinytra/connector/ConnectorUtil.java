@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public final class ConnectorUtil {
     public static final String MIXIN_CONFIGS_ATTRIBUTE = "MixinConfigs";
@@ -21,6 +22,8 @@ public final class ConnectorUtil {
     public static final String CONNECTOR_MARKER = "connector_transformed";
     public static final long ZIP_TIME = 318211200000L;
     public static final Path CONNECTOR_FOLDER = FMLPaths.MODSDIR.get().resolve(".connector");
+    // net.minecraft.util.StringUtil
+    private static final Pattern STRIP_COLOR_PATTERN = Pattern.compile("(?i)\\u00A7[0-9A-FK-OR]");
 
     // Ugly hardcoded values
     // Never load fabric mods of these mod ids
@@ -142,7 +145,7 @@ public final class ConnectorUtil {
             }
         }
     }
-    
+
     public static boolean isJavaReservedKeyword(String str) {
         return RESERVED.contains(str);
     }
@@ -157,6 +160,10 @@ public final class ConnectorUtil {
         } catch (Throwable t) {
             throw new RuntimeException(t);
         }
+    }
+
+    public static String stripColor(String p_14407_) {
+        return STRIP_COLOR_PATTERN.matcher(p_14407_).replaceAll("");
     }
 
     @FunctionalInterface

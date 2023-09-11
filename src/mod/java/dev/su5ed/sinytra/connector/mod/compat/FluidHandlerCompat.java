@@ -90,10 +90,6 @@ public final class FluidHandlerCompat {
 
         @Override
         public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
-            if (this.renderHandler == null) {
-                // No renderer registered, might be due to running on a dedicated server
-                return;
-            }
             consumer.accept(new IClientFluidTypeExtensions() {
                 private TextureAtlasSprite[] getSprites() {
                     return renderHandler.getFluidSprites(null, null, fluid.defaultFluidState());

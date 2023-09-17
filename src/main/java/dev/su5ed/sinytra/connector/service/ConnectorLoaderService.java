@@ -42,10 +42,10 @@ public class ConnectorLoaderService implements ITransformationService {
             Map<String, ILaunchPluginService> plugins = (Map<String, ILaunchPluginService>) pluginsField.get(launchPluginHandler);
             // Sort launch plugins
             LinkedHashMap<String, ILaunchPluginService> sortedPlugins = new LinkedHashMap<>();
-            // Mixin must come first
-            sortedPlugins.put("mixin", plugins.remove("mixin"));
             // Runtime Enum extender will fail if a mixin makes $VALUES mutable first, so it must come before us as well
             sortedPlugins.put("runtime_enum_extender", plugins.remove("runtime_enum_extender"));
+            // Mixin must come after
+            sortedPlugins.put("mixin", plugins.remove("mixin"));
             // Our plugins come after mixin
             injectPlugins.forEach(plugin -> sortedPlugins.put(plugin.name(), plugin));
             // The rest goes to the end

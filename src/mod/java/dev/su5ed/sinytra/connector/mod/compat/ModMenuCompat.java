@@ -8,7 +8,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.client.gui.ModListScreen;
 import net.minecraftforge.fml.ModList;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -20,7 +19,14 @@ public class ModMenuCompat {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String MODID = "modmenu";
 
-    public static void init(FMLClientSetupEvent event) {
+    private static boolean initialized = false;
+
+    public static void init() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
+
         Map<String, ConfigScreenFactory<?>> modFactories = new HashMap<>();
         List<Map<String, ConfigScreenFactory<?>>> providedFactories = new ArrayList<>();
         FabricLoader.getInstance().getEntrypointContainers(MODID, ModMenuApi.class).forEach(container -> {

@@ -65,6 +65,13 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/gui/screens/inventory/AbstractContainerScreen")
+            .targetMethod("m_280072_")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;m_280677_(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;II)V")
+            .modifyInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;renderTooltip(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;Lnet/minecraft/world/item/ItemStack;II)V")
+            .modifyParams(builder -> builder.insert(3, Type.getObjectType("net/minecraft/world/item/ItemStack")).targetType(ModifyMethodParams.TargetType.INJECTION_POINT))
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/entity/LivingEntity")
             .targetMethod("m_21208_()V")
             .targetMixinType(Patch.MODIFY_CONST)

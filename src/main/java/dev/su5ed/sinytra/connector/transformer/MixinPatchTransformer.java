@@ -65,6 +65,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/renderer/LevelRenderer")
+            .targetMethod("m_109514_(Lnet/minecraft/sounds/SoundEvent;Lnet/minecraft/core/BlockPos;)V")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_93055_(Lnet/minecraft/network/chat/Component;)V")
+            .modifyTarget("playStreamingMusic(Lnet/minecraft/sounds/SoundEvent;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/item/RecordItem;)V")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/gui/screens/inventory/AbstractContainerScreen")
             .targetMethod("m_280072_")
             .targetInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;m_280677_(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;II)V")

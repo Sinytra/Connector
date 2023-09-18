@@ -65,6 +65,20 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/entity/LivingEntity")
+            .targetMethod("m_21208_()V")
+            .targetMixinType(Patch.MODIFY_CONST)
+            .extractMixin("net/minecraftforge/common/extensions/IForgeLivingEntity")
+            .modifyTarget("sinkInFluid(Lnet/minecraftforge/fluids/FluidType;)V")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/entity/layers/ElytraLayer")
+            .targetMethod("m_6494_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.MODIFY_EXPR_VAL)
+            .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/renderer/ShaderInstance")
             .targetMethod("<init>")
             .targetInjectionPoint("Lnet/minecraft/resources/ResourceLocation;<init>(Ljava/lang/String;)V")

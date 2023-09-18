@@ -17,12 +17,17 @@ import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Path;
 import java.security.CodeSigner;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.jar.Attributes;
 import java.util.jar.Manifest;
+
+import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
 public class FabricASMFixer {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -88,6 +93,70 @@ public class FabricASMFixer {
             }
         }
         return Optional.empty();
+    }
+
+    public static class FabricASMGeneratedClassesSecureJar implements SecureJar {
+        private final ModuleDataProvider moduleDataProvider = new FabricASMGeneratedClassesProvider();
+
+        //@formatter:off
+        @Override public ModuleDataProvider moduleDataProvider() {return moduleDataProvider;}
+        @Override public Path getPrimaryPath() {return Path.of(moduleDataProvider().uri());}
+        @Override public CodeSigner[] getManifestSigners() {return new CodeSigner[0];}
+        @Override public Status verifyPath(Path path) {return Status.NONE;}
+        @Override public Status getFileStatus(String name) {return Status.NONE;}
+        @Override public Attributes getTrustedManifestEntries(String name) {return new Attributes();}
+        @Override public boolean hasSecurityData() {return false;}
+        @Override public Set<String> getPackages() {return moduleDataProvider().descriptor().packages();}
+        @Override public List<Provider> getProviders() {return List.of();}
+        @Override public String name() {return moduleDataProvider().name();}
+        @Override public Path getPath(String first, String... rest) {return getPrimaryPath();}
+        @Override public Path getRootPath() {return getPrimaryPath();}
+        //@formatter:on
+    }
+
+    private static class FabricASMGeneratedClassesProvider implements SecureJar.ModuleDataProvider {
+        private static final String GEN_PACKAGE = "com.chocohead.gen.mixin";
+        private ModuleDescriptor descriptor;
+
+        @Override
+        public String name() {
+            return "fabric_asm_generated_classes";
+        }
+
+        @Override
+        public ModuleDescriptor descriptor() {
+            if (descriptor == null) {
+                descriptor = ModuleDescriptor.newAutomaticModule(name())
+                    .packages(Set.of(GEN_PACKAGE))
+                    .build();
+            }
+            return descriptor;
+        }
+
+        @Override
+        public URI uri() {
+            return uncheck(() -> new URI("file:///~nonexistent"));
+        }
+
+        @Override
+        public Optional<URI> findFile(String name) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<InputStream> open(String name) {
+            return FabricASMFixer.findGeneratedFile(name);
+        }
+
+        @Override
+        public Manifest getManifest() {
+            return new Manifest();
+        }
+
+        @Override
+        public CodeSigner[] verifyAndGetSigners(String cname, byte[] bytes) {
+            return new CodeSigner[0];
+        }
     }
 
     public record ModuleDataProviderWrapper(SecureJar.ModuleDataProvider provider) implements SecureJar.ModuleDataProvider {

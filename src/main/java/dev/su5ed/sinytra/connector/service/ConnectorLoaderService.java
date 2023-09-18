@@ -59,7 +59,7 @@ public class ConnectorLoaderService implements ITransformationService {
     @Override
     public List<Resource> completeScan(IModuleLayerManager layerManager) {
         LoadingModList.get().getErrors().addAll(ConnectorEarlyLoader.getLoadingExceptions());
-        return List.of();
+        return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(new FabricASMFixer.FabricASMGeneratedClassesSecureJar())));
     }
 
     @Override

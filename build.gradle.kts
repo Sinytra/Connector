@@ -35,6 +35,8 @@ val githubRepository: String by project
 val publishBranch: String by project
 val forgifiedFabricApiCurseForge: String by project
 val forgifiedFabricApiModrinth: String by project
+val connectorExtrasCurseForge: String by project
+val connectorExtrasModrinth: String by project
 
 val CI: Provider<String> = providers.environmentVariable("CI")
 
@@ -327,6 +329,9 @@ publishMods {
         requires {
             slug.set(forgifiedFabricApiCurseForge)
         }
+        optional {
+            slug.set(connectorExtrasCurseForge)
+        }
     }
     modrinth {
         accessToken.set(providers.environmentVariable("MODRINTH_TOKEN"))
@@ -334,6 +339,9 @@ publishMods {
         minecraftVersions.add(versionMc)
         requires {
             id.set(forgifiedFabricApiModrinth)
+        }
+        optional {
+            id.set(connectorExtrasModrinth)
         }
     }
 }

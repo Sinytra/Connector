@@ -38,12 +38,12 @@ val forgifiedFabricApiModrinth: String by project
 val connectorExtrasCurseForge: String by project
 val connectorExtrasModrinth: String by project
 
-val CI: Provider<String> = providers.environmentVariable("CI")
+val PUBLISH_RELEASE_TYPE: Provider<String> = providers.environmentVariable("PUBLISH_RELEASE_TYPE")
 
 group = "dev.su5ed.sinytra"
 version = "$versionConnector+$versionMc"
 // Append git commit hash for dev versions
-if (!CI.isPresent) {
+if (!PUBLISH_RELEASE_TYPE.isPresent) {
     version = "$version+dev-${gradleutils.gitInfo["hash"]}"
 }
 println("Project version: $version")
@@ -313,9 +313,9 @@ tasks {
 publishMods {
     file.set(fullJar.archiveFile)
     changelog.set(providers.environmentVariable("CHANGELOG").orElse("# $version"))
-    type.set(providers.environmentVariable("PUBLISH_RELEASE_TYPE").orElse("alpha").map(ReleaseType::of))
+    type.set(PUBLISH_RELEASE_TYPE.orElse("alpha").map(ReleaseType::of))
     modLoaders.add("forge")
-    dryRun.set(!CI.isPresent)
+    dryRun.set(!providers.environmentVariable("CI").isPresent)
 
     github {
         accessToken.set(providers.environmentVariable("GITHUB_TOKEN"))

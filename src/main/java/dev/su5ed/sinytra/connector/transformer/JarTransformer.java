@@ -214,7 +214,7 @@ public final class JarTransformer {
             setMixinClassProvider(loader);
 
             ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
-            Transformer remappingTransformer = RelocatingRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
+            Transformer remappingTransformer = OptimizedRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
             List<Pair<File, Future<FabricModPath>>> futures = paths.stream()
                 .map(jar -> {
                     Future<FabricModPath> future = executorService.submit(() -> {

@@ -51,7 +51,6 @@ println("Project version: $version")
 val mod: SourceSet by sourceSets.creating
 
 val shade: Configuration by configurations.creating { isTransitive = false }
-val shadeRelocMixin: Configuration by configurations.creating { isTransitive = false }
 val adapterData: Configuration by configurations.creating
 
 val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
@@ -123,18 +122,11 @@ val modJar: Jar by tasks.creating(Jar::class) {
     )
     archiveClassifier.set("mod")
 }
-val remappedJar: ShadowJar by tasks.creating(ShadowJar::class) {
-    configurations = listOf(shadeRelocMixin)
-    from(tasks.jar)
-    relocate("org.spongepowered", "io.github.steelwoolmc.shadow.spongepowered")
-    relocate("shadowignore.org.spongepowered", "org.spongepowered")
-    archiveClassifier.set("shadow")
-}
 val remappedDepsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     dependsOn(depsJar)
 
-    from(remappedJar.archiveFile)
-    from(depsJar.archiveFile)
+    from(tasks.jar)
+    from(depsJar)
     mergeServiceFiles() // Relocate services
     relocate("net.minecraftforge.fart", "reloc.net.minecraftforge.fart")
     relocate("net.minecraftforge.srgutils", "reloc.net.minecraftforge.srgutils")
@@ -185,7 +177,7 @@ reobf {
 
 configurations {
     compileOnly {
-        extendsFrom(shade, shadeRelocMixin)
+        extendsFrom(shade)
     }
 
     "modCompileOnly" {
@@ -193,7 +185,7 @@ configurations {
     }
 
     "modImplementation" {
-        extendsFrom(configurations.minecraft.get(), shade, shadeRelocMixin)
+        extendsFrom(configurations.minecraft.get(), shade)
     }
 
     "modAnnotationProcessor" {
@@ -260,7 +252,7 @@ dependencies {
     shade(group = "net.minecraftforge", name = "srgutils", version = "0.5.4")
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
     shade(group = "dev.su5ed.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool)
-    shadeRelocMixin(group = "dev.su5ed.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
+    shade(group = "dev.su5ed.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
     shade(group = "io.github.steelwoolmc", name = "mixin-transmogrifier", version = versionMixinTransmog)
     adapterData(group = "dev.su5ed.sinytra.adapter", name = "adapter", version = versionAdapter)
 

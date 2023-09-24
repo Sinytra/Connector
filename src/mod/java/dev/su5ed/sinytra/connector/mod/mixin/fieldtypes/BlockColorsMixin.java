@@ -1,11 +1,13 @@
 package dev.su5ed.sinytra.connector.mod.mixin.fieldtypes;
 
+import dev.su5ed.sinytra.connector.mod.compat.RedirectingIdMapper;
 import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.core.Holder;
 import net.minecraft.core.IdMapper;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,16 +22,14 @@ public class BlockColorsMixin {
     @Final
     private Map<Holder.Reference<Block>, BlockColor> blockColors;
     @Unique
-    public IdMapper<BlockColor> connector$blockColors = new IdMapper<>();
+    public IdMapper<BlockColor> connector$blockColors = new RedirectingIdMapper<>(
+            i -> ForgeRegistries.BLOCKS.getDelegateOrThrow(BuiltInRegistries.BLOCK.byId(i)),
+            blockReference -> BuiltInRegistries.BLOCK.getId(blockReference.get()),
+            this.blockColors
+    );
 
     @Unique
     public IdMapper<BlockColor> connector$getBlockColors() {
-        if (this.blockColors.size() != this.connector$blockColors.size()) {
-            if (this.blockColors.size() < this.connector$blockColors.size()) throw new IllegalStateException("Tried to register new block colors using connector$getBlockColors()!");
-            this.blockColors.forEach((block, color) -> {
-                this.connector$blockColors.addMapping(color, BuiltInRegistries.BLOCK.getId(block.get()));
-            });
-        }
         return this.connector$blockColors;
     }
 }

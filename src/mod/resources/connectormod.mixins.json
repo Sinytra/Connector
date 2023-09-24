@@ -9,6 +9,8 @@
     "ForgeHooksMixin",
     "LivingEntityMixin",
     "PoiTypesMixin",
+    "item.PiglinAiAccessor",
+    "item.IForgeItemMixin",
     "network.ConnectionTypeMixin",
     "network.HandshakeHandlerMixin",
     "network.NetworkFiltersMixin",

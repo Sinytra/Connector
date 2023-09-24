@@ -16,8 +16,9 @@
     "network.NetworkFiltersMixin",
     "tags.TagEntryAccessor",
     "tags.TagLoaderMixin",
-    "registries.ForgeRegistryMixin",
+    "registries.BuiltInRegistriesAccessor",
     "registries.BootstrapMixin",
+    "registries.ForgeRegistryMixin",
     "registries.RegistryDataLoaderMixin"
   ],
   "client": [
@@ -27,7 +28,8 @@
     "ItemOverridesMixin",
     "ForgeHooksClientMixin",
     "ModListScreenMixin",
-    "GuiMixin",
+    "hud.ForgeGuiMixin",
+    "hud.GuiMixin",
     "boot.MinecraftMixin",
     "recipebook.RecipeBookManagerMixin",
     "recipebook.RecipeBookCategoriesMixin",

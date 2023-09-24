@@ -23,7 +23,13 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(Bootstrap.class)
 public abstract class BootstrapMixin {
-	@Redirect(method = "bootStrap", at = @At(value = "INVOKE", target = "Lnet/minecraftforge/registries/GameData;vanillaSnapshot()V", remap = false))
+    @Redirect(method = "bootStrap", at = @At(value = "INVOKE", target = "Lnet/minecraft/core/registries/BuiltInRegistries;bootStrap()V"))
+    private static void initialize() {
+        // Skip freeze and validation
+        BuiltInRegistriesAccessor.callCreateContents();
+    }
+
+    @Redirect(method = "bootStrap", at = @At(value = "INVOKE", target = "Lnet/minecraftforge/registries/GameData;vanillaSnapshot()V", remap = false))
     private static void skipVanillaSnapshot() {
         // Don't lock registries just yet
     }

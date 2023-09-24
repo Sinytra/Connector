@@ -6,4 +6,6 @@ public interface GuiExtensions {
     void connector_preRender(GuiGraphics guiGraphics, float tickDelta);
 
     void connector_postRender(GuiGraphics guiGraphics, float tickDelta);
+
+    void connector_renderFood(GuiGraphics guiGraphics);
 }

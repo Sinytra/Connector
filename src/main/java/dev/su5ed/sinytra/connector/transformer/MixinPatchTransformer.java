@@ -65,6 +65,18 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
+            .targetInjectionPoint("HEAD", "")
+            .modifyTarget("connector_preRender")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
+            .targetInjectionPoint("RETURN", "")
+            .modifyTarget("connector_postRender")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/entity/Entity")
             .targetMethod("changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraftforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;")
             .targetInjectionPoint("Lnet/minecraft/server/level/ServerLevel;m_8617_(Lnet/minecraft/server/level/ServerLevel;)V")

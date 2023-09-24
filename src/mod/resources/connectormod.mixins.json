@@ -25,6 +25,7 @@
     "ItemOverridesMixin",
     "ForgeHooksClientMixin",
     "ModListScreenMixin",
+    "GuiMixin",
     "boot.MinecraftMixin",
     "recipebook.RecipeBookManagerMixin",
     "recipebook.RecipeBookCategoriesMixin",

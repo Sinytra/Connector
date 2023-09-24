@@ -12,9 +12,6 @@ import java.util.Map;
 @Mixin(AttributeSupplier.class)
 public interface AttributeSupplierAccessor {
     @Accessor
-    Map<Attribute, AttributeInstance> getInstances();
-
-    @Accessor
     @Mutable
     void setInstances(Map<Attribute, AttributeInstance> instances);
 }

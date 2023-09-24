@@ -17,7 +17,6 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.ClassRemapper;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -27,55 +26,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-public final class RelocatingRenamingTransformer extends RenamingTransformer {
-    private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$]+;$";
-    private static final Map<String, String> RELOCATE = Map.of(
-        "org/spongepowered/", "org/spongepowered/reloc/",
-        "com/llamalad7/mixinextras/", "com/llamalad7/mixinextras/reloc/"
-    );
+public final class OptimizedRenamingTransformer extends RenamingTransformer {
+    private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$_]+;$";
+    private static final String METHOD_DESC_PATTERN = "^(?<desc>\\((?:\\[*[ZCBSIFJD]|\\[*L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$";
 
     public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, Map<String, String> flatMappings) {
         RenamingClassProvider reverseProvider = new RenamingClassProvider(classProvider, mappingFile, mappingFile.reverse(), log);
         EnhancedRemapper enhancedRemapper = new RelocatingEnhancedRemapper(reverseProvider, mappingFile, flatMappings, log);
-        return new RelocatingRenamingTransformer(enhancedRemapper, false);
+        return new OptimizedRenamingTransformer(enhancedRemapper, false);
     }
 
-    public RelocatingRenamingTransformer(EnhancedRemapper remapper, boolean collectAbstractParams) {
+    public OptimizedRenamingTransformer(EnhancedRemapper remapper, boolean collectAbstractParams) {
         super(remapper, collectAbstractParams);
-    }
-
-    @Override
-    public ClassEntry process(ClassEntry entry) {
-        ClassEntry processed = super.process(entry);
-        String name = relocateValue(entry.getName());
-        return ClassEntry.create(name, processed.getTime(), processed.getData());
-    }
-
-    @Override
-    public ResourceEntry process(ResourceEntry entry) {
-        String name = entry.getName();
-        if (name.startsWith("META-INF/services/") || name.endsWith(".json")) {
-            String content = new String(entry.getData(), StandardCharsets.UTF_8);
-            for (Map.Entry<String, String> relocateEntry : RELOCATE.entrySet()) {
-                content = content.replace(
-                    relocateEntry.getKey().replace('/', '.'),
-                    relocateEntry.getValue().replace('/', '.')
-                );
-            }
-            byte[] remapped = content.getBytes(StandardCharsets.UTF_8);
-            return ResourceEntry.create(name, entry.getTime(), remapped);
-        }
-        return super.process(entry);
-    }
-
-    private static String relocateValue(String key) {
-        for (Map.Entry<String, String> entry : RELOCATE.entrySet()) {
-            String relocKey = entry.getKey();
-            if (key.startsWith(relocKey)) {
-                return key.replace(relocKey, entry.getValue());
-            }
-        }
-        return key;
     }
 
     private static final class RenamingClassProvider implements ClassProvider {
@@ -174,8 +136,7 @@ public final class RelocatingRenamingTransformer extends RenamingTransformer {
             if (fastMapped != null) {
                 return fastMapped;
             }
-            String remapped = super.map(key);
-            return key.equals(remapped) ? relocateValue(key) : remapped;
+            return super.map(key);
         }
 
         @Override
@@ -228,30 +189,23 @@ public final class RelocatingRenamingTransformer extends RenamingTransformer {
         @Override
         public Object mapValue(Object value) {
             if (value instanceof String str) {
-                boolean desc = str.matches(CLASS_DESC_PATTERN);
-                String relocating = desc ? str.substring(1, str.length() - 1) : str;
-                String relocated = relocate(relocating, !desc);
-                if (relocated != null) {
-                    return desc ? 'L' + relocated + ';' : relocated;
+                if (str.matches(CLASS_DESC_PATTERN)) {
+                    String mapped = this.flatMappings.get(str.substring(1, str.length() - 1));
+                    if (mapped != null) {
+                        return 'L' + mapped + ';';
+                    }
                 }
-
-                String mapped = this.flatMappings.get(str);
-                if (mapped != null) {
-                    return mapped;
+                else if (str.matches(METHOD_DESC_PATTERN)) {
+                    return mapMethodDesc(str);
+                }
+                else {
+                    String mapped = this.flatMappings.get(str);
+                    if (mapped != null) {
+                        return mapped;
+                    }
                 }
             }
             return super.mapValue(value);
-        }
-
-        @Nullable
-        private static String relocate(String str, boolean normalize) {
-            for (Map.Entry<String, String> entry : RELOCATE.entrySet()) {
-                String pKey = normalize ? entry.getKey().replace('/', '.') : entry.getKey();
-                if (str.startsWith(pKey)) {
-                    return str.replace(pKey, normalize ? entry.getValue().replace('/', '.') : entry.getValue());
-                }
-            }
-            return null;
         }
     }
 

@@ -26,6 +26,8 @@ all their favourite mods in one modpack.
 - Visit the [Mod Compatibility Thread](https://github.com/Sinytra/Connector/discussions/12) to can find information about known working / incompatible mods
 - To learn more about how Connector works, read our [Introductory blog post](https://github.com/Sinytra/Connector/discussions/11)
 - You may also like the [Forgified Fabric API](https://github.com/Sinytra/ForgifiedFabricAPI), a port of the Fabric API to Forge
+- Check out [Connector Extras](https://github.com/Sinytra/ConnectorExtras) for an improved experience
+  and better compatibility with third-party APIs
 
 ## Usage Guide
 

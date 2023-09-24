@@ -13,14 +13,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public final class ConnectorUtil {
-    public static final String MIXIN_CONFIGS_ATTRIBUTE = "ConnectorMixinConfigs";
+    public static final String MIXIN_CONFIGS_ATTRIBUTE = "MixinConfigs";
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
     public static final String MODS_TOML = "META-INF/mods.toml";
     public static final String CONNECTOR_MARKER = "connector_transformed";
     public static final long ZIP_TIME = 318211200000L;
     public static final Path CONNECTOR_FOLDER = FMLPaths.MODSDIR.get().resolve(".connector");
+    // net.minecraft.util.StringUtil
+    private static final Pattern STRIP_COLOR_PATTERN = Pattern.compile("(?i)\\u00A7[0-9A-FK-OR]");
 
     // Ugly hardcoded values
     // Never load fabric mods of these mod ids
@@ -35,6 +38,7 @@ public final class ConnectorUtil {
         // Mixinextras initializes itself from within its own mixin config plugin.
         // Attempting to initialize it from an entrypoint at the GAME layer will result in an "attempted duplicate class definition" error
         // It is redundant and no longer required, as mentioned in https://gist.github.com/LlamaLad7/ec597b6d02d39b8a2e35559f9fcce42f#initialization
+        "com.llamalad7.mixinextras.MixinExtrasBootstrap",
         "com.llamalad7.mixinextras.MixinExtrasBootstrap::init"
     );
     // keywords, boolean and null literals, not allowed in identifiers
@@ -141,7 +145,7 @@ public final class ConnectorUtil {
             }
         }
     }
-    
+
     public static boolean isJavaReservedKeyword(String str) {
         return RESERVED.contains(str);
     }
@@ -156,6 +160,10 @@ public final class ConnectorUtil {
         } catch (Throwable t) {
             throw new RuntimeException(t);
         }
+    }
+
+    public static String stripColor(String p_14407_) {
+        return STRIP_COLOR_PATTERN.matcher(p_14407_).replaceAll("");
     }
 
     @FunctionalInterface

@@ -46,6 +46,8 @@ import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -62,7 +64,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -213,7 +214,7 @@ public final class JarTransformer {
             setMixinClassProvider(loader);
 
             ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
-            Transformer remappingTransformer = RelocatingRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
+            Transformer remappingTransformer = OptimizedRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), getFlatMapping(SOURCE_NAMESPACE));
             List<Pair<File, Future<FabricModPath>>> futures = paths.stream()
                 .map(jar -> {
                     Future<FabricModPath> future = executorService.submit(() -> {
@@ -259,11 +260,13 @@ public final class JarTransformer {
 
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input, metadata.refmaps(), remapper);
+        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(metadata.mixinPackages(), refmap.merged().mappings, adapterPatches);
+        RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.mixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
             .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE)))
             .add(remappingTransformer)
-            .add(new MixinPatchTransformer(metadata.mixinPackages(), refmap.merged().mappings, adapterPatches))
-            .add(new RefmapRemapper(metadata.mixinConfigs(), refmap.files(), metadata.makeUniqueConfigNames()))
+            .add(patchTransformer)
+            .add(refmapRemapper)
             .add(new ModMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));
@@ -272,6 +275,9 @@ public final class JarTransformer {
         }
         try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());
+            try (FileSystem zipFile = FileSystems.newFileSystem(output)) {
+                patchTransformer.finalize(zipFile.getPath("/"), metadata.mixinConfigs(), refmap.merged());
+            }
         } catch (Throwable t) {
             LOGGER.error("Encountered error while transforming jar file " + input.getAbsolutePath(), t);
             throw t;
@@ -304,17 +310,15 @@ public final class JarTransformer {
                 }
             }
             // Find additional configs that may not be listed in mod metadata
-            AtomicBoolean hasAdditionalConfigs = new AtomicBoolean(false);
             jarFile.stream()
                 .forEach(entry -> {
                     String name = entry.getName();
                     if ((name.endsWith(".mixins.json") || name.startsWith("mixins.") && name.endsWith(".json")) && configs.add(name)) {
                         readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages);
-                        hasAdditionalConfigs.set(true);   
                     }
                 });
             Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
-            return new FabricModFileMetadata(metadata, configs, refmaps, mixinPackages, manifestAttributes, containsAT, !hasAdditionalConfigs.get());
+            return new FabricModFileMetadata(metadata, configs, refmaps, mixinPackages, manifestAttributes, containsAT);
         }
     }
 
@@ -340,7 +344,7 @@ public final class JarTransformer {
 
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
 
-    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT, boolean makeUniqueConfigNames) {}
+    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT) {}
 
     public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
         public FabricModPath transform(Transformer remappingTransformer) throws IOException {

@@ -20,12 +20,17 @@ public class ConnectorLoader {
 
     // Whether we are currently in a loading state
     private static boolean loading;
+    private static boolean finishedLoading;
 
     /**
      * @return whether we are currently in a loading state
      */
     public static boolean isLoading() {
         return loading;
+    }
+
+    public static boolean hasFinishedLoading() {
+        return finishedLoading;
     }
 
     /**
@@ -57,6 +62,7 @@ public class ConnectorLoader {
             }
 
             loading = false;
+            finishedLoading = true;
         } catch (Throwable t) {
             throw ConnectorEarlyLoader.createGenericLoadingException(t, "Encountered error during early mod loading");
         }

@@ -15,6 +15,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "7.1.2" apply false
     id("org.spongepowered.mixin") version "0.7.+"
     id("me.modmuss50.mod-publish-plugin") version "0.3.+"
+    id("net.neoforged.gradleutils") version "2.0.+"
 }
 
 val versionConnector: String by project
@@ -27,33 +28,43 @@ val versionFabricLoader: String by project
 val versionAccessWidener: String by project
 val versionFabricApi: String by project
 val versionMixin: String by project
+val versionMixinTransmog: String by project
 val curseForgeId: String by project
 val modrinthId: String by project
 val githubRepository: String by project
 val publishBranch: String by project
 val forgifiedFabricApiCurseForge: String by project
 val forgifiedFabricApiModrinth: String by project
+val connectorExtrasCurseForge: String by project
+val connectorExtrasModrinth: String by project
 
-version = "$versionConnector+$versionMc"
+val PUBLISH_RELEASE_TYPE: Provider<String> = providers.environmentVariable("PUBLISH_RELEASE_TYPE")
+
 group = "dev.su5ed.sinytra"
+version = "$versionConnector+$versionMc"
+// Append git commit hash for dev versions
+if (!PUBLISH_RELEASE_TYPE.isPresent) {
+    version = "$version+dev-${gradleutils.gitInfo["hash"]}"
+}
 println("Project version: $version")
 
 val mod: SourceSet by sourceSets.creating
 
-val shade: Configuration by configurations.creating
-val shadeRuntimeOnly: Configuration by configurations.creating
+val shade: Configuration by configurations.creating { isTransitive = false }
 val adapterData: Configuration by configurations.creating
 
 val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
-    configurations = listOf(shade, shadeRuntimeOnly)
+    configurations = listOf(shade)
 
     exclude("assets/fabricloader/**")
-    exclude("META-INF/**")
+    exclude("META-INF/*.SF")
+    exclude("META-INF/*.RSA")
+    exclude("META-INF/maven/**")
+    exclude("META-INF/services/net.minecraftforge.forgespi.language.IModLanguageProvider")
     exclude("ui/**")
     exclude("*.json", "*.html", "*.version")
     exclude("module-info.class")
     exclude("LICENSE.txt")
-    relocate("com.llamalad7.mixinextras", "com.llamalad7.mixinextras.reloc")
 
     dependencies {
         exclude(dependency("org.ow2.asm:"))
@@ -99,23 +110,15 @@ val createJarJarMetadata: Task by tasks.creating {
         Files.write(output.asFile.toPath(), MetadataIOHandler.toLines(metadata), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
     }
 }
-// ShadowJar doesn't support nesting archives - it will flatten them if they're included. Therefore, we must first preprocess
-// the jar contents with shadow before creating the final bundle that also includes the dummy nested jar.
-val prepareModJar: ShadowJar by tasks.creating(ShadowJar::class) {
-    dependsOn("modClasses")
-    from(mod.output)
-    relocate("org.spongepowered.asm", "org.spongepowered.reloc.asm")
-    archiveClassifier.set("prepare-mod")
-}
 val modJar: Jar by tasks.creating(Jar::class) {
-    from(zipTree(prepareModJar.archiveFile))
+    from(mod.output)
     into("META-INF/jarjar/") {
         from(createJarJarMetadata)
         from(dummyFabricLoaderLangJar)
     }
     manifest.attributes(
         "Implementation-Version" to project.version,
-        "ConnectorMixinConfigs" to "connectormod.mixins.json"
+        "MixinConfigs" to "connectormod.mixins.json"
     )
     archiveClassifier.set("mod")
 }
@@ -123,15 +126,11 @@ val remappedDepsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     dependsOn(depsJar)
 
     from(tasks.jar)
-    from(depsJar.archiveFile)
+    from(depsJar)
     mergeServiceFiles() // Relocate services
-    relocate("org.spongepowered.asm", "org.spongepowered.reloc.asm")
-    relocate("org.spongepowered.include", "org.spongepowered.reloc.include")
-    relocate("org.spongepowered.tools", "org.spongepowered.reloc.tools")
-    relocate("net.minecraftforge.fart", "net.minecraftforge.reloc.fart")
-    relocate("net.minecraftforge.srgutils", "net.minecraftforge.reloc.srgutils")
-    relocate("net.fabricmc.accesswidener", "net.fabricmc.reloc.accesswidener")
-    relocate("MixinConfigs", "ConnectorMixinConfigs")
+    relocate("net.minecraftforge.fart", "reloc.net.minecraftforge.fart")
+    relocate("net.minecraftforge.srgutils", "reloc.net.minecraftforge.srgutils")
+    relocate("net.fabricmc.accesswidener", "reloc.net.fabricmc.accesswidener")
     archiveClassifier.set("deps-reloc")
 }
 val fullJar: Jar by tasks.creating(Jar::class) {
@@ -209,7 +208,7 @@ minecraft {
             property("forge.logging.console.level", "debug")
             property("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE,COREMOD")
             property("connector.logging.markers", "MIXINPATCH,MERGER")
-            property("mixin.debug", "true")
+            property("mixin.debug.export", "true")
 //            property("connector.cache.enabled", "false")
             workingDirectory = project.file("run").canonicalPath
 
@@ -240,6 +239,7 @@ repositories {
         name = "Su5eD"
         url = uri("https://maven.su5ed.dev/releases")
     }
+    mavenLocal()
 }
 
 dependencies {
@@ -247,15 +247,16 @@ dependencies {
 
     shade(group = "dev.su5ed.sinytra", name = "fabric-loader", version = versionFabricLoader) { isTransitive = false }
     // Fabric loader dependencies
-    shade("org.ow2.sat4j:org.ow2.sat4j.core:2.3.6")
-    shade("org.ow2.sat4j:org.ow2.sat4j.pb:2.3.6")
+    shade(group = "org.ow2.sat4j", name = "org.ow2.sat4j.core", version = "2.3.6")
+    shade(group = "org.ow2.sat4j", name = "org.ow2.sat4j.pb", version = "2.3.6")
+    shade(group = "net.minecraftforge", name = "srgutils", version = "0.5.4")
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
     shade(group = "dev.su5ed.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool)
     shade(group = "dev.su5ed.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
+    shade(group = "io.github.steelwoolmc", name = "mixin-transmogrifier", version = versionMixinTransmog)
     adapterData(group = "dev.su5ed.sinytra.adapter", name = "adapter", version = versionAdapter)
-    shadeRuntimeOnly(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = versionMixin) { isTransitive = false }
-    annotationProcessor(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = versionMixin)
 
+    annotationProcessor(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = versionMixin)
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))
 
@@ -304,7 +305,7 @@ tasks {
 publishMods {
     file.set(fullJar.archiveFile)
     changelog.set(providers.environmentVariable("CHANGELOG").orElse("# $version"))
-    type.set(providers.environmentVariable("PUBLISH_RELEASE_TYPE").orElse("alpha").map(ReleaseType::of))
+    type.set(PUBLISH_RELEASE_TYPE.orElse("alpha").map(ReleaseType::of))
     modLoaders.add("forge")
     dryRun.set(!providers.environmentVariable("CI").isPresent)
 
@@ -320,6 +321,9 @@ publishMods {
         requires {
             slug.set(forgifiedFabricApiCurseForge)
         }
+        optional {
+            slug.set(connectorExtrasCurseForge)
+        }
     }
     modrinth {
         accessToken.set(providers.environmentVariable("MODRINTH_TOKEN"))
@@ -327,6 +331,9 @@ publishMods {
         minecraftVersions.add(versionMc)
         requires {
             id.set(forgifiedFabricApiModrinth)
+        }
+        optional {
+            id.set(connectorExtrasModrinth)
         }
     }
 }

@@ -1,15 +1,25 @@
 package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableList;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.adapter.patch.ClassTransform;
+import dev.su5ed.sinytra.adapter.patch.MixinClassGenerator;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
-import dev.su5ed.sinytra.adapter.patch.PatchInstance;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
+import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
+import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -24,7 +34,17 @@ import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import org.slf4j.Logger;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +52,58 @@ import java.util.Set;
 public class MixinPatchTransformer implements Transformer {
     private static final List<Patch> PATCHES = List.of(
         // TODO Add mirror mixin method that injects into ForgeHooks#onPlaceItemIntoWorld for server side behavior
+        Patch.builder()
+            .targetClass("net/minecraft/client/Minecraft")
+            .targetMethod("<init>")
+            .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startClient(Ljava/io/File;Ljava/lang/Object;)V")
+            .modifyInjectionPoint("Ljava/lang/Thread;currentThread()Ljava/lang/Thread;")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/server/Main")
+            .targetMethod("main([Ljava/lang/String;)V")
+            .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
+            .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/entity/Entity")
+            .targetMethod("changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraftforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;")
+            .targetInjectionPoint("Lnet/minecraft/server/level/ServerLevel;m_8617_(Lnet/minecraft/server/level/ServerLevel;)V")
+            .targetMixinType(Patch.REDIRECT)
+            .modifyTarget("lambda$changeDimension$13")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/LevelRenderer")
+            .targetMethod("m_109514_(Lnet/minecraft/sounds/SoundEvent;Lnet/minecraft/core/BlockPos;)V")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_93055_(Lnet/minecraft/network/chat/Component;)V")
+            .modifyTarget("playStreamingMusic(Lnet/minecraft/sounds/SoundEvent;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/item/RecordItem;)V")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/screens/inventory/AbstractContainerScreen")
+            .targetMethod("m_280072_")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;m_280677_(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;II)V")
+            .modifyInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;renderTooltip(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;Lnet/minecraft/world/item/ItemStack;II)V")
+            .modifyParams(builder -> builder.insert(3, Type.getObjectType("net/minecraft/world/item/ItemStack")).targetType(ModifyMethodParams.TargetType.INJECTION_POINT))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/entity/LivingEntity")
+            .targetMethod("m_21208_()V")
+            .targetMixinType(Patch.MODIFY_CONST)
+            .extractMixin("net/minecraftforge/common/extensions/IForgeLivingEntity")
+            .modifyTarget("sinkInFluid(Lnet/minecraftforge/fluids/FluidType;)V")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/entity/layers/ElytraLayer")
+            .targetMethod("m_6494_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.MODIFY_EXPR_VAL)
+            .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/ShaderInstance")
+            .targetMethod("<init>")
+            .targetInjectionPoint("Lnet/minecraft/resources/ResourceLocation;<init>(Ljava/lang/String;)V")
+            .disable()
+            .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/item/enchantment/EnchantmentHelper")
             .targetInjectionPoint("Lnet/minecraft/world/item/Item;m_6473_()I")
@@ -41,15 +113,21 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/world/entity/LivingEntity")
             .targetMethod("m_7023_(Lnet/minecraft/world/phys/Vec3;)V")
             .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_49958_()F")
-            .targetMixinType(Patch.MODIFY_VAR)
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;getFriction(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;)F")
-            .modifyAnnotationValues(annotation -> {
-                if (PatchInstance.findAnnotationValue(annotation.values, "ordinal").isEmpty()) {
-                    annotation.values.add("ordinal");
-                    annotation.values.add(0);
-                }
-                return false;
-            })
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
+            .targetMethod("m_214168_(Lnet/minecraft/core/BlockPos;Lnet/minecraft/network/protocol/game/ServerboundPlayerActionPacket$Action;Lnet/minecraft/core/Direction;II)V")
+            .targetInjectionPoint("Lnet/minecraft/world/phys/Vec3;m_82557_(Lnet/minecraft/world/phys/Vec3;)D")
+            .modifyTarget("canReach(Lnet/minecraft/core/BlockPos;D)Z")
+            .extractMixin("net/minecraftforge/common/extensions/IForgePlayer")
+            .build(),
+        // There exists a variable in this method that is an exact copy of the previous one. It gets removed by forge binpatches that follow recompiled java code.
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/LightTexture")
+            .targetMethod("m_109881_")
+            .targetInjectionPoint("Lnet/minecraft/client/renderer/LightTexture;m_252983_(Lorg/joml/Vector3f;)V")
+            .modifyParams(builder -> builder.substitute(17, 16))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/Minecraft")
@@ -67,14 +145,59 @@ public class MixinPatchTransformer implements Transformer {
                 "Lnet/minecraft/world/level/block/FireBlock;tryCatchFire(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V",
                 (insn, list) -> list.insertBefore(insn, new FieldInsnNode(Opcodes.GETSTATIC, "net/minecraft/core/Direction", "NORTH", "Lnet/minecraft/core/Direction;")))
             .build(),
-        // Redirect HUD rendering calls to Forge's replacement class
+        // Move HUD rendering calls at Options.renderDebug to a lambda in Forge's vanilla gui overlay enum class
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
-            .targetMethod("m_280421_")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
             .targetInjectionPoint("Lnet/minecraft/client/Options;f_92063_:Z")
-            .modifyTarget("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
-            .modifyInjectionPoint("TAIL", "")
-            .modifyTargetClasses(classes -> classes.add(Type.getObjectType("net/minecraftforge/client/gui/overlay/ForgeGui")))
+            .modifyTarget("lambda$static$18(Lnet/minecraftforge/client/gui/overlay/ForgeGui;Lnet/minecraft/client/gui/GuiGraphics;FII)V")
+            .modifyInjectionPoint("HEAD", "")
+            .modifyMethodAccess(new ModifyMethodAccess.AccessChange(true, Opcodes.ACC_STATIC))
+            .modifyParams(builder -> builder
+                .replace(0, Type.getObjectType("net/minecraftforge/client/gui/overlay/ForgeGui"))
+                .insert(3, Type.INT_TYPE)
+                .insert(4, Type.INT_TYPE))
+            .modifyTargetClasses(classes -> classes.add(Type.getObjectType("net/minecraftforge/client/gui/overlay/VanillaGuiOverlay")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/entity/player/Player")
+            .targetMethod("m_7909_(F)V")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.WRAP_OPERATION)
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canPerformAction(Lnet/minecraftforge/common/ToolAction;)Z")
+            .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraftforge/common/ToolAction")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/entity/FishingHookRenderer")
+            .targetMethod("render(Lnet/minecraft/world/entity/projectile/FishingHook;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.WRAP_OPERATION)
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canPerformAction(Lnet/minecraftforge/common/ToolAction;)Z")
+            .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraftforge/common/ToolAction")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/level/block/PowderSnowBlock")
+            .targetMethod("m_154255_(Lnet/minecraft/world/entity/Entity;)Z")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.WRAP_OPERATION)
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canWalkOnPowderedSnow(Lnet/minecraft/world/entity/LivingEntity;)Z")
+            .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraft/world/entity/LivingEntity")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/ItemInHandRenderer")
+            .targetMethod("m_117184_")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.MODIFY_ARG)
+            .modifyMixinType(Patch.REDIRECT, builder -> builder
+                .sameTarget()
+                .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;"))
+            .modifyParams(builder -> builder
+                .replace(0, Type.getObjectType("net/minecraft/world/item/ItemStack"))
+                .lvtFixer((index, insn, list) -> {
+                    if (index == 1) {
+                        list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/item/ItemStack", ASMAPI.mapMethod("m_41720_"), "()Lnet/minecraft/world/item/Item;"));
+                    }
+                }))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/GameRenderer")
@@ -148,7 +271,7 @@ public class MixinPatchTransformer implements Transformer {
                 .replace(9, Type.getObjectType("net/minecraft/resources/ResourceLocation"))
                 .lvtFixer((index, insn, list) -> {
                     if (index == 10) {
-                        list.insert(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, "dev/su5ed/sinytra/connector/mod/compat/CompatUtil", "getArmorBasePath", "(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/String;"));
+                        list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/resources/ResourceLocation", "toString", "()Ljava/lang/String;"));
                     }
                 }))
             .build(),
@@ -204,15 +327,92 @@ public class MixinPatchTransformer implements Transformer {
         new FieldTypeAdapter(),
         new EnvironmentStripperTransformer()
     );
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     private final Set<String> mixinPackages;
-    private final PatchEnvironment refmap;
+    private final PatchEnvironment environment;
     private final List<? extends Patch> patches;
 
-    public MixinPatchTransformer(Set<String> mixinPackages, Map<String, Map<String, String>> refmap, List<? extends Patch> adapterPatches) {
+    public MixinPatchTransformer(Set<String> mixinPackages, Map<String, Map<String, String>> environment, List<? extends Patch> adapterPatches) {
         this.mixinPackages = mixinPackages;
-        this.refmap = new PatchEnvironment(refmap);
+        this.environment = new PatchEnvironment(environment);
         this.patches = ImmutableList.<Patch>builder().addAll(adapterPatches).addAll(PATCHES).build();
+    }
+
+    public void finalize(Path zipRoot, Collection<String> configs, SrgRemappingReferenceMapper.SimpleRefmap refmap) {
+        Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.getClassGenerator().getGeneratedMixinClasses();
+        if (generatedMixinClasses.isEmpty()) {
+            return;
+        }
+        for (String config : configs) {
+            Path entry = zipRoot.resolve(config);
+            if (Files.exists(entry)) {
+                try (Reader reader = Files.newBufferedReader(entry)) {
+                    JsonElement element = JsonParser.parseReader(reader);
+                    JsonObject json = element.getAsJsonObject();
+                    if (json.has("package")) {
+                        String pkg = json.get("package").getAsString();
+                        Map<String, MixinClassGenerator.GeneratedClass> mixins = getMixinsInPackage(pkg, generatedMixinClasses);
+                        if (!mixins.isEmpty()) {
+                            JsonArray jsonMixins = json.has("mixins") ? json.get("mixins").getAsJsonArray() : new JsonArray();
+                            LOGGER.info("Adding {} mixins to config {}", mixins.size(), config);
+                            mixins.keySet().forEach(jsonMixins::add);
+                            json.add("mixins", jsonMixins);
+
+                            String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
+                            Files.writeString(entry, output, StandardCharsets.UTF_8);
+
+                            // Update refmap
+                            if (json.has("refmap")) {
+                                for (MixinClassGenerator.GeneratedClass generatedClass : mixins.values()) {
+                                    moveRefmapMappings(generatedClass.originalName(), generatedClass.generatedName(), json.get("refmap").getAsString(), zipRoot, refmap);
+                                }
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            }
+        }
+    }
+
+    private void moveRefmapMappings(String oldClass, String newClass, String refmap, Path root, SrgRemappingReferenceMapper.SimpleRefmap oldRefmap) throws IOException {
+        Map<String, String> mappingsEntry = oldRefmap.mappings.get(oldClass);
+        if (mappingsEntry == null) {
+            return;
+        }
+        Map<String, String> dataMappingsEntry = oldRefmap.data.get("searge").get(oldClass);
+        if (dataMappingsEntry == null) {
+            return;
+        }
+        Path path = root.resolve(refmap);
+        if (Files.notExists(path)) {
+            return;
+        }
+        try (Reader reader = Files.newBufferedReader(path)) {
+            SrgRemappingReferenceMapper.SimpleRefmap configRefmap = new Gson().fromJson(reader, SrgRemappingReferenceMapper.SimpleRefmap.class);
+
+            configRefmap.mappings.put(newClass, mappingsEntry);
+            configRefmap.data.get("searge").put(newClass, dataMappingsEntry);
+
+            String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(configRefmap);
+            Files.writeString(path, output, StandardCharsets.UTF_8);
+        }
+    }
+
+    private Map<String, MixinClassGenerator.GeneratedClass> getMixinsInPackage(String mixinPackage, Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses) {
+        Map<String, MixinClassGenerator.GeneratedClass> classes = new HashMap<>();
+        for (Map.Entry<String, MixinClassGenerator.GeneratedClass> entry : generatedMixinClasses.entrySet()) {
+            String name = entry.getKey();
+            String className = name.replace('/', '.');
+            if (className.startsWith(mixinPackage)) {
+                String specificPart = className.substring(mixinPackage.length() + 1);
+                classes.put(specificPart, entry.getValue());
+                generatedMixinClasses.remove(name);
+            }
+        }
+        return classes;
     }
 
     private boolean isInMixinPackage(String className) {
@@ -239,7 +439,7 @@ public class MixinPatchTransformer implements Transformer {
 
         if (isInMixinPackage(className)) {
             for (Patch patch : this.patches) {
-                patchResult = patchResult.or(patch.apply(node, this.refmap));
+                patchResult = patchResult.or(patch.apply(node, this.environment));
             }
         }
 
@@ -249,5 +449,17 @@ public class MixinPatchTransformer implements Transformer {
             return ClassEntry.create(entry.getName(), entry.getTime(), writer.toByteArray());
         }
         return entry;
+    }
+
+    @Override
+    public Collection<? extends Entry> getExtras() {
+        List<Entry> entries = new ArrayList<>();
+        this.environment.getClassGenerator().getGeneratedMixinClasses().forEach((name, cls) -> {
+            ClassWriter writer = new ClassWriter(0);
+            cls.node().accept(writer);
+            byte[] bytes = writer.toByteArray();
+            entries.add(ClassEntry.create(name + ".class", ConnectorUtil.ZIP_TIME, bytes));
+        });
+        return entries;
     }
 }

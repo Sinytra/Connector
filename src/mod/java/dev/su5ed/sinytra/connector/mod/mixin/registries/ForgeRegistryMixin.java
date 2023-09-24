@@ -18,7 +18,7 @@ public abstract class ForgeRegistryMixin<V> implements IForgeRegistry<V> {
     // Mixin AP complained about not finding the target method, so we use @Desc instead of a string
     @Inject(target = @Desc(value = "getDelegateOrThrow", args = Object.class, ret = Holder.Reference.class), at = @At("HEAD"), cancellable = true, remap = false)
     private void getDelegateOrThrow(V value, CallbackInfoReturnable<Holder.Reference<V>> cir) {
-        if (ConnectorLoader.isLoading()) {
+        if (!ConnectorLoader.hasFinishedLoading()) {
             cir.setReturnValue(getDelegate(value).orElseGet(() -> {
                 MappedRegistry<V> registry = GameData.getWrapper(getRegistryKey(), Lifecycle.stable());
                 try {

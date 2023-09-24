@@ -11,6 +11,7 @@
     "PoiTypesMixin",
     "network.ConnectionTypeMixin",
     "network.HandshakeHandlerMixin",
+    "network.NetworkFiltersMixin",
     "tags.TagEntryAccessor",
     "tags.TagLoaderMixin",
     "registries.ForgeRegistryMixin",
@@ -18,8 +19,12 @@
     "registries.RegistryDataLoaderMixin"
   ],
   "client": [
+    "CreativeModeInventoryScreenMixin",
+    "HumanoidArmorLayerMixin",
     "ItemBlockRenderTypesMixin",
     "ItemOverridesMixin",
+    "ForgeHooksClientMixin",
+    "ModListScreenMixin",
     "boot.MinecraftMixin",
     "recipebook.RecipeBookManagerMixin",
     "recipebook.RecipeBookCategoriesMixin",

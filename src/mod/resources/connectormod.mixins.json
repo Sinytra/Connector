@@ -11,6 +11,8 @@
     "PoiTypesMixin",
     "item.PiglinAiAccessor",
     "item.IForgeItemMixin",
+    "lang.PathPackResourcesAnonMixin",
+    "lang.PathPackResourcesMixin",
     "network.ConnectionTypeMixin",
     "network.HandshakeHandlerMixin",
     "network.NetworkFiltersMixin",

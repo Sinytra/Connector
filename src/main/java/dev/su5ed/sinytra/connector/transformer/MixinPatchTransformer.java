@@ -75,6 +75,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyValue("connector$to")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/item/MilkBucketItem")
+            .targetMethod("m_5922_")
+            .targetInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;m_21219_()Z")
+            .modifyInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;curePotionEffects(Lnet/minecraft/world/item/ItemStack;)Z")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
             .targetInjectionPoint("HEAD", "")

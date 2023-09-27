@@ -9,8 +9,10 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
-@Mod("connectormod")
+@Mod(ConnectorMod.MODID)
 public class ConnectorMod {
+    public static final String MODID = "connectormod";
+
     private static boolean clientLoadComplete;
 
     public static boolean clientLoadComplete() {

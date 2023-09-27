@@ -12,7 +12,7 @@ import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
-import dev.su5ed.sinytra.adapter.patch.PatchSerialization;
+import dev.su5ed.sinytra.adapter.patch.serialization.PatchSerialization;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
@@ -190,7 +190,7 @@ public final class JarTransformer {
             Path patchDataPath = EmbeddedDependencies.getAdapterData(EmbeddedDependencies.ADAPTER_PATCH_DATA);
             try (Reader reader = Files.newBufferedReader(patchDataPath)) {
                 JsonElement json = new Gson().fromJson(reader, JsonElement.class);
-                PatchEnvironment.setMatcherRemapper(ASMAPI::mapMethod);
+                PatchEnvironment.setReferenceMapper(str -> str.startsWith("m_") ? ASMAPI.mapMethod(str) : ASMAPI.mapField(str));
                 adapterPatches = PatchSerialization.deserialize(json, JsonOps.INSTANCE);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);

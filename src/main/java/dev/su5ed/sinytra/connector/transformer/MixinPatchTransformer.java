@@ -64,6 +64,16 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
+        Patch.interfaceBuilder()
+            .targetClass("net/minecraft/world/item/alchemy/PotionBrewing$Mix")
+            .targetField("f_43532_")
+            .modifyValue("connector$from")
+            .build(),
+        Patch.interfaceBuilder()
+            .targetClass("net/minecraft/world/item/alchemy/PotionBrewing$Mix")
+            .targetField("f_43534_")
+            .modifyValue("connector$to")
+            .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
@@ -116,6 +126,12 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
             .targetMixinType(Patch.MODIFY_EXPR_VAL)
             .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/item/BoneMealItem")
+            .targetMethod("growCrop")
+            .modifyTarget("applyBonemeal(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;)Z")
+            .modifyParams(builder -> builder.insert(3, Type.getObjectType("net/minecraft/world/entity/player/Player")))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/ShaderInstance")

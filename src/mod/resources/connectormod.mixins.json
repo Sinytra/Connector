@@ -9,6 +9,7 @@
     "ForgeHooksMixin",
     "LivingEntityMixin",
     "PoiTypesMixin",
+    "PotionBrewingMixMixin",
     "item.PiglinAiAccessor",
     "item.IForgeItemMixin",
     "lang.PathPackResourcesAnonMixin",

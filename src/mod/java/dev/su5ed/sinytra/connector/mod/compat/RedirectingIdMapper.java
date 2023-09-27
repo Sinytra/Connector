@@ -41,6 +41,11 @@ public class RedirectingIdMapper<K, T> extends IdMapper<T> {
     }
 
     @Override
+    public T byId(int id) {
+        return this.map.get(this.keyFunction.apply(id));
+    }
+
+    @Override
     public Iterator<T> iterator() {
         return this.map.values().iterator();
     }

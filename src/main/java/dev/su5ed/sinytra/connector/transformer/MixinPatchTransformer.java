@@ -48,6 +48,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
+
+import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowConsumer;
 
 public class MixinPatchTransformer implements Transformer {
     private static final List<Patch> PATCHES = List.of(
@@ -380,40 +383,65 @@ public class MixinPatchTransformer implements Transformer {
         this.patches = ImmutableList.<Patch>builder().addAll(adapterPatches).addAll(PATCHES).build();
     }
 
-    public void finalize(Path zipRoot, Collection<String> configs, SrgRemappingReferenceMapper.SimpleRefmap refmap) {
+    public void finalize(Path zipRoot, Collection<String> configs, SrgRemappingReferenceMapper.SimpleRefmap refmap) throws IOException {
         Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.getClassGenerator().getGeneratedMixinClasses();
-        if (generatedMixinClasses.isEmpty()) {
-            return;
-        }
-        for (String config : configs) {
-            Path entry = zipRoot.resolve(config);
-            if (Files.exists(entry)) {
-                try (Reader reader = Files.newBufferedReader(entry)) {
-                    JsonElement element = JsonParser.parseReader(reader);
-                    JsonObject json = element.getAsJsonObject();
-                    if (json.has("package")) {
-                        String pkg = json.get("package").getAsString();
-                        Map<String, MixinClassGenerator.GeneratedClass> mixins = getMixinsInPackage(pkg, generatedMixinClasses);
-                        if (!mixins.isEmpty()) {
-                            JsonArray jsonMixins = json.has("mixins") ? json.get("mixins").getAsJsonArray() : new JsonArray();
-                            LOGGER.info("Adding {} mixins to config {}", mixins.size(), config);
-                            mixins.keySet().forEach(jsonMixins::add);
-                            json.add("mixins", jsonMixins);
+        if (!generatedMixinClasses.isEmpty()) {
+            for (String config : configs) {
+                Path entry = zipRoot.resolve(config);
+                if (Files.exists(entry)) {
+                    try (Reader reader = Files.newBufferedReader(entry)) {
+                        JsonElement element = JsonParser.parseReader(reader);
+                        JsonObject json = element.getAsJsonObject();
+                        if (json.has("package")) {
+                            String pkg = json.get("package").getAsString();
+                            Map<String, MixinClassGenerator.GeneratedClass> mixins = getMixinsInPackage(pkg, generatedMixinClasses);
+                            if (!mixins.isEmpty()) {
+                                JsonArray jsonMixins = json.has("mixins") ? json.get("mixins").getAsJsonArray() : new JsonArray();
+                                LOGGER.info("Adding {} mixins to config {}", mixins.size(), config);
+                                mixins.keySet().forEach(jsonMixins::add);
+                                json.add("mixins", jsonMixins);
 
-                            String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
-                            Files.writeString(entry, output, StandardCharsets.UTF_8);
+                                String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
+                                Files.writeString(entry, output, StandardCharsets.UTF_8);
 
-                            // Update refmap
-                            if (json.has("refmap")) {
-                                for (MixinClassGenerator.GeneratedClass generatedClass : mixins.values()) {
-                                    moveRefmapMappings(generatedClass.originalName(), generatedClass.generatedName(), json.get("refmap").getAsString(), zipRoot, refmap);
+                                // Update refmap
+                                if (json.has("refmap")) {
+                                    for (MixinClassGenerator.GeneratedClass generatedClass : mixins.values()) {
+                                        moveRefmapMappings(generatedClass.originalName(), generatedClass.generatedName(), json.get("refmap").getAsString(), zipRoot, refmap);
+                                    }
                                 }
                             }
                         }
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
                     }
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
                 }
+            }
+        }
+        // Strip unused service providers
+        Path services = zipRoot.resolve("META-INF/services");
+        if (Files.exists(services)) {
+            try (Stream<Path> stream = Files.walk(services)) {
+                stream
+                    .filter(Files::isRegularFile)
+                    .forEach(rethrowConsumer(path -> {
+                        String serviceName = path.getFileName().toString();
+                        List<String> providers = Files.readAllLines(path);
+                        List<String> existingProviders = providers.stream()
+                            .filter(cls -> Files.exists(zipRoot.resolve(cls.replace('.', '/') + ".class")))
+                            .toList();
+                        int diff = providers.size() - existingProviders.size();
+                        if (diff > 0) {
+                            LOGGER.debug("Removing {} nonexistent service providers for service {}", diff, serviceName);
+                            if (existingProviders.isEmpty()) {
+                                Files.delete(path);
+                            }
+                            else {
+                                String newText = String.join("\n", existingProviders);
+                                Files.writeString(path, newText, StandardCharsets.UTF_8);
+                            }
+                        }
+                    }));
             }
         }
     }

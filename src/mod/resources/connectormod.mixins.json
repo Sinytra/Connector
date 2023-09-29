@@ -6,6 +6,7 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "AttributeSupplierAccessor",
+    "SheetsAccessor",
     "ForgeHooksMixin",
     "LivingEntityMixin",
     "PoiTypesMixin",

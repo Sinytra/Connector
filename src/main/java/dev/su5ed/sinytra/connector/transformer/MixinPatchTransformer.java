@@ -12,6 +12,7 @@ import dev.su5ed.sinytra.adapter.patch.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.MixinClassGenerator;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
+import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTypePatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
@@ -375,6 +376,9 @@ public class MixinPatchTransformer implements Transformer {
             .build(),
         Patch.builder()
             .transform(new DynamicLVTPatch(JarTransformer::getLvtOffsetsData))
+            .build(),
+        Patch.builder()
+            .transform(new DynamicAnonymousShadowFieldTypePatch())
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
@@ -514,7 +518,7 @@ public class MixinPatchTransformer implements Transformer {
         reader.accept(node, 0);
 
         for (ClassTransform transform : CLASS_TRANSFORMS) {
-            patchResult = patchResult.or(transform.apply(node));
+            patchResult = patchResult.or(transform.apply(node, null, this.environment));
         }
 
         if (isInMixinPackage(className)) {

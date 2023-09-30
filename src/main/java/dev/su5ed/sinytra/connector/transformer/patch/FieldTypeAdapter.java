@@ -1,9 +1,12 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
 import com.mojang.logging.LogUtils;
+import dev.su5ed.sinytra.adapter.patch.AnnotationValueHandle;
 import dev.su5ed.sinytra.adapter.patch.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.Patch;
+import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import net.minecraftforge.coremod.api.ASMAPI;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -57,7 +60,7 @@ public class FieldTypeAdapter implements ClassTransform {
     }
 
     @Override
-    public Patch.Result apply(ClassNode classNode) {
+    public Patch.Result apply(ClassNode classNode, @Nullable AnnotationValueHandle<?> annotation, PatchEnvironment environment) {
         boolean applied = false;
         for (MethodNode method : classNode.methods) {
             for (AbstractInsnNode insn : method.instructions) {

@@ -10,6 +10,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLLoader;
 
 @Mod(ConnectorMod.MODID)
 public class ConnectorMod {
@@ -24,8 +25,10 @@ public class ConnectorMod {
     public ConnectorMod() {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         bus.addListener(ConnectorMod::onClientSetup);
-        bus.addListener(ConnectorMod::onLoadComplete);
         FluidHandlerCompat.init(bus);
+        if (FMLLoader.getDist().isClient()) {
+            bus.addListener(ConnectorMod::onLoadComplete);
+        }
 
         ModList modList = ModList.get();
         if (modList.isLoaded("fabric_object_builder_api_v1")) {

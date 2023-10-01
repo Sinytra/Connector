@@ -150,7 +150,7 @@ public class MixinPatchTransformer implements Transformer {
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/item/BoneMealItem")
-            .targetMethod("growCrop")
+            .targetMethod("m_40627_")
             .modifyTarget("applyBonemeal(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;)Z")
             .modifyParams(builder -> builder.insert(3, Type.getObjectType("net/minecraft/world/entity/player/Player")))
             .build(),

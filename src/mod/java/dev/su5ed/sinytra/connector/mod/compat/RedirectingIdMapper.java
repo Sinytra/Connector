@@ -9,30 +9,30 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 
-public class RedirectingIdMapper<K, T> extends IdMapper<T> {
+public class RedirectingIdMapper<K, V> extends IdMapper<V> {
     IntFunction<K> keyFunction;
     Function<K, Integer> reverseKeyFunction;
-    Map<K, T> map;
+    Map<K, V> map;
 
-    public RedirectingIdMapper(IntFunction<K> keyFunction, Function<K, Integer> reverseKeyFunction, Map<K, T> map) {
+    public RedirectingIdMapper(IntFunction<K> keyFunction, Function<K, Integer> reverseKeyFunction, Map<K, V> map) {
         this.keyFunction = keyFunction;
         this.reverseKeyFunction = reverseKeyFunction;
         this.map = map;
     }
 
     @Override
-    public void addMapping(@NotNull T value, int id) {
+    public void addMapping(@NotNull V value, int id) {
         this.map.put(this.keyFunction.apply(id), value);
     }
 
     @Override
-    public void add(@NotNull T value) {
+    public void add(@NotNull V value) {
         this.addMapping(value, this.map.size());
     }
 
     @Override
-    public int getId(@NotNull T value) {
-        for (Map.Entry<K, T> ktEntry : this.map.entrySet()) {
+    public int getId(@NotNull V value) {
+        for (Map.Entry<K, V> ktEntry : this.map.entrySet()) {
             if (Objects.equals(ktEntry.getValue(), value)) {
                 return this.reverseKeyFunction.apply(ktEntry.getKey());
             }
@@ -41,12 +41,12 @@ public class RedirectingIdMapper<K, T> extends IdMapper<T> {
     }
 
     @Override
-    public T byId(int id) {
+    public V byId(int id) {
         return this.map.get(this.keyFunction.apply(id));
     }
 
     @Override
-    public Iterator<T> iterator() {
+    public Iterator<V> iterator() {
         return this.map.values().iterator();
     }
 

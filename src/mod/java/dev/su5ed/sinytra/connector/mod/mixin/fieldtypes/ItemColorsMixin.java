@@ -22,14 +22,17 @@ public class ItemColorsMixin {
     @Final
     private Map<Holder.Reference<Item>, ItemColor> itemColors;
     @Unique
-    public IdMapper<ItemColor> connector$itemColors = new RedirectingIdMapper<>(
-            i -> ForgeRegistries.ITEMS.getDelegateOrThrow(BuiltInRegistries.ITEM.byId(i)),
-            itemReference -> BuiltInRegistries.ITEM.getId(itemReference.get()),
-            this.itemColors
-    );
+    private IdMapper<ItemColor> connector$itemColors;
 
     @Unique
     public IdMapper<ItemColor> connector$getItemColors() {
+        if (this.connector$itemColors == null) {
+            this.connector$itemColors = new RedirectingIdMapper<>(
+                    i -> ForgeRegistries.ITEMS.getDelegateOrThrow(BuiltInRegistries.ITEM.byId(i)),
+                    itemReference -> BuiltInRegistries.ITEM.getId(itemReference.get()),
+                    this.itemColors
+            );
+        }
         return this.connector$itemColors;
     }
 }

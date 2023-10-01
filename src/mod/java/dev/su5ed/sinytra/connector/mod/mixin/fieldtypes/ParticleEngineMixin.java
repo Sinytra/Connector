@@ -20,14 +20,17 @@ public class ParticleEngineMixin {
     @Final
     private Map<ResourceLocation, ParticleProvider<?>> providers;
     @Unique
-    private final Int2ObjectMap<ParticleProvider<?>> connector$providers = new RedirectingInt2ObjectMap<>(
-            i -> BuiltInRegistries.PARTICLE_TYPE.getKey(BuiltInRegistries.PARTICLE_TYPE.byId(i)),
-            key -> BuiltInRegistries.PARTICLE_TYPE.getId(BuiltInRegistries.PARTICLE_TYPE.get(key)),
-            this.providers
-    );
+    private Int2ObjectMap<ParticleProvider<?>> connector$providers;
 
     @Unique
     public Int2ObjectMap<ParticleProvider<?>> connector$getProviders() {
-        return connector$providers;
+        if (this.connector$providers == null) {
+            this.connector$providers = new RedirectingInt2ObjectMap<>(
+                    i -> BuiltInRegistries.PARTICLE_TYPE.getKey(BuiltInRegistries.PARTICLE_TYPE.byId(i)),
+                    key -> BuiltInRegistries.PARTICLE_TYPE.getId(BuiltInRegistries.PARTICLE_TYPE.get(key)),
+                    this.providers
+            );
+        }
+        return this.connector$providers;
     }
 }

@@ -201,6 +201,16 @@ public class MixinPatchTransformer implements Transformer {
                 "Lnet/minecraft/world/level/block/FireBlock;tryCatchFire(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V",
                 (insn, list) -> list.insertBefore(insn, new FieldInsnNode(Opcodes.GETSTATIC, "net/minecraft/core/Direction", "NORTH", "Lnet/minecraft/core/Direction;")))
             .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/level/block/FireBlock")
+            .targetMethod("m_221150_")
+            .modifyTarget("tryCatchFire")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/level/block/FireBlock")
+            .targetInjectionPoint("Lnet/minecraft/world/level/block/FireBlock;m_221150_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;I)V")
+            .modifyInjectionPoint("Lnet/minecraft/world/level/block/FireBlock;tryCatchFire(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V")
+            .build(),
         // Move HUD rendering calls at Options.renderDebug to a lambda in Forge's vanilla gui overlay enum class
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")

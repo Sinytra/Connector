@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public class FieldToMethodTransformer implements Transformer {
-    private static final Map<String, Map<String, String>> REPLACEMENTS = Map.of(
+    public static final Map<String, Map<String, String>> REPLACEMENTS = Map.of(
         // Extracted from forge's coremods/field_to_method.js
         "net.minecraft.world.level.biome.Biome", Map.of(
             "f_47437_", "getModifiedClimateSettings",

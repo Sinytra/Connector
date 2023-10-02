@@ -392,9 +392,9 @@ public class MixinPatchTransformer implements Transformer {
     private final PatchEnvironment environment;
     private final List<? extends Patch> patches;
 
-    public MixinPatchTransformer(Set<String> mixinPackages, Map<String, Map<String, String>> environment, List<? extends Patch> adapterPatches) {
+    public MixinPatchTransformer(Set<String> mixinPackages, PatchEnvironment environment, List<? extends Patch> adapterPatches) {
         this.mixinPackages = mixinPackages;
-        this.environment = new PatchEnvironment(environment);
+        this.environment = environment;
         this.patches = ImmutableList.<Patch>builder().addAll(adapterPatches).addAll(PATCHES).build();
     }
 

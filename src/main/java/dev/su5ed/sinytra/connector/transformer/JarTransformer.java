@@ -32,6 +32,7 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.progress.ProgressMeter;
 import net.minecraftforge.fml.loading.progress.StartupNotificationManager;
+import net.minecraftforge.srgutils.IMappingFile;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -260,10 +261,16 @@ public final class JarTransformer {
 
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input, metadata.refmaps(), remapper);
-        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(metadata.mixinPackages(), refmap.merged().mappings, adapterPatches);
+        IMappingFile srgToIntermediary = resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
+        AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
+
+        List<Patch> extraPatches = Stream.concat(adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
+        PatchEnvironment environment = new PatchEnvironment(refmap.merged().mappings);
+        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(metadata.mixinPackages(), environment, extraPatches);
         RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.mixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
-            .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), resolver.getMap("srg", SOURCE_NAMESPACE)))
+            .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary))
+            .add(accessorRedirectTransformer)
             .add(remappingTransformer)
             .add(patchTransformer)
             .add(refmapRemapper)
@@ -274,7 +281,10 @@ public final class JarTransformer {
             builder.add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver, getFlatMapping(SOURCE_NAMESPACE)));
         }
         try (Renamer renamer = builder.build()) {
+            accessorRedirectTransformer.analyze(input, metadata.mixinPackages(), environment);
+
             renamer.run(input, output.toFile());
+
             try (FileSystem zipFile = FileSystems.newFileSystem(output)) {
                 patchTransformer.finalize(zipFile.getPath("/"), metadata.mixinConfigs(), refmap.merged());
             }

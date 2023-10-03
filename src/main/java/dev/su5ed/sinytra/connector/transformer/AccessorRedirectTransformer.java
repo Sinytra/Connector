@@ -65,6 +65,9 @@ public class AccessorRedirectTransformer implements Transformer {
         try (FileSystem fs = FileSystems.newFileSystem(input.toPath(), Map.of())) {
             for (String pkg : mixinPackages) {
                 Path packageRoot = fs.getPath(pkg);
+                if (Files.notExists(packageRoot)) {
+                    continue;
+                }
                 try (Stream<Path> stream = Files.walk(packageRoot)) {
                     stream
                         .filter(path -> path.getFileName().toString().endsWith(".class"))

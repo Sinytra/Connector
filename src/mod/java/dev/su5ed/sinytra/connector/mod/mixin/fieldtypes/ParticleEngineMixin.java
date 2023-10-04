@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.mixin.fieldtypes;
 
-import dev.su5ed.sinytra.connector.mod.compat.RedirectingInt2ObjectMap;
+import dev.su5ed.sinytra.connector.mod.compat.fieldtypes.RedirectingInt2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.particle.ParticleProvider;

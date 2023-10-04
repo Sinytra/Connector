@@ -25,54 +25,51 @@ import java.util.Map;
 import java.util.Objects;
 
 public class FieldToMethodTransformer implements Transformer {
-    public static final Map<String, Map<String, String>> REPLACEMENTS;
-
-    static {
-        ImmutableMap.Builder<String, Map<String, String>> builder = ImmutableMap.builder();
+    public static final Map<String, Map<String, String>> REPLACEMENTS = ImmutableMap.<String, Map<String, String>>builder()
         // Extracted from forge's coremods/field_to_method.js
-        builder.put("net.minecraft.world.level.biome.Biome", Map.of(
-                "f_47437_", "getModifiedClimateSettings",
-                "f_47443_", "getModifiedSpecialEffects"
-        ));
-        builder.put("net.minecraft.world.level.levelgen.structure.Structure", Map.of(
-                "f_226555_", "getModifiedStructureSettings"
-        ));
-        builder.put("net.minecraft.world.effect.MobEffectInstance", Map.of(
-                "f_19502_", "m_19544_"
-        ));
-        builder.put("net.minecraft.world.level.block.LiquidBlock", Map.of(
-                "f_54689_", "getFluid"
-        ));
-        builder.put("net.minecraft.world.item.BucketItem", Map.of(
-                "f_40687_", "getFluid"
-        ));
-        builder.put("net.minecraft.world.level.block.StairBlock", Map.of(
-                "f_56858_", "getModelBlock",
-                "f_56859_", "getModelState"
-        ));
-        builder.put("net.minecraft.world.level.block.FlowerPotBlock", Map.of(
-                "f_53525_", "m_53560_"
-        ));
-        builder.put("net.minecraft.world.item.ItemStack", Map.of(
-                "f_41589_", "m_41720_"
-                ));
+        .put("net.minecraft.world.level.biome.Biome", Map.of(
+            "f_47437_", "getModifiedClimateSettings",
+            "f_47443_", "getModifiedSpecialEffects"
+        ))
+        .put("net.minecraft.world.level.levelgen.structure.Structure", Map.of(
+            "f_226555_", "getModifiedStructureSettings"
+        ))
+        .put("net.minecraft.world.effect.MobEffectInstance", Map.of(
+            "f_19502_", "m_19544_"
+        ))
+        .put("net.minecraft.world.level.block.LiquidBlock", Map.of(
+            "f_54689_", "getFluid"
+        ))
+        .put("net.minecraft.world.item.BucketItem", Map.of(
+            "f_40687_", "getFluid"
+        ))
+        .put("net.minecraft.world.level.block.StairBlock", Map.of(
+            "f_56858_", "getModelBlock",
+            "f_56859_", "getModelState"
+        ))
+        .put("net.minecraft.world.level.block.FlowerPotBlock", Map.of(
+            "f_53525_", "m_53560_"
+        ))
+        .put("net.minecraft.world.item.ItemStack", Map.of(
+            "f_41589_", "m_41720_"
+        ))
         // Additional fields that forge replaces with getters via patches statically
-        builder.put("net.minecraft.world.item.MobBucketItem", Map.of(
-                "f_151134_", "getFishType",
-                "f_151135_", "getEmptySound"
-        ));
+        .put("net.minecraft.world.item.MobBucketItem", Map.of(
+            "f_151134_", "getFishType",
+            "f_151135_", "getEmptySound"
+        ))
         // Custom getters added by Connector
-        builder.put("net.minecraft.client.particle.ParticleEngine", Map.of(
-                "f_107293_", "connector$getProviders"
-        ));
-        builder.put("net.minecraft.client.color.block.BlockColors", Map.of(
-                "f_92571_",  "connector$getBlockColors"
-        ));
-        builder.put("net.minecraft.client.color.item.ItemColors", Map.of(
-                "f_92674_",  "connector$getItemColors"
-        ));
-        REPLACEMENTS = builder.buildOrThrow();
-    }
+        .put("net.minecraft.client.particle.ParticleEngine", Map.of(
+            "f_107293_", "connector$getProviders"
+        ))
+        .put("net.minecraft.client.color.block.BlockColors", Map.of(
+            "f_92571_", "connector$getBlockColors"
+        ))
+        .put("net.minecraft.client.color.item.ItemColors", Map.of(
+            "f_92674_", "connector$getItemColors"
+        ))
+        .buildOrThrow();
+
     private static final Logger LOGGER = LogUtils.getLogger();
     private final String accessWidenerResource;
     private final Map<String, String> mappedReplacements;

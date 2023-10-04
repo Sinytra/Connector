@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.mod.compat;
+package dev.su5ed.sinytra.connector.mod.compat.fieldtypes;
 
 import net.minecraft.core.IdMapper;
 import org.jetbrains.annotations.NotNull;

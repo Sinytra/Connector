@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.mod.compat;
+package dev.su5ed.sinytra.connector.mod.compat.fieldtypes;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;

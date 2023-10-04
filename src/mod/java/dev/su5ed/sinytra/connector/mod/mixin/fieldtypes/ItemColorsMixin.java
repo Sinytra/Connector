@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.mixin.fieldtypes;
 
-import dev.su5ed.sinytra.connector.mod.compat.RedirectingIdMapper;
+import dev.su5ed.sinytra.connector.mod.compat.fieldtypes.RedirectingIdMapper;
 import net.minecraft.client.color.item.ItemColor;
 import net.minecraft.client.color.item.ItemColors;
 import net.minecraft.core.Holder;

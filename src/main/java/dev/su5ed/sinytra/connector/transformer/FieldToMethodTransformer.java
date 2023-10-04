@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public class FieldToMethodTransformer implements Transformer {
-    private static final Map<String, Map<String, String>> REPLACEMENTS;
+    public static final Map<String, Map<String, String>> REPLACEMENTS;
 
     static {
         ImmutableMap.Builder<String, Map<String, String>> builder = ImmutableMap.builder();

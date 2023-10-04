@@ -12,6 +12,7 @@ import dev.su5ed.sinytra.adapter.patch.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.MixinClassGenerator;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
+import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTypePatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
@@ -48,6 +49,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
+
+import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowConsumer;
 
 public class MixinPatchTransformer implements Transformer {
     private static final List<Patch> PATCHES = List.of(
@@ -63,6 +67,33 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("main([Ljava/lang/String;)V")
             .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
+            .build(),
+        Patch.interfaceBuilder()
+            .targetClass("net/minecraft/world/item/alchemy/PotionBrewing$Mix")
+            .targetField("f_43532_")
+            .modifyValue("connector$from")
+            .build(),
+        Patch.interfaceBuilder()
+            .targetClass("net/minecraft/world/item/alchemy/PotionBrewing$Mix")
+            .targetField("f_43534_")
+            .modifyValue("connector$to")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/entity/player/Player")
+            .targetMethod("m_6728_")
+            .targetInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;m_213824_()Z")
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canDisableShield(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/entity/LivingEntity;)Z")
+            .modifyParams(builder -> builder
+                .insert(0, Type.getObjectType("net/minecraft/world/item/ItemStack"))
+                .insert(1, Type.getObjectType("net/minecraft/world/item/ItemStack"))
+                .insert(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
+                .targetType(ModifyMethodParams.TargetType.INJECTION_POINT))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/item/MilkBucketItem")
+            .targetMethod("m_5922_")
+            .targetInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;m_21219_()Z")
+            .modifyInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;curePotionEffects(Lnet/minecraft/world/item/ItemStack;)Z")
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
@@ -118,6 +149,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/item/BoneMealItem")
+            .targetMethod("m_40627_")
+            .modifyTarget("applyBonemeal(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;)Z")
+            .modifyParams(builder -> builder.insert(3, Type.getObjectType("net/minecraft/world/entity/player/Player")))
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/renderer/ShaderInstance")
             .targetMethod("<init>")
             .targetInjectionPoint("Lnet/minecraft/resources/ResourceLocation;<init>(Ljava/lang/String;)V")
@@ -163,6 +200,16 @@ public class MixinPatchTransformer implements Transformer {
                 "Lnet/minecraft/world/level/block/FireBlock;m_221150_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;I)V",
                 "Lnet/minecraft/world/level/block/FireBlock;tryCatchFire(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V",
                 (insn, list) -> list.insertBefore(insn, new FieldInsnNode(Opcodes.GETSTATIC, "net/minecraft/core/Direction", "NORTH", "Lnet/minecraft/core/Direction;")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/level/block/FireBlock")
+            .targetMethod("m_221150_")
+            .modifyTarget("tryCatchFire")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/level/block/FireBlock")
+            .targetInjectionPoint("Lnet/minecraft/world/level/block/FireBlock;m_221150_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;I)V")
+            .modifyInjectionPoint("Lnet/minecraft/world/level/block/FireBlock;tryCatchFire(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V")
             .build(),
         // Move HUD rendering calls at Options.renderDebug to a lambda in Forge's vanilla gui overlay enum class
         Patch.builder()
@@ -339,6 +386,9 @@ public class MixinPatchTransformer implements Transformer {
             .build(),
         Patch.builder()
             .transform(new DynamicLVTPatch(JarTransformer::getLvtOffsetsData))
+            .build(),
+        Patch.builder()
+            .transform(new DynamicAnonymousShadowFieldTypePatch())
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
@@ -352,46 +402,71 @@ public class MixinPatchTransformer implements Transformer {
     private final PatchEnvironment environment;
     private final List<? extends Patch> patches;
 
-    public MixinPatchTransformer(Set<String> mixinPackages, Map<String, Map<String, String>> environment, List<? extends Patch> adapterPatches) {
+    public MixinPatchTransformer(Set<String> mixinPackages, PatchEnvironment environment, List<? extends Patch> adapterPatches) {
         this.mixinPackages = mixinPackages;
-        this.environment = new PatchEnvironment(environment);
+        this.environment = environment;
         this.patches = ImmutableList.<Patch>builder().addAll(adapterPatches).addAll(PATCHES).build();
     }
 
-    public void finalize(Path zipRoot, Collection<String> configs, SrgRemappingReferenceMapper.SimpleRefmap refmap) {
+    public void finalize(Path zipRoot, Collection<String> configs, SrgRemappingReferenceMapper.SimpleRefmap refmap) throws IOException {
         Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.getClassGenerator().getGeneratedMixinClasses();
-        if (generatedMixinClasses.isEmpty()) {
-            return;
-        }
-        for (String config : configs) {
-            Path entry = zipRoot.resolve(config);
-            if (Files.exists(entry)) {
-                try (Reader reader = Files.newBufferedReader(entry)) {
-                    JsonElement element = JsonParser.parseReader(reader);
-                    JsonObject json = element.getAsJsonObject();
-                    if (json.has("package")) {
-                        String pkg = json.get("package").getAsString();
-                        Map<String, MixinClassGenerator.GeneratedClass> mixins = getMixinsInPackage(pkg, generatedMixinClasses);
-                        if (!mixins.isEmpty()) {
-                            JsonArray jsonMixins = json.has("mixins") ? json.get("mixins").getAsJsonArray() : new JsonArray();
-                            LOGGER.info("Adding {} mixins to config {}", mixins.size(), config);
-                            mixins.keySet().forEach(jsonMixins::add);
-                            json.add("mixins", jsonMixins);
+        if (!generatedMixinClasses.isEmpty()) {
+            for (String config : configs) {
+                Path entry = zipRoot.resolve(config);
+                if (Files.exists(entry)) {
+                    try (Reader reader = Files.newBufferedReader(entry)) {
+                        JsonElement element = JsonParser.parseReader(reader);
+                        JsonObject json = element.getAsJsonObject();
+                        if (json.has("package")) {
+                            String pkg = json.get("package").getAsString();
+                            Map<String, MixinClassGenerator.GeneratedClass> mixins = getMixinsInPackage(pkg, generatedMixinClasses);
+                            if (!mixins.isEmpty()) {
+                                JsonArray jsonMixins = json.has("mixins") ? json.get("mixins").getAsJsonArray() : new JsonArray();
+                                LOGGER.info("Adding {} mixins to config {}", mixins.size(), config);
+                                mixins.keySet().forEach(jsonMixins::add);
+                                json.add("mixins", jsonMixins);
 
-                            String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
-                            Files.writeString(entry, output, StandardCharsets.UTF_8);
+                                String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
+                                Files.writeString(entry, output, StandardCharsets.UTF_8);
 
-                            // Update refmap
-                            if (json.has("refmap")) {
-                                for (MixinClassGenerator.GeneratedClass generatedClass : mixins.values()) {
-                                    moveRefmapMappings(generatedClass.originalName(), generatedClass.generatedName(), json.get("refmap").getAsString(), zipRoot, refmap);
+                                // Update refmap
+                                if (json.has("refmap")) {
+                                    for (MixinClassGenerator.GeneratedClass generatedClass : mixins.values()) {
+                                        moveRefmapMappings(generatedClass.originalName(), generatedClass.generatedName(), json.get("refmap").getAsString(), zipRoot, refmap);
+                                    }
                                 }
                             }
                         }
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
                     }
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
                 }
+            }
+        }
+        // Strip unused service providers
+        Path services = zipRoot.resolve("META-INF/services");
+        if (Files.exists(services)) {
+            try (Stream<Path> stream = Files.walk(services)) {
+                stream
+                    .filter(Files::isRegularFile)
+                    .forEach(rethrowConsumer(path -> {
+                        String serviceName = path.getFileName().toString();
+                        List<String> providers = Files.readAllLines(path);
+                        List<String> existingProviders = providers.stream()
+                            .filter(cls -> Files.exists(zipRoot.resolve(cls.replace('.', '/') + ".class")))
+                            .toList();
+                        int diff = providers.size() - existingProviders.size();
+                        if (diff > 0) {
+                            LOGGER.debug("Removing {} nonexistent service providers for service {}", diff, serviceName);
+                            if (existingProviders.isEmpty()) {
+                                Files.delete(path);
+                            }
+                            else {
+                                String newText = String.join("\n", existingProviders);
+                                Files.writeString(path, newText, StandardCharsets.UTF_8);
+                            }
+                        }
+                    }));
             }
         }
     }
@@ -453,7 +528,7 @@ public class MixinPatchTransformer implements Transformer {
         reader.accept(node, 0);
 
         for (ClassTransform transform : CLASS_TRANSFORMS) {
-            patchResult = patchResult.or(transform.apply(node));
+            patchResult = patchResult.or(transform.apply(node, null, this.environment));
         }
 
         if (isInMixinPackage(className)) {

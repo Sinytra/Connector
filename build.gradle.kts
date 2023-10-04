@@ -131,6 +131,8 @@ val remappedDepsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     relocate("net.minecraftforge.fart", "reloc.net.minecraftforge.fart")
     relocate("net.minecraftforge.srgutils", "reloc.net.minecraftforge.srgutils")
     relocate("net.fabricmc.accesswidener", "reloc.net.fabricmc.accesswidener")
+    relocate("org.sat4j", "reloc.org.sat4j")
+    relocate("net.bytebuddy", "reloc.net.bytebuddy")
     archiveClassifier.set("deps-reloc")
 }
 val fullJar: Jar by tasks.creating(Jar::class) {

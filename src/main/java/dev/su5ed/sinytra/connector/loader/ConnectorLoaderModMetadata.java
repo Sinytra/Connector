@@ -28,6 +28,7 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
 
     private final LoaderModMetadata wrapped;
     private final String normalModid;
+    private List<ModDependency> dependencies;
 
     public ConnectorLoaderModMetadata(LoaderModMetadata wrapped) {
         this.wrapped = wrapped;
@@ -35,6 +36,8 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
         String replaced = this.wrapped.getId().replace('-', '_');
         // If modid is amongst reserved keywords, add a suffix
         this.normalModid = ConnectorUtil.isJavaReservedKeyword(replaced) ? replaced + NORMALIZER_SUFFIX : replaced;
+        // Apply global dependency overrides to mods
+        this.dependencies = ConnectorUtil.applyGlobalDependencyOverrides(this.wrapped.getDependencies());
     }
 
     /**
@@ -113,6 +116,7 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
     @Override
     public void setDependencies(Collection<ModDependency> dependencies) {
         this.wrapped.setDependencies(dependencies);
+        this.dependencies = ConnectorUtil.applyGlobalDependencyOverrides(this.wrapped.getDependencies());
     }
 
     @Override
@@ -147,7 +151,7 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
 
     @Override
     public Collection<ModDependency> getDependencies() {
-        return this.wrapped.getDependencies();
+        return this.dependencies;
     }
 
     @Override

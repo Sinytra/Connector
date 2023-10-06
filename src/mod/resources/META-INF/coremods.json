@@ -1,4 +1,5 @@
 {
   "injectCreativeModeTabCtr": "META-INF/asm/injectCreativeModeTabCtr.js",
-  "injectFabricASM": "META-INF/asm/injectFabricASM.js"
+  "injectFabricASM": "META-INF/asm/injectFabricASM.js",
+  "updateItemUseStartTreshold": "META-INF/asm/updateItemUseStartTreshold.js"
 }

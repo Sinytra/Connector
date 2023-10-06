@@ -49,9 +49,6 @@ public class ConnectorLoader {
         try {
             loading = true;
 
-            // Unfreeze registries
-            unfreezeRegistries();
-
             // Invoke entry points
             EntrypointUtils.invoke("main", ModInitializer.class, ModInitializer::onInitialize);
             if (FMLEnvironment.dist == Dist.CLIENT) {
@@ -70,7 +67,7 @@ public class ConnectorLoader {
     }
 
     @SuppressWarnings("deprecation")
-    private static void unfreezeRegistries() {
+    public static void unfreezeRegistries() {
         ((MappedRegistry<?>) BuiltInRegistries.REGISTRY).unfreeze();
         for (Registry<?> registry : BuiltInRegistries.REGISTRY) {
             ((MappedRegistry<?>) registry).unfreeze();

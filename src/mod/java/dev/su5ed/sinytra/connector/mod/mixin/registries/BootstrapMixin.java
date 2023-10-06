@@ -16,17 +16,21 @@
 
 package dev.su5ed.sinytra.connector.mod.mixin.registries;
 
+import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
 import net.minecraft.server.Bootstrap;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Bootstrap.class)
 public abstract class BootstrapMixin {
-    @Redirect(method = "bootStrap", at = @At(value = "INVOKE", target = "Lnet/minecraft/core/registries/BuiltInRegistries;bootStrap()V"))
-    private static void initialize() {
-        // Skip freeze and validation
-        BuiltInRegistriesAccessor.callCreateContents();
+    @Inject(method = "bootStrap", at = @At(value = "INVOKE", target = "Lnet/minecraft/core/registries/BuiltInRegistries;bootStrap()V", shift = At.Shift.AFTER))
+    private static void initialize(CallbackInfo ci) {
+        // Unfreeze registries before mod load
+        // We let the get frozen first as some forge mods may rely on registering their contents in the BuiltInRegistries.freeze() method
+        ConnectorLoader.unfreezeRegistries();
     }
 
     @Redirect(method = "bootStrap", at = @At(value = "INVOKE", target = "Lnet/minecraftforge/registries/GameData;vanillaSnapshot()V", remap = false))

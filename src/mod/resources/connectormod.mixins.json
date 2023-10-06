@@ -20,7 +20,6 @@
     "network.NetworkFiltersMixin",
     "tags.TagEntryAccessor",
     "tags.TagLoaderMixin",
-    "registries.BuiltInRegistriesAccessor",
     "registries.BootstrapMixin",
     "registries.ForgeRegistryMixin",
     "registries.RegistryDataLoaderMixin"

@@ -1,5 +1,7 @@
 package dev.su5ed.sinytra.connector;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -107,7 +109,7 @@ public final class ConnectorUtil {
     );
     // Common aliased mod dependencies that don't work with forge ports, which use a different modid.
     // They're too annoying to override individually in each mod, so we provide this small QoL feature for the user's comfort
-    private static final Map<String, String> GLOBAL_DEPENDENCY_OVERRIDES = Map.of(
+    private static final BiMap<String, String> GLOBAL_DEPENDENCY_OVERRIDES = ImmutableBiMap.of(
         "cloth-config2", "cloth_config"
     );
 
@@ -189,6 +191,10 @@ public final class ConnectorUtil {
                 return dependency;
             })
             .toList();
+    }
+
+    public static Map<String, String> getReverseAliases() {
+        return GLOBAL_DEPENDENCY_OVERRIDES.inverse();
     }
 
     @FunctionalInterface

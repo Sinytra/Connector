@@ -8,4 +8,6 @@ public interface GuiExtensions {
     void connector_postRender(GuiGraphics guiGraphics, float tickDelta);
 
     void connector_renderFood(GuiGraphics guiGraphics);
+
+    void connector_renderHotbar(GuiGraphics guiGraphics, float tickDelta);
 }

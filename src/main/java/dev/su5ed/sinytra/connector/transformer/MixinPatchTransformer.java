@@ -96,25 +96,6 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;curePotionEffects(Lnet/minecraft/world/item/ItemStack;)Z")
             .build(),
         Patch.builder()
-            .targetClass("net/minecraft/client/gui/Gui")
-            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
-            .targetInjectionPoint("HEAD", "")
-            .modifyTarget("connector_preRender")
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/gui/Gui")
-            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
-            .targetInjectionPoint("RETURN", "")
-            .modifyTarget("connector_postRender")
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/gui/Gui")
-            .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
-            .targetInjectionPoint("Lnet/minecraft/util/profiling/ProfilerFiller;m_6182_(Ljava/lang/String;)V")
-            .modifyTarget("connector_renderFood")
-            .modifyInjectionPoint("HEAD", "")
-            .build(),
-        Patch.builder()
             .targetClass("net/minecraft/world/entity/Entity")
             .targetMethod("changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraftforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;")
             .targetInjectionPoint("Lnet/minecraft/server/level/ServerLevel;m_8617_(Lnet/minecraft/server/level/ServerLevel;)V")
@@ -224,6 +205,32 @@ public class MixinPatchTransformer implements Transformer {
                 .insert(3, Type.INT_TYPE)
                 .insert(4, Type.INT_TYPE))
             .modifyTargetClasses(classes -> classes.add(Type.getObjectType("net/minecraftforge/client/gui/overlay/VanillaGuiOverlay")))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
+            .targetInjectionPoint("HEAD", "")
+            .modifyTarget("connector_preRender")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
+            .targetInjectionPoint("RETURN", "")
+            .modifyTarget("connector_postRender")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .targetInjectionPoint("Lnet/minecraft/util/profiling/ProfilerFiller;m_6182_(Ljava/lang/String;)V")
+            .modifyTarget("connector_renderFood")
+            .modifyInjectionPoint("HEAD", "")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_280518_(FLnet/minecraft/client/gui/GuiGraphics;)V")
+            .modifyTarget("connector_renderHotbar")
+            .modifyInjectionPoint("HEAD", "")
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/entity/player/Player")

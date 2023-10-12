@@ -1,9 +1,9 @@
 package dev.su5ed.sinytra.connector.transformer;
 
-import dev.su5ed.sinytra.adapter.patch.AnnotationValueHandle;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchContext;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
+import dev.su5ed.sinytra.adapter.patch.selector.MethodContext;
 import dev.su5ed.sinytra.connector.transformer.patch.RedirectAccessorToMethod;
 import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.Transformer;
@@ -11,7 +11,6 @@ import net.minecraftforge.srgutils.IMappingFile;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -38,7 +37,7 @@ public class AccessorRedirectTransformer implements Transformer {
                 .targetClass(entry.getKey().replace('.', '/'))
                 .targetField(ASMAPI.mapField(redirect.getKey()))
                 .transform(new RedirectAccessorToMethod(redirect.getValue()))
-                .transform((classNode, methodNode, annotationNode, map, patchContext) -> {
+                .transform((classNode, methodNode, methodContext, patchContext) -> {
                     methodNode.name = PREFIX + methodNode.name;
                     return Patch.Result.APPLY;
                 })
@@ -119,7 +118,7 @@ public class AccessorRedirectTransformer implements Transformer {
         }
     }
 
-    private Patch.Result analyzeAccessor(ClassNode classNode, MethodNode methodNode, AnnotationNode annotation, Map<String, AnnotationValueHandle<?>> annotationValues, PatchContext context) {
+    private Patch.Result analyzeAccessor(ClassNode classNode, MethodNode methodNode, MethodContext methodContext, PatchContext context) {
         this.methodRenames.computeIfAbsent(classNode.name, s -> new HashMap<>())
             .put(methodNode.name + methodNode.desc, PREFIX + methodNode.name);
         return Patch.Result.PASS;

@@ -376,7 +376,7 @@ public class MixinPatchTransformer implements Transformer {
                         list.insert(insn, new TypeInsnNode(Opcodes.CHECKCAST, "net/minecraft/client/model/HumanoidModel"));
                     }
                 }))
-            .transform((classNode, methodNode, annotation, annotationValues, context) -> {
+            .transform((classNode, methodNode, methodContext, context) -> {
                 methodNode.desc = "(Lnet/minecraft/client/model/Model;)Lnet/minecraft/client/model/Model;";
                 methodNode.signature = null;
                 InsnList insns = new InsnList();

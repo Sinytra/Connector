@@ -71,6 +71,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                 ClassRemapper remapper = new EnhancedClassRemapper(writer, this.remapper, null);
                 MixinTargetAnalyzer analyzer = new MixinTargetAnalyzer(Opcodes.ASM9, remapper);
                 reader.accept(analyzer, ClassReader.SKIP_CODE);
+                analyzer.targets.remove(cls);
 
                 byte[] remapped = writer.toByteArray();
                 IClassInfo info = new ClassProviderImpl.ClassInfo(remapped);

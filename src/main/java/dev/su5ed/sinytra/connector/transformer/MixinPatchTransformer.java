@@ -17,6 +17,7 @@ import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
+import dev.su5ed.sinytra.connector.transformer.patch.AdvancedModifyInjectionPoint;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
@@ -297,6 +298,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyParams(builder -> builder.insert(1, Type.getObjectType("net/minecraft/world/item/context/UseOnContext")))
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/item/AxeItem")
+            .targetMethod("m_6225_")
+            .targetInjectionPoint("INVOKE", "Ljava/util/Optional;isPresent()Z")
+            .transform(new AdvancedModifyInjectionPoint("INVOKE", "Ljava/util/Optional;isPresent()Z", 3))
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen")
             .targetMethod("m_280113_")
             .targetInjectionPoint("Lcom/google/common/collect/Ordering;sortedCopy(Ljava/lang/Iterable;)Ljava/util/List;")
@@ -328,6 +335,18 @@ public class MixinPatchTransformer implements Transformer {
             .targetMixinType(Patch.REDIRECT)
             .disable()
             .build(),
+        // not exactly sure how to patch this part
+        /*Patch.builder()
+            .targetClass("net/minecraft/client/renderer/block/LiquidBlockRenderer")
+            .targetMethod("m_228796_")
+            .targetInjectionPoint("Lnet/minecraft/client/renderer/block/LiquidBlockRender;m_228797_(Lcom/mojang/blaze3d/vertex/VertexConsumer;;DDDFFFFFI)")
+            .modifyInjectionPoint(null, "Lnet/minecraft/client/renderer/block/LiquidBlockRender;m_228797_(Lcom/mojang/blaze3d/vertex/VertexConsumer;;DDDFFFFFFI)", false)
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/block/LiquidBlockRenderer")
+            .targetMethod("m_228797_")
+            .modifyParams(builder -> builder.insert(7, Type.FLOAT_TYPE))
+            .build(),*/
         // Move arg modifier to the forge method, which replaces all usages of the vanilla one
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")

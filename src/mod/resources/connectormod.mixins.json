@@ -30,7 +30,6 @@
     "ItemBlockRenderTypesMixin",
     "ItemOverridesMixin",
     "ForgeHooksClientMixin",
-    "ModListScreenMixin",
     "hud.ForgeGuiMixin",
     "hud.GuiMixin",
     "boot.MinecraftMixin",

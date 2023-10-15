@@ -7,8 +7,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import cpw.mods.modlauncher.api.ServiceRunner;
 import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
-import net.fabricmc.loader.api.metadata.ModDependency;
-import net.fabricmc.loader.impl.metadata.ModDependencyImpl;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.io.IOException;
@@ -16,12 +14,8 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
-
-import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
 public final class ConnectorUtil {
     public static final String MIXIN_CONFIGS_ATTRIBUTE = "MixinConfigs";
@@ -109,8 +103,8 @@ public final class ConnectorUtil {
     );
     // Common aliased mod dependencies that don't work with forge ports, which use a different modid.
     // They're too annoying to override individually in each mod, so we provide this small QoL feature for the user's comfort
-    private static final BiMap<String, String> GLOBAL_DEPENDENCY_OVERRIDES = ImmutableBiMap.of(
-        "cloth-config2", "cloth_config"
+    public static final BiMap<String, String> GLOBAL_MOD_ALIASES = ImmutableBiMap.of(
+        "cloth_config", "cloth-config2"
     );
 
     private static final boolean CACHE_ENABLED;
@@ -177,24 +171,6 @@ public final class ConnectorUtil {
 
     public static String stripColor(String str) {
         return str != null ? STRIP_COLOR_PATTERN.matcher(str).replaceAll("") : null;
-    }
-
-    public static List<ModDependency> applyGlobalDependencyOverrides(Collection<ModDependency> dependencies) {
-        return dependencies.stream()
-            .map(dependency -> {
-                for (Map.Entry<String, String> entry : GLOBAL_DEPENDENCY_OVERRIDES.entrySet()) {
-                    String key = entry.getKey();
-                    if (dependency.getKind() == ModDependency.Kind.DEPENDS && dependency.getModId().equals(key)) {
-                        return uncheck(() -> new ModDependencyImpl(ModDependency.Kind.DEPENDS, entry.getValue(), List.of("*")));
-                    }
-                }
-                return dependency;
-            })
-            .toList();
-    }
-
-    public static Map<String, String> getReverseAliases() {
-        return GLOBAL_DEPENDENCY_OVERRIDES.inverse();
     }
 
     @FunctionalInterface

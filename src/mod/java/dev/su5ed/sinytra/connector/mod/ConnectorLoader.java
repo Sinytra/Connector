@@ -6,8 +6,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.impl.entrypoint.EntrypointUtils;
-import net.minecraft.core.MappedRegistry;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.loading.FMLEnvironment;
@@ -58,19 +56,14 @@ public class ConnectorLoader {
                 EntrypointUtils.invoke("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
             }
 
+            // Freeze registries
+            BuiltInRegistries.bootStrap();
+
             loading = false;
             finishedLoading = true;
         } catch (Throwable t) {
             throw ConnectorEarlyLoader.createGenericLoadingException(t, "Encountered error during early mod loading");
         }
         progress.complete();
-    }
-
-    @SuppressWarnings("deprecation")
-    public static void unfreezeRegistries() {
-        ((MappedRegistry<?>) BuiltInRegistries.REGISTRY).unfreeze();
-        for (Registry<?> registry : BuiltInRegistries.REGISTRY) {
-            ((MappedRegistry<?>) registry).unfreeze();
-        }
     }
 }

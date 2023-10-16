@@ -3,7 +3,6 @@ package dev.su5ed.sinytra.connector.mod.compat;
 import com.google.common.base.Stopwatch;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
-import dev.su5ed.sinytra.connector.mod.mixin.tags.TagEntryAccessor;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagEntry;
 import net.minecraft.tags.TagLoader;
@@ -50,7 +49,7 @@ public final class TagConverter {
                     if (isFabricTag(entryName)) {
                         ResourceLocation newEntryName = getNormalizedTagName(entryName.getPath(), existing);
                         if (!newName.equals(newEntryName)) {
-                            TagEntry newEntry = TagEntryAccessor.create(newEntryName, tagEntry.entry().isTag(), tagEntry.entry().isRequired());
+                            TagEntry newEntry = new TagEntry(newEntryName, tagEntry.entry().isTag(), tagEntry.entry().isRequired());
                             newEntries.add(new TagLoader.EntryWithSource(newEntry, tagEntry.source()));
                         }
                     }

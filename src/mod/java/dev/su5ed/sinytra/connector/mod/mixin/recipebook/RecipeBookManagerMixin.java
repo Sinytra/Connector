@@ -11,7 +11,6 @@ import java.util.*;
 
 @Mixin(value = RecipeBookManager.class, remap = false)
 public class RecipeBookManagerMixin {
-    @Mutable
     @Shadow
     @Final
     private static Map<RecipeBookCategories, List<RecipeBookCategories>> AGGREGATE_CATEGORIES;

@@ -335,18 +335,6 @@ public class MixinPatchTransformer implements Transformer {
             .targetMixinType(Patch.REDIRECT)
             .disable()
             .build(),
-        // not exactly sure how to patch this part
-        /*Patch.builder()
-            .targetClass("net/minecraft/client/renderer/block/LiquidBlockRenderer")
-            .targetMethod("m_228796_")
-            .targetInjectionPoint("Lnet/minecraft/client/renderer/block/LiquidBlockRender;m_228797_(Lcom/mojang/blaze3d/vertex/VertexConsumer;;DDDFFFFFI)")
-            .modifyInjectionPoint(null, "Lnet/minecraft/client/renderer/block/LiquidBlockRender;m_228797_(Lcom/mojang/blaze3d/vertex/VertexConsumer;;DDDFFFFFFI)", false)
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/renderer/block/LiquidBlockRenderer")
-            .targetMethod("m_228797_")
-            .modifyParams(builder -> builder.insert(7, Type.FLOAT_TYPE))
-            .build(),*/
         // Move arg modifier to the forge method, which replaces all usages of the vanilla one
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")

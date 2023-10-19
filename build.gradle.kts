@@ -16,6 +16,7 @@ plugins {
     id("org.spongepowered.mixin") version "0.7.+"
     id("me.modmuss50.mod-publish-plugin") version "0.3.+"
     id("net.neoforged.gradleutils") version "2.0.+"
+    id("org.parchmentmc.librarian.forgegradle") version "1.+"
 }
 
 val versionConnector: String by project
@@ -203,7 +204,7 @@ sourceSets {
 
 println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty("java.vm.version")} (${System.getProperty("java.vendor")}), Arch: ${System.getProperty("os.arch")}")
 minecraft {
-    mappings("official", versionMc)
+    mappings("parchment", "2023.06.26-1.20.1")
     accessTransformer(file("src/mod/resources/META-INF/accesstransformer.cfg"))
 
     runs {

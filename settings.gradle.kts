@@ -21,6 +21,10 @@ pluginManagement {
             name = "NeoForged"
             url = uri("https://maven.neoforged.net")
         }
+        maven {
+            name = "Parchment"
+            url = uri("https://maven.parchmentmc.org")
+        }
     }
 
     plugins {

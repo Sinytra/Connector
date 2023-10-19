@@ -95,8 +95,6 @@ public class ConnectorEarlyLoader {
             }
             // Propagate mods to fabric
             FabricLoaderImpl.INSTANCE.addFmlMods(mods);
-            // Add global mod aliases
-            FabricLoaderImpl.INSTANCE.aliasMods(ConnectorUtil.GLOBAL_MOD_ALIASES);
             // Setup fabric loader state
             FabricLoaderImpl.INSTANCE.setup();
             // Invoke prelaunch entrypoint

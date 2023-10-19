@@ -259,7 +259,8 @@ dependencies {
     shade(group = "io.github.steelwoolmc", name = "mixin-transmogrifier", version = versionMixinTransmog)
     adapterData(group = "dev.su5ed.sinytra.adapter", name = "adapter", version = versionAdapter)
 
-    annotationProcessor(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = versionMixin)
+    compileOnly(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
+    annotationProcessor(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))
 

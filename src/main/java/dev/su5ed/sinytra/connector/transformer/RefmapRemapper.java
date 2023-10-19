@@ -5,6 +5,7 @@ import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
 import org.slf4j.Logger;
+import org.spongepowered.asm.util.Constants;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -109,7 +110,7 @@ public class RefmapRemapper implements Transformer {
     }
 
     private ManifestEntry modifyManifest(Manifest manifest, long time) {
-        manifest.getMainAttributes().putValue(ConnectorUtil.MIXIN_CONFIGS_ATTRIBUTE, String.join(",", this.configs));
+        manifest.getMainAttributes().putValue(Constants.ManifestAttributes.MIXINCONFIGS, String.join(",", this.configs));
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             manifest.write(byteStream);
             return ManifestEntry.create(time, byteStream.toByteArray());

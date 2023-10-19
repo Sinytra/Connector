@@ -1,7 +1,7 @@
 package dev.su5ed.sinytra.connector;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -18,7 +18,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 public final class ConnectorUtil {
-    public static final String MIXIN_CONFIGS_ATTRIBUTE = "MixinConfigs";
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
     public static final String MODS_TOML = "META-INF/mods.toml";
     public static final String CONNECTOR_MARKER = "connector_transformed";
@@ -103,7 +102,7 @@ public final class ConnectorUtil {
     );
     // Common aliased mod dependencies that don't work with forge ports, which use a different modid.
     // They're too annoying to override individually in each mod, so we provide this small QoL feature for the user's comfort
-    public static final BiMap<String, String> GLOBAL_MOD_ALIASES = ImmutableBiMap.of(
+    public static final Multimap<String, String> GLOBAL_MOD_ALIASES = ImmutableMultimap.of(
         "cloth_config", "cloth-config2"
     );
 

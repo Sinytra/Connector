@@ -227,6 +227,13 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("HEAD", "")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_280523_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .modifyTarget("connector_renderEffects")
+            .modifyInjectionPoint("HEAD", "")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/entity/player/Player")
             .targetMethod("m_7909_(F)V")
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")

@@ -8,6 +8,7 @@ import com.google.gson.GsonBuilder;
 import cpw.mods.modlauncher.api.ServiceRunner;
 import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
 import net.minecraftforge.fml.loading.FMLPaths;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -113,25 +114,31 @@ public final class ConnectorUtil {
         CACHE_ENABLED = prop == null || prop.equals("true");
     }
 
-    public static CacheFile getCached(Path input, Path output) {
+    public static CacheFile getCached(@Nullable Path input, Path output) {
         if (CACHE_ENABLED) {
             Path inputCache = output.getParent().resolve(output.getFileName() + ".input");
             try {
-                byte[] bytes = Files.readAllBytes(input);
-                String cacheVersion = EmbeddedDependencies.getJarCacheVersion();
-                String checksum = cacheVersion + "," + Hashing.sha256().hashBytes(bytes);
-
-                if (Files.exists(inputCache) && Files.exists(output)) {
-                    String cached = Files.readString(inputCache);
-                    if (cached.equals(checksum)) {
-                        return new CacheFile(inputCache, checksum, true);
-                    }
-                    else {
-                        Files.delete(output);
-                        Files.delete(inputCache);
-                    }
+                String hash = EmbeddedDependencies.getJarCacheVersion();
+                if (input != null) {
+                    byte[] bytes = Files.readAllBytes(input);
+                    hash += "," + Hashing.sha256().hashBytes(bytes);
                 }
-                return new CacheFile(inputCache, checksum, false);
+
+                if (Files.exists(inputCache)) {
+                    if (Files.exists(output)) {
+                        String cached = Files.readString(inputCache);
+                        if (cached.equals(hash)) {
+                            return new CacheFile(inputCache, hash, true);
+                        }
+                        else {
+                            Files.delete(output);
+                            Files.delete(inputCache);
+                        }
+                    }
+                } else {
+                    Files.deleteIfExists(output);
+                }
+                return new CacheFile(inputCache, hash, false);
             } catch (Throwable t) {
                 throw new RuntimeException(t);
             }
@@ -139,7 +146,7 @@ public final class ConnectorUtil {
         return new CacheFile(null, null, false);
     }
 
-    public static void cache(Path input, Path output, ServiceRunner action) {
+    public static void cache(@Nullable Path input, Path output, ServiceRunner action) {
         CacheFile cacheFile = getCached(input, output);
         if (!cacheFile.isUpToDate()) {
             try {

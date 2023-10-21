@@ -6,7 +6,7 @@ import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
-import dev.su5ed.sinytra.connector.transformer.JarTransformer;
+import dev.su5ed.sinytra.connector.transformer.jar.JarTransformer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.metadata.ModMetadata;

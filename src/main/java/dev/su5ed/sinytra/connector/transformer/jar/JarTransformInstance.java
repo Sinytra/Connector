@@ -9,6 +9,8 @@ import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.serialization.PatchSerialization;
+import dev.su5ed.sinytra.adapter.patch.util.provider.ClassLookup;
+import dev.su5ed.sinytra.adapter.patch.util.provider.ZipClassLookup;
 import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
 import dev.su5ed.sinytra.connector.transformer.AccessWidenerTransformer;
 import dev.su5ed.sinytra.connector.transformer.AccessorRedirectTransformer;
@@ -24,6 +26,9 @@ import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Renamer;
 import net.minecraftforge.fart.api.Transformer;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.loading.FMLLoader;
+import net.minecraftforge.fml.loading.targets.CommonLaunchHandler;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.slf4j.Logger;
 
@@ -36,9 +41,12 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import java.util.zip.ZipFile;
 
+import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 import static dev.su5ed.sinytra.connector.transformer.jar.JarTransformer.*;
 
 public class JarTransformInstance {
@@ -51,6 +59,7 @@ public class JarTransformInstance {
     private final LVTOffsets lvtOffsetsData;
     private final BytecodeFixerUpperFrontend bfu;
     private final Transformer remappingTransformer;
+    private final ClassLookup cleanClassLookup;
 
     public JarTransformInstance(ClassProvider classProvider) {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
@@ -76,8 +85,8 @@ public class JarTransformInstance {
         }
 
         this.bfu = new BytecodeFixerUpperFrontend();
-
         this.remappingTransformer = OptimizedRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), IntermediateMapping.get(SOURCE_NAMESPACE));
+        this.cleanClassLookup = createCleanClassLookup();
     }
 
     public BytecodeFixerUpperFrontend getBfu() {
@@ -98,7 +107,7 @@ public class JarTransformInstance {
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
-        PatchEnvironment environment = new PatchEnvironment(refmap.merged().mappings);
+        PatchEnvironment environment = new PatchEnvironment(refmap.merged().mappings, this.cleanClassLookup);
         MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches, this.bfu.unwrap());
         RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.mixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
@@ -128,5 +137,24 @@ public class JarTransformInstance {
 
         stopwatch.stop();
         LOGGER.debug(TRANSFORM_MARKER, "Jar {} transformed in {} ms", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
+    }
+
+    private static ClassLookup createCleanClassLookup() {
+        if (FMLEnvironment.production) {
+            CommonLaunchHandler.LocatedPaths paths = FMLLoader.getLaunchHandler().getMinecraftPaths();
+            Path cleanPath = paths.minecraftPaths().stream()
+                .filter(path -> path.getFileName().toString().contains("-srg"))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Cannot find clean artifact path"));
+            ZipFile zipFile = uncheck(() -> new ZipFile(cleanPath.toFile()));
+            return new ZipClassLookup(zipFile);
+        }
+        else {
+            String path = Objects.requireNonNull(System.getProperty("connector.clean.path"), "Cannot find clean artifact path");
+            Path cleanPath = Path.of(path);
+            ClassProvider obfProvider = ClassProvider.fromPaths(cleanPath);
+            IMappingFile mapping = FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(OBF_NAMESPACE);
+            return new RenamingClassLookup(obfProvider, mapping);
+        }
     }
 }

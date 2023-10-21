@@ -53,7 +53,8 @@ public class BytecodeFixerUpperFrontend {
         Files.deleteIfExists(path);
         Attributes attributes = new Attributes();
         attributes.putValue("FMLModType", IModFile.Type.GAMELIBRARY.name());
-        this.bfu.getGenerator().save(path, attributes);
-        this.cacheFile.save();
+        if (this.bfu.getGenerator().save(path, attributes)) {
+            this.cacheFile.save();
+        }
     }
 }

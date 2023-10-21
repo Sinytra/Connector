@@ -1,5 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
+import net.minecraftforge.gradle.common.util.MavenArtifactDownloader
 import net.minecraftforge.gradle.common.util.RunConfig
 import net.minecraftforge.jarjar.metadata.*
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion
@@ -231,6 +232,16 @@ minecraft {
 
         create("client", config)
         create("server", config)
+    }
+}
+
+// Attach clean artifact path to runs
+val CLEAN_ARTIFACT = "net.minecraft:joined:%s:srg"
+afterEvaluate {
+    val mcpVersion = project.extra["MCP_VERSION"]
+    val cleanArtifactJar = MavenArtifactDownloader.generate(project, CLEAN_ARTIFACT.format(mcpVersion), true) ?: throw RuntimeException("Cannot find clean minecraft artifact")
+    minecraft.runs.configureEach { 
+        property("connector.clean.path", cleanArtifactJar)
     }
 }
 

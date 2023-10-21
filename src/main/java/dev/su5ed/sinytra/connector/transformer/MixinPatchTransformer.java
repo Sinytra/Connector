@@ -16,6 +16,7 @@ import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.fixes.BytecodeFixerUpper;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTypePatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInjectorOrdinalPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
@@ -405,9 +406,8 @@ public class MixinPatchTransformer implements Transformer {
             .add(
                 Patch.builder()
                     .transform(new DynamicLVTPatch(() -> lvtOffsets))
-                    .build(),
-                Patch.builder()
                     .transform(new DynamicAnonymousShadowFieldTypePatch())
+                    .transform(new DynamicInjectorOrdinalPatch())
                     .build(),
                 Patch.interfaceBuilder()
                     .transform(new FieldTypePatchTransformer(bfu))

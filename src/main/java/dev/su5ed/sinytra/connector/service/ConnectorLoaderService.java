@@ -8,6 +8,7 @@ import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.unsafe.UnsafeHacks;
 
@@ -26,7 +27,17 @@ public class ConnectorLoaderService implements ITransformationService {
     }
 
     @Override
-    public void initialize(IEnvironment environment) {}
+    public void initialize(IEnvironment environment) {
+        Runnable original = FMLLoader.progressWindowTick;
+        FMLLoader.progressWindowTick = () -> {
+            ConnectorEarlyLoader.setup();
+            FabricMixinBootstrap.init();
+            FabricASMFixer.injectMinecraftModuleReader();
+
+            FMLLoader.progressWindowTick = original;
+            original.run();
+        };
+    }
 
     @SuppressWarnings("unchecked")
     @Override

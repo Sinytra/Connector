@@ -4,7 +4,6 @@
   "refmap": "mixins.connectormod.refmap.json",
   "package": "dev.su5ed.sinytra.connector.mod.mixin",
   "compatibilityLevel": "JAVA_17",
-  "plugin": "dev.su5ed.sinytra.connector.mod.ConnectorBootstrap",
   "mixins": [
     "AttributeSupplierAccessor",
     "ForgeHooksMixin",

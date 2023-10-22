@@ -15,6 +15,7 @@ import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
 import dev.su5ed.sinytra.connector.transformer.AccessWidenerTransformer;
 import dev.su5ed.sinytra.connector.transformer.AccessorRedirectTransformer;
 import dev.su5ed.sinytra.connector.transformer.FieldToMethodTransformer;
+import dev.su5ed.sinytra.connector.transformer.JarSignatureStripper;
 import dev.su5ed.sinytra.connector.transformer.MixinPatchTransformer;
 import dev.su5ed.sinytra.connector.transformer.ModMetadataGenerator;
 import dev.su5ed.sinytra.connector.transformer.OptimizedRenamingTransformer;
@@ -111,6 +112,7 @@ public class JarTransformInstance {
         MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches, this.bfu.unwrap());
         RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.mixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
+            .add(new JarSignatureStripper())
             .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary))
             .add(accessorRedirectTransformer)
             .add(this.remappingTransformer)

@@ -240,7 +240,7 @@ val CLEAN_ARTIFACT = "net.minecraft:joined:%s:srg"
 afterEvaluate {
     val mcpVersion = project.extra["MCP_VERSION"]
     val cleanArtifactJar = MavenArtifactDownloader.generate(project, CLEAN_ARTIFACT.format(mcpVersion), true) ?: throw RuntimeException("Cannot find clean minecraft artifact")
-    minecraft.runs.configureEach { 
+    minecraft.runs.configureEach {
         property("connector.clean.path", cleanArtifactJar)
     }
 }

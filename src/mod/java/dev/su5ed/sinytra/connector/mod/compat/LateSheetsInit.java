@@ -1,6 +1,7 @@
 package dev.su5ed.sinytra.connector.mod.compat;
 
 import net.minecraft.client.renderer.Sheets;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.state.properties.WoodType;
 
 public class LateSheetsInit {
@@ -13,5 +14,8 @@ public class LateSheetsInit {
                 Sheets.HANGING_SIGN_MATERIALS.put(woodType, Sheets.createHangingSignMaterial(woodType));
             }
         });
+        BuiltInRegistries.DECORATED_POT_PATTERNS.registryKeySet().stream()
+            .filter(key -> !Sheets.DECORATED_POT_MATERIALS.containsKey(key))
+            .forEach(key -> Sheets.DECORATED_POT_MATERIALS.put(key, Sheets.createDecoratedPotMaterial(key)));
     }
 }

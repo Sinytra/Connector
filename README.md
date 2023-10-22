@@ -119,3 +119,35 @@ Here's a few tips to help get your PR approved:
 * A PR should be focused on content, rather than syntax changes.
 * Use the file you are editing as a style guide.
 * Make sure your feature isn't already in the works, or hasn't been rejected previously.
+
+## Configuration
+
+### Global Mod Aliases
+
+To improve mod compatibility, Connector provides a Global Mod Alias feature that can be used to provide alternative IDs
+for mods in the fabric loader. Similar to fabric's [Dependency Overrides](https://fabricmc.net/wiki/tutorial:dependency_overrides),
+it uses a json config file to define aliases.
+
+Global Mod Aliases are defined in a file named `connector_global_mod_aliases.json`, located inside your config folder.
+If it doesn't exist yet, Connector will create a new one with its default mod aliases.
+
+Here's a minimal configuration example:
+```json
+{
+   "version": 1,
+   "aliases": {
+      "cloth_config": "cloth-config2",
+      "embeddium": [
+         "sodium",
+         "rubidium"
+      ]
+   }
+}
+```
+
+Let's go over it line-by-line.
+- First, we have `version`, which specifies the config file spec version we would like to use.
+  At the time of writing, the latest version is version 1.
+- Secondly, we have `aliases`. This JSON object contains all of our alises for various mods.  
+  Keys inside the object represent mod IDs to be aliased. The value can be either a single **string**, or an **array** in case
+  we want to provide multiple aliases for one mod.

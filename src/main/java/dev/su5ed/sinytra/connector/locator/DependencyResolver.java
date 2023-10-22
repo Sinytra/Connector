@@ -42,10 +42,11 @@ public final class DependencyResolver {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
     public static final DependencyOverrides DEPENDENCY_OVERRIDES = new DependencyOverrides(FMLPaths.CONFIGDIR.get());
+    private static final GlobalModAliases GLOBAL_MOD_ALIASES = new GlobalModAliases(FMLPaths.CONFIGDIR.get(), ConnectorUtil.DEFAULT_GLOBAL_MOD_ALIASES);
 
     public static List<JarTransformer.TransformableJar> resolveDependencies(Collection<JarTransformer.TransformableJar> keys, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
         // Add global mod aliases
-        FabricLoaderImpl.INSTANCE.aliasMods(ConnectorUtil.GLOBAL_MOD_ALIASES);
+        FabricLoaderImpl.INSTANCE.aliasMods(GLOBAL_MOD_ALIASES.getAliases());
         BiMap<JarTransformer.TransformableJar, ModCandidate> jarToCandidate = HashBiMap.create();
         // Fabric candidates
         List<ModCandidate> candidates = createCandidatesRecursive(keys, keys, jars, jarToCandidate);

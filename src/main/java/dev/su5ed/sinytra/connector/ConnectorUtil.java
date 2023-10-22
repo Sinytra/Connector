@@ -103,7 +103,7 @@ public final class ConnectorUtil {
     );
     // Common aliased mod dependencies that don't work with forge ports, which use a different modid.
     // They're too annoying to override individually in each mod, so we provide this small QoL feature for the user's comfort
-    public static final Multimap<String, String> GLOBAL_MOD_ALIASES = ImmutableMultimap.of(
+    public static final Multimap<String, String> DEFAULT_GLOBAL_MOD_ALIASES = ImmutableMultimap.of(
         "cloth_config", "cloth-config2"
     );
 

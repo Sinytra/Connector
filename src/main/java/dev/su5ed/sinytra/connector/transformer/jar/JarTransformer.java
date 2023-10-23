@@ -185,6 +185,7 @@ public final class JarTransformer {
                     readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages);
                 }
             }
+            Set<String> visibleConfigs = Set.copyOf(configs);
             // Find additional configs that may not be listed in mod metadata
             jarFile.stream()
                 .forEach(entry -> {
@@ -194,7 +195,7 @@ public final class JarTransformer {
                     }
                 });
             Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
-            return new FabricModFileMetadata(metadata, configs, refmaps, mixinPackages, manifestAttributes, containsAT);
+            return new FabricModFileMetadata(metadata, visibleConfigs, configs, refmaps, mixinPackages, manifestAttributes, containsAT);
         }
     }
 
@@ -220,7 +221,7 @@ public final class JarTransformer {
 
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
 
-    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT) {}
+    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> visibleMixinConfigs, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT) {}
 
     public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
         public FabricModPath transform(JarTransformInstance transformInstance) throws IOException {

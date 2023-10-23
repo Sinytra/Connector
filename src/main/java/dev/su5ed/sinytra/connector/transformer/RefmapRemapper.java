@@ -56,13 +56,13 @@ public class RefmapRemapper implements Transformer {
         return new RefmapFiles(results, refmapFiles);
     }
 
-    private final Collection<String> configs;
+    private final Collection<String> visibleMixinConfigs;
     private final Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files;
 
     private boolean hasManifest;
 
-    public RefmapRemapper(Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files) {
-        this.configs = configs;
+    public RefmapRemapper(Collection<String> visibleMixinConfigs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files) {
+        this.visibleMixinConfigs = visibleMixinConfigs;
         this.files = files;
     }
 
@@ -87,7 +87,7 @@ public class RefmapRemapper implements Transformer {
     @Override
     public ManifestEntry process(ManifestEntry entry) {
         this.hasManifest = true;
-        if (!this.configs.isEmpty()) {
+        if (!this.visibleMixinConfigs.isEmpty()) {
             Manifest manifest = new Manifest();
             try (InputStream is = new ByteArrayInputStream(entry.getData())) {
                 manifest.read(is);
@@ -101,7 +101,7 @@ public class RefmapRemapper implements Transformer {
 
     @Override
     public Collection<? extends Entry> getExtras() {
-        if (!this.configs.isEmpty() && !this.hasManifest) {
+        if (!this.visibleMixinConfigs.isEmpty() && !this.hasManifest) {
             Manifest manifest = new Manifest();
             manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
             return List.of(modifyManifest(manifest, ConnectorUtil.ZIP_TIME));
@@ -110,7 +110,7 @@ public class RefmapRemapper implements Transformer {
     }
 
     private ManifestEntry modifyManifest(Manifest manifest, long time) {
-        manifest.getMainAttributes().putValue(Constants.ManifestAttributes.MIXINCONFIGS, String.join(",", this.configs));
+        manifest.getMainAttributes().putValue(Constants.ManifestAttributes.MIXINCONFIGS, String.join(",", this.visibleMixinConfigs));
         try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
             manifest.write(byteStream);
             return ManifestEntry.create(time, byteStream.toByteArray());

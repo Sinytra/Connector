@@ -110,7 +110,7 @@ public class JarTransformInstance {
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
         PatchEnvironment environment = new PatchEnvironment(refmap.merged().mappings, this.cleanClassLookup);
         MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches, this.bfu.unwrap());
-        RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.mixinConfigs(), refmap.files());
+        RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.visibleMixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())
             .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary))

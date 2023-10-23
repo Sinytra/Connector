@@ -16,6 +16,7 @@
 
 package dev.su5ed.sinytra.connector.service;
 
+import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.SemanticVersion;
@@ -23,10 +24,9 @@ import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.api.metadata.ModDependency;
 import net.fabricmc.loader.api.metadata.version.VersionInterval;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
-import net.fabricmc.loader.impl.util.log.Log;
-import net.fabricmc.loader.impl.util.log.LogCategory;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.loading.moddiscovery.ModFileInfo;
+import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.FabricUtil;
 import org.spongepowered.asm.mixin.Mixins;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
@@ -42,6 +42,8 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
 // Source: https://github.com/FabricMC/fabric-loader/blob/cfb300f6c7271ff161b7a4de321b5de6d9f1d328/src/main/java/net/fabricmc/loader/impl/launch/FabricMixinBootstrap.java
 public final class FabricMixinBootstrap {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     private FabricMixinBootstrap() {}
 
     public static void init() {
@@ -54,7 +56,7 @@ public final class FabricMixinBootstrap {
                 for (String config : configsValue.split(",")) {
                     ModFileInfo prev = configToModMap.putIfAbsent(config, modFile);
                     if (prev != null)
-                        throw new RuntimeException(String.format("Non-unique Mixin config name %s used by the mods %s and %s", config, prev.moduleName(), modFile.moduleName()));
+                        LOGGER.error("Non-unique Mixin config name {} used by the mods {} and {}", config, prev.moduleName(), modFile.moduleName());
                 }
             }
         }
@@ -63,7 +65,7 @@ public final class FabricMixinBootstrap {
             IMixinConfig.class.getMethod("decorate", String.class, Object.class);
             MixinConfigDecorator.apply(configToModMap);
         } catch (NoSuchMethodException e) {
-            Log.info(LogCategory.MIXIN, "Detected old Mixin version without config decoration support");
+            LOGGER.info("Detected old Mixin version without config decoration support");
         }
     }
 

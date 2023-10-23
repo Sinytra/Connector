@@ -31,7 +31,6 @@ public class ConnectorLoaderService implements ITransformationService {
         Runnable original = FMLLoader.progressWindowTick;
         FMLLoader.progressWindowTick = () -> {
             ConnectorEarlyLoader.setup();
-            FabricMixinBootstrap.init();
             FabricASMFixer.injectMinecraftModuleReader();
 
             FMLLoader.progressWindowTick = original;
@@ -42,6 +41,8 @@ public class ConnectorLoaderService implements ITransformationService {
     @SuppressWarnings("unchecked")
     @Override
     public void onLoad(IEnvironment env, Set<String> otherServices) {
+        List<ILaunchPluginService> injectPlugins = List.of(new ConnectorPreLaunchPlugin());
+
         try {
             Field launchPluginsField = Launcher.class.getDeclaredField("launchPlugins");
             launchPluginsField.setAccessible(true);
@@ -55,6 +56,8 @@ public class ConnectorLoaderService implements ITransformationService {
             sortedPlugins.put("runtime_enum_extender", plugins.remove("runtime_enum_extender"));
             // Mixin must come after
             sortedPlugins.put("mixin", plugins.remove("mixin"));
+            // Our plugins come after mixin
+            injectPlugins.forEach(plugin -> sortedPlugins.put(plugin.name(), plugin));
             // The rest goes to the end
             sortedPlugins.putAll(plugins);
             UnsafeHacks.setField(pluginsField, launchPluginHandler, sortedPlugins);

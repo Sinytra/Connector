@@ -10,9 +10,9 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 
 public class RedirectingIdMapper<K, V> extends IdMapper<V> {
-    IntFunction<K> keyFunction;
-    Function<K, Integer> reverseKeyFunction;
-    Map<K, V> map;
+    private final IntFunction<K> keyFunction;
+    private final Function<K, Integer> reverseKeyFunction;
+    private final Map<K, V> map;
 
     public RedirectingIdMapper(IntFunction<K> keyFunction, Function<K, Integer> reverseKeyFunction, Map<K, V> map) {
         this.keyFunction = keyFunction;

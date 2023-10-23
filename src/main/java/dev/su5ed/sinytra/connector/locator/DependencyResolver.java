@@ -4,12 +4,14 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
+import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
-import dev.su5ed.sinytra.connector.transformer.JarTransformer;
+import dev.su5ed.sinytra.connector.transformer.jar.JarTransformer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.metadata.ModMetadata;
 import net.fabricmc.loader.impl.FMLModMetadata;
+import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.discovery.BuiltinMetadataWrapper;
 import net.fabricmc.loader.impl.discovery.ModCandidate;
 import net.fabricmc.loader.impl.discovery.ModResolutionException;
@@ -40,8 +42,11 @@ public final class DependencyResolver {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
     public static final DependencyOverrides DEPENDENCY_OVERRIDES = new DependencyOverrides(FMLPaths.CONFIGDIR.get());
+    private static final GlobalModAliases GLOBAL_MOD_ALIASES = new GlobalModAliases(FMLPaths.CONFIGDIR.get(), ConnectorUtil.DEFAULT_GLOBAL_MOD_ALIASES);
 
     public static List<JarTransformer.TransformableJar> resolveDependencies(Collection<JarTransformer.TransformableJar> keys, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
+        // Add global mod aliases
+        FabricLoaderImpl.INSTANCE.aliasMods(GLOBAL_MOD_ALIASES.getAliases());
         BiMap<JarTransformer.TransformableJar, ModCandidate> jarToCandidate = HashBiMap.create();
         // Fabric candidates
         List<ModCandidate> candidates = createCandidatesRecursive(keys, keys, jars, jarToCandidate);

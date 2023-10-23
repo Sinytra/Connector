@@ -12,10 +12,10 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 
 public class RedirectingInt2ObjectMap<K, V> implements Int2ObjectMap<V> {
-    IntFunction<K> keyFunction;
-    Function<K, Integer> reverseKeyFunction;
-    Map<K, V> map;
-    V defaultReturnValue;
+    private final IntFunction<K> keyFunction;
+    private final Function<K, Integer> reverseKeyFunction;
+    private final Map<K, V> map;
+    private V defaultReturnValue;
 
     public RedirectingInt2ObjectMap(IntFunction<K> keyFunction, Function<K, Integer> reverseKeyFunction, Map<K, V> map) {
         this.keyFunction = keyFunction;

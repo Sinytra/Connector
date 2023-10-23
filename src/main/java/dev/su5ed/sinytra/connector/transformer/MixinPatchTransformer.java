@@ -9,10 +9,14 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.adapter.patch.ClassTransform;
+import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
 import dev.su5ed.sinytra.adapter.patch.MixinClassGenerator;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
+import dev.su5ed.sinytra.adapter.patch.fixes.BytecodeFixerUpper;
+import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTypePatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInjectorOrdinalPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
@@ -68,16 +72,6 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("main([Ljava/lang/String;)V")
             .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
-            .build(),
-        Patch.interfaceBuilder()
-            .targetClass("net/minecraft/world/item/alchemy/PotionBrewing$Mix")
-            .targetField("f_43532_")
-            .modifyValue("connector$from")
-            .build(),
-        Patch.interfaceBuilder()
-            .targetClass("net/minecraft/world/item/alchemy/PotionBrewing$Mix")
-            .targetField("f_43534_")
-            .modifyValue("connector$to")
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/entity/player/Player")
@@ -231,6 +225,13 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
             .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_280518_(FLnet/minecraft/client/gui/GuiGraphics;)V")
             .modifyTarget("connector_renderHotbar")
+            .modifyInjectionPoint("HEAD", "")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_280523_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .modifyTarget("connector_renderEffects")
             .modifyInjectionPoint("HEAD", "")
             .build(),
         Patch.builder()
@@ -397,12 +398,6 @@ public class MixinPatchTransformer implements Transformer {
                 methodNode.instructions.insert(insns);
                 return Patch.Result.APPLY;
             })
-            .build(),
-        Patch.builder()
-            .transform(new DynamicLVTPatch(JarTransformer::getLvtOffsetsData))
-            .build(),
-        Patch.builder()
-            .transform(new DynamicAnonymousShadowFieldTypePatch())
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
@@ -416,10 +411,23 @@ public class MixinPatchTransformer implements Transformer {
     private final PatchEnvironment environment;
     private final List<? extends Patch> patches;
 
-    public MixinPatchTransformer(Set<String> mixinPackages, PatchEnvironment environment, List<? extends Patch> adapterPatches) {
+    public MixinPatchTransformer(LVTOffsets lvtOffsets, Set<String> mixinPackages, PatchEnvironment environment, List<? extends Patch> adapterPatches, BytecodeFixerUpper bfu) {
         this.mixinPackages = mixinPackages;
         this.environment = environment;
-        this.patches = ImmutableList.<Patch>builder().addAll(adapterPatches).addAll(PATCHES).build();
+        this.patches = ImmutableList.<Patch>builder()
+            .addAll(adapterPatches)
+            .addAll(PATCHES)
+            .add(
+                Patch.builder()
+                    .transform(new DynamicLVTPatch(() -> lvtOffsets))
+                    .transform(new DynamicAnonymousShadowFieldTypePatch())
+                    .transform(new DynamicInjectorOrdinalPatch())
+                    .build(),
+                Patch.interfaceBuilder()
+                    .transform(new FieldTypePatchTransformer(bfu))
+                    .build()
+            )
+            .build();
     }
 
     public void finalize(Path zipRoot, Collection<String> configs, SrgRemappingReferenceMapper.SimpleRefmap refmap) throws IOException {

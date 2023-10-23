@@ -1,6 +1,7 @@
 package dev.su5ed.sinytra.connector.mod.mixin.hud;
 
 import dev.su5ed.sinytra.connector.mod.compat.hud.GuiExtensions;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import org.spongepowered.asm.mixin.Mixin;
@@ -31,8 +32,18 @@ public abstract class GuiMixin implements GuiExtensions {
         // Let mods mixin into this method
     }
 
+    @Override
+    public void connector_renderEffects(GuiGraphics guiGraphics, float tickDelta) {
+        // Let mods mixin into this method
+    }
+
     @Inject(method = "renderHotbar", at = @At("HEAD"))
     private void onRenderHotbar(float partialTick, GuiGraphics guiGraphics, CallbackInfo ci) {
         this.connector_renderHotbar(guiGraphics, partialTick);
+    }
+
+    @Inject(method = "renderEffects", at = @At("HEAD"))
+    private void onRenderHotbar(GuiGraphics guiGraphics, CallbackInfo ci) {
+        this.connector_renderEffects(guiGraphics, Minecraft.getInstance().getPartialTick());
     }
 }

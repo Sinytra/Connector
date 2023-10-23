@@ -1,13 +1,14 @@
 package dev.su5ed.sinytra.connector;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import cpw.mods.modlauncher.api.ServiceRunner;
 import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
 import net.minecraftforge.fml.loading.FMLPaths;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -18,7 +19,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 public final class ConnectorUtil {
-    public static final String MIXIN_CONFIGS_ATTRIBUTE = "MixinConfigs";
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
     public static final String MODS_TOML = "META-INF/mods.toml";
     public static final String CONNECTOR_MARKER = "connector_transformed";
@@ -103,7 +103,7 @@ public final class ConnectorUtil {
     );
     // Common aliased mod dependencies that don't work with forge ports, which use a different modid.
     // They're too annoying to override individually in each mod, so we provide this small QoL feature for the user's comfort
-    public static final BiMap<String, String> GLOBAL_MOD_ALIASES = ImmutableBiMap.of(
+    public static final Multimap<String, String> DEFAULT_GLOBAL_MOD_ALIASES = ImmutableMultimap.of(
         "cloth_config", "cloth-config2"
     );
 
@@ -114,25 +114,31 @@ public final class ConnectorUtil {
         CACHE_ENABLED = prop == null || prop.equals("true");
     }
 
-    public static CacheFile getCached(Path input, Path output) {
+    public static CacheFile getCached(@Nullable Path input, Path output) {
         if (CACHE_ENABLED) {
             Path inputCache = output.getParent().resolve(output.getFileName() + ".input");
             try {
-                byte[] bytes = Files.readAllBytes(input);
-                String cacheVersion = EmbeddedDependencies.getJarCacheVersion();
-                String checksum = cacheVersion + "," + Hashing.sha256().hashBytes(bytes);
-
-                if (Files.exists(inputCache) && Files.exists(output)) {
-                    String cached = Files.readString(inputCache);
-                    if (cached.equals(checksum)) {
-                        return new CacheFile(inputCache, checksum, true);
-                    }
-                    else {
-                        Files.delete(output);
-                        Files.delete(inputCache);
-                    }
+                String hash = EmbeddedDependencies.getJarCacheVersion();
+                if (input != null) {
+                    byte[] bytes = Files.readAllBytes(input);
+                    hash += "," + Hashing.sha256().hashBytes(bytes);
                 }
-                return new CacheFile(inputCache, checksum, false);
+
+                if (Files.exists(inputCache)) {
+                    if (Files.exists(output)) {
+                        String cached = Files.readString(inputCache);
+                        if (cached.equals(hash)) {
+                            return new CacheFile(inputCache, hash, true);
+                        }
+                        else {
+                            Files.delete(output);
+                            Files.delete(inputCache);
+                        }
+                    }
+                } else {
+                    Files.deleteIfExists(output);
+                }
+                return new CacheFile(inputCache, hash, false);
             } catch (Throwable t) {
                 throw new RuntimeException(t);
             }
@@ -140,7 +146,7 @@ public final class ConnectorUtil {
         return new CacheFile(null, null, false);
     }
 
-    public static void cache(Path input, Path output, ServiceRunner action) {
+    public static void cache(@Nullable Path input, Path output, ServiceRunner action) {
         CacheFile cacheFile = getCached(input, output);
         if (!cacheFile.isUpToDate()) {
             try {

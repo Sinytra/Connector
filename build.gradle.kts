@@ -1,5 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
+import net.minecraftforge.gradle.common.util.MavenArtifactDownloader
 import net.minecraftforge.gradle.common.util.RunConfig
 import net.minecraftforge.jarjar.metadata.*
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion
@@ -16,6 +17,7 @@ plugins {
     id("org.spongepowered.mixin") version "0.7.+"
     id("me.modmuss50.mod-publish-plugin") version "0.3.+"
     id("net.neoforged.gradleutils") version "2.0.+"
+    id("org.parchmentmc.librarian.forgegradle") version "1.+"
 }
 
 val versionConnector: String by project
@@ -203,7 +205,7 @@ sourceSets {
 
 println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty("java.vm.version")} (${System.getProperty("java.vendor")}), Arch: ${System.getProperty("os.arch")}")
 minecraft {
-    mappings("official", versionMc)
+    mappings("parchment", "2023.06.26-1.20.1")
     accessTransformer(file("src/mod/resources/META-INF/accesstransformer.cfg"))
 
     runs {
@@ -233,6 +235,16 @@ minecraft {
     }
 }
 
+// Attach clean artifact path to runs
+val CLEAN_ARTIFACT = "net.minecraft:joined:%s:srg"
+afterEvaluate {
+    val mcpVersion = project.extra["MCP_VERSION"]
+    val cleanArtifactJar = MavenArtifactDownloader.generate(project, CLEAN_ARTIFACT.format(mcpVersion), true) ?: throw RuntimeException("Cannot find clean minecraft artifact")
+    minecraft.runs.configureEach {
+        property("connector.clean.path", cleanArtifactJar)
+    }
+}
+
 repositories {
     maven {
         name = "Fabric"
@@ -259,7 +271,8 @@ dependencies {
     shade(group = "io.github.steelwoolmc", name = "mixin-transmogrifier", version = versionMixinTransmog)
     adapterData(group = "dev.su5ed.sinytra.adapter", name = "adapter", version = versionAdapter)
 
-    annotationProcessor(group = "dev.su5ed.sinytra", name = "sponge-mixin", version = versionMixin)
+    compileOnly(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
+    annotationProcessor(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))
 

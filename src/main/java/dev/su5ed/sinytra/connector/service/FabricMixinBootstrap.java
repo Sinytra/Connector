@@ -33,6 +33,7 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.transformer.Config;
 import org.spongepowered.asm.util.Constants;
 
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,9 +55,11 @@ public final class FabricMixinBootstrap {
             String configsValue = manifest.getMainAttributes().getValue(Constants.ManifestAttributes.MIXINCONFIGS);
             if (configsValue != null) {
                 for (String config : configsValue.split(",")) {
-                    ModFileInfo prev = configToModMap.putIfAbsent(config, modFile);
-                    if (prev != null)
-                        LOGGER.error("Non-unique Mixin config name {} used by the mods {} and {}", config, prev.moduleName(), modFile.moduleName());
+                    if (Files.exists(modFile.getFile().findResource(config))) {
+                        ModFileInfo prev = configToModMap.putIfAbsent(config, modFile);
+                        if (prev != null)
+                            LOGGER.error("Non-unique Mixin config name {} used by the mods {} and {}", config, prev.moduleName(), modFile.moduleName());
+                    }
                 }
             }
         }

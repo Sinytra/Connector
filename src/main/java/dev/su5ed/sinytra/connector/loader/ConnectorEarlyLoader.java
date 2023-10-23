@@ -97,11 +97,22 @@ public class ConnectorEarlyLoader {
             FabricLoaderImpl.INSTANCE.addFmlMods(mods);
             // Setup fabric loader state
             FabricLoaderImpl.INSTANCE.setup();
-            // Invoke prelaunch entrypoint
-            EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
         } catch (Throwable t) {
             LOGGER.error("Encountered error during early mod setup", t);
             addGenericLoadingException(t, "Encountered an error during early mod setup");
+        }
+        progress.complete();
+    }
+
+    public static void runPreLaunch() {
+        LOGGER.debug("Running prelaunch entrypoint");
+        ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] PreLaunch", 0);
+        try {
+            // Invoke prelaunch entrypoint
+            EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
+        } catch (Throwable t) {
+            LOGGER.error("Encountered an error in prelaunch entrypoint", t);
+            addGenericLoadingException(t, "Encountered an error in prelaunch entrypoint");
         }
         progress.complete();
     }

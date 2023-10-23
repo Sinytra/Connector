@@ -30,8 +30,10 @@ public class ConnectorLoaderService implements ITransformationService {
     public void initialize(IEnvironment environment) {
         Runnable original = FMLLoader.progressWindowTick;
         FMLLoader.progressWindowTick = () -> {
-            ConnectorEarlyLoader.setup();
-            FabricASMFixer.injectMinecraftModuleReader();
+            // Hacky way to run invoke prelaunch outside launch plugin iteration,
+            // prevents crash with REIPC. I'm not going to blame them here since
+            // modlauncher provides users with very limited prelaunch hook accessibility
+            ConnectorEarlyLoader.runPreLaunch();
 
             FMLLoader.progressWindowTick = original;
             original.run();

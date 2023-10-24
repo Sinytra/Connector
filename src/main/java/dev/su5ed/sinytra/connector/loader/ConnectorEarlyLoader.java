@@ -71,13 +71,12 @@ public class ConnectorEarlyLoader {
     }
 
     /**
-     * Run initial fabric loader setup and invoke preLaunch entrypoint. Any exceptions thrown are ignored and thrown
-     * later during FML load.
+     * Run initial fabric loader setup. Any exceptions thrown are ignored and re-thrown later during FML load.
      *
      * @see #CONNECTOR_MODS
      */
     @SuppressWarnings("unused")
-    public static void setup() {
+    public static void init() {
         if (hasEncounteredException()) {
             LOGGER.error("Skipping early mod setup due to previous error");
             return;
@@ -95,8 +94,6 @@ public class ConnectorEarlyLoader {
             }
             // Propagate mods to fabric
             FabricLoaderImpl.INSTANCE.addFmlMods(mods);
-            // Setup fabric loader state
-            FabricLoaderImpl.INSTANCE.setup();
         } catch (Throwable t) {
             LOGGER.error("Encountered error during early mod setup", t);
             addGenericLoadingException(t, "Encountered an error during early mod setup");
@@ -104,10 +101,12 @@ public class ConnectorEarlyLoader {
         progress.complete();
     }
 
-    public static void runPreLaunch() {
+    public static void setup() {
         LOGGER.debug("Running prelaunch entrypoint");
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] PreLaunch", 0);
         try {
+            // Setup fabric loader state
+            FabricLoaderImpl.INSTANCE.setup();
             // Invoke prelaunch entrypoint
             EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
         } catch (Throwable t) {

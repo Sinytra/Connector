@@ -25,7 +25,7 @@ public class ConnectorPreLaunchPlugin implements ILaunchPluginService {
         // Decorate mixin config's with mod IDs, enabling method prefix functionality
         FabricMixinBootstrap.init();
         // Setup Fabric Loader
-        ConnectorEarlyLoader.setup();
+        ConnectorEarlyLoader.init();
         // Apply Fabric ASM fix
         FabricASMFixer.injectMinecraftModuleReader();
     }

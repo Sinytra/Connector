@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.nio.file.FileSystem;
@@ -44,6 +45,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.Manifest;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 
@@ -97,6 +99,11 @@ public class JarTransformInstance {
     public void transformJar(File input, Path output, FabricModFileMetadata metadata) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
+        if (metadata.generated()) {
+            processGeneratedJar(input, output, stopwatch);
+            return;
+        }
+
         String jarMapping = metadata.manifestAttributes().getValue(FABRIC_MAPPING_NAMESPACE);
         if (jarMapping != null && !jarMapping.equals(SOURCE_NAMESPACE)) {
             LOGGER.error("Found transformable jar with unsupported mapping {}, currently only {} is supported", jarMapping, SOURCE_NAMESPACE);
@@ -139,6 +146,24 @@ public class JarTransformInstance {
 
         stopwatch.stop();
         LOGGER.debug(TRANSFORM_MARKER, "Jar {} transformed in {} ms", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
+    }
+
+    private static void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
+        Files.copy(input.toPath(), output);
+        try (FileSystem fs = FileSystems.newFileSystem(output)) {
+            Path path = fs.getPath("META-INF/MANIFEST.MF");
+            Manifest manifest = new Manifest();
+            if (Files.exists(path)) {
+                manifest.read(Files.newInputStream(path));
+            }
+            manifest.getMainAttributes().putValue("FMLModType", "GAMELIBRARY");
+            Files.createDirectories(path.getParent());
+            try (OutputStream os = Files.newOutputStream(path)) {
+                manifest.write(os);
+            }
+        }
+        stopwatch.stop();
+        LOGGER.debug(TRANSFORM_MARKER, "Skipping transformation of jar {} after {} ms as it contains generated metadata, assuming it's a java library", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
     }
 
     private static ClassLookup createCleanClassLookup() {

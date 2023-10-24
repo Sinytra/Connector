@@ -35,6 +35,7 @@ import java.lang.module.ModuleDescriptor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -138,25 +139,29 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         List<IModFile> modFiles = new ArrayList<>(moduleSafeJars.stream().map(mod -> createConnectorModFile(mod, this)).toList());
         // Create mod file for generated adapter mixins jar
         Path generatedAdapterJar = JarTransformer.getGeneratedJarPath();
-        if (Files.exists(generatedAdapterJar)) {
-            IModLocator.ModFileOrException moe = createMod(generatedAdapterJar);
-            if (moe.ex() != null) {
-                ConnectorEarlyLoader.addGenericLoadingException(new Throwable(), "Error creating generated adapter jar mod");
-                StartupNotificationManager.addModMessage("JAR TRANSFORMATION ERROR");
-                LOGGER.error("Cancelling jar discovery due to an error");
-                return List.of();
-            }
-            modFiles.add(moe.file());
+        if (Files.exists(generatedAdapterJar)) {;
+            modFiles.add(createModOrThrow(generatedAdapterJar));
         }
         return modFiles;
     }
 
-    private static IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath, IModProvider provider) {
+    private IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath, IModProvider provider) {
+        if (modPath.metadata().generated()) {
+            return createModOrThrow(modPath.paths());
+        }
         ModJarMetadata mjm = ConnectorUtil.uncheckThrowable(() -> (ModJarMetadata) MJM_INIT.invoke());
         SecureJar modJar = SecureJar.from(Manifest::new, jar -> mjm, modPath.filter(), modPath.paths());
         IModFile mod = new ModFile(modJar, provider, modFile -> ConnectorModMetadataParser.createForgeMetadata(modFile, modPath.metadata().modMetadata()));
         mjm.setModFile(mod);
         return mod;
+    }
+
+    private IModFile createModOrThrow(Path... paths) {
+        IModLocator.ModFileOrException moe = createMod(paths);
+        if (moe.ex() != null) {
+            throw new RuntimeException("Failed to create mod file for paths " + Arrays.toString(paths), moe.ex());
+        }
+        return moe.file();
     }
 
     private static boolean locateFabricModJar(Path path) {

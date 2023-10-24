@@ -12,6 +12,7 @@ import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.sinytra.connector.locator.DependencyResolver;
 import dev.su5ed.sinytra.connector.transformer.AccessWidenerTransformer;
 import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.metadata.CustomValue;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.fabricmc.loader.impl.metadata.ModMetadataParser;
 import net.fabricmc.loader.impl.metadata.ParseMetadataException;
@@ -63,6 +64,7 @@ public final class JarTransformer {
     private static final String MAPPED_SUFFIX = "_mapped_" + FMLEnvironment.naming + "_" + FMLLoader.versionInfo().mcVersion();
     // Keep this outside of BytecodeFixerUpperFrontend to prevent unnecessary static init of patches when we only need the jar path
     private static final Path GENERATED_JAR_PATH = ConnectorUtil.CONNECTOR_FOLDER.resolve("adapter/adapter_generated_mixins.jar");
+    private static final String LOOM_GENERATED_PROPERTY = "fabric-loom:generated";
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static final VarHandle TRANSFORMER_LOADER_FIELD = uncheck(() -> MethodHandles.privateLookupIn(MixinLaunchPluginLegacy.class, MethodHandles.lookup()).findVarHandle(MixinLaunchPluginLegacy.class, "transformerLoader", ILaunchPluginService.ITransformerLoader.class));
@@ -121,11 +123,16 @@ public final class JarTransformer {
         Stopwatch stopwatch = Stopwatch.createStarted();
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Transforming Jars", paths.size());
         try {
-            ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
-            ILaunchPluginService.ITransformerLoader loader = name -> classProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
-            setMixinClassProvider(loader);
-
-            JarTransformInstance transformInstance = new JarTransformInstance(classProvider);
+            ProgressMeter initProgress = StartupNotificationManager.addProgressBar("[Connector] Initializing Transformer", 0);
+            JarTransformInstance transformInstance;
+            try {
+                ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
+                ILaunchPluginService.ITransformerLoader loader = name -> classProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
+                setMixinClassProvider(loader);
+                transformInstance = new JarTransformInstance(classProvider);
+            } finally {
+                initProgress.complete();
+            }
             ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
             List<Pair<File, Future<FabricModPath>>> futures = paths.stream()
                 .map(jar -> {
@@ -195,7 +202,9 @@ public final class JarTransformer {
                     }
                 });
             Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
-            return new FabricModFileMetadata(metadata, visibleConfigs, configs, refmaps, mixinPackages, manifestAttributes, containsAT);
+            CustomValue generatedValue = metadata.getCustomValue(LOOM_GENERATED_PROPERTY);
+            boolean generated = generatedValue != null && generatedValue.getType() == CustomValue.CvType.BOOLEAN && generatedValue.getAsBoolean();
+            return new FabricModFileMetadata(metadata, visibleConfigs, configs, refmaps, mixinPackages, manifestAttributes, containsAT, generated);
         }
     }
 
@@ -221,7 +230,7 @@ public final class JarTransformer {
 
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
 
-    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> visibleMixinConfigs, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT) {}
+    public record FabricModFileMetadata(ConnectorLoaderModMetadata modMetadata, Collection<String> visibleMixinConfigs, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT, boolean generated) {}
 
     public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
         public FabricModPath transform(JarTransformInstance transformInstance) throws IOException {

@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.mixin.fieldtypes;
 
-import dev.su5ed.sinytra.connector.mod.compat.fieldtypes.RedirectingIdMapper;
+import dev.su5ed.sinytra.connector.mod.compat.fieldtypes.FieldTypeUtil;
 import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.core.Holder;
@@ -27,10 +27,10 @@ public class BlockColorsMixin {
     @Unique
     public IdMapper<BlockColor> connector$getBlockColors() {
         if (this.connector$blockColors == null) {
-            this.connector$blockColors = new RedirectingIdMapper<>(
-                    i -> ForgeRegistries.BLOCKS.getDelegateOrThrow(BuiltInRegistries.BLOCK.byId(i)),
-                    blockReference -> BuiltInRegistries.BLOCK.getId(blockReference.get()),
-                    this.blockColors
+            this.connector$blockColors = FieldTypeUtil.createRedirectingMapperSafely(
+                i -> ForgeRegistries.BLOCKS.getDelegateOrThrow(BuiltInRegistries.BLOCK.byId(i)),
+                blockReference -> BuiltInRegistries.BLOCK.getId(blockReference.get()),
+                this.blockColors
             );
         }
         return this.connector$blockColors;

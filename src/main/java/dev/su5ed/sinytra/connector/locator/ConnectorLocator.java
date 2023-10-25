@@ -126,7 +126,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         // Get renamer library classpath
         List<Path> renameLibs = StreamSupport.stream(loadedMods.spliterator(), false).map(modFile -> modFile.getSecureJar().getRootPath()).toList();
         // Run jar transformations (or get existing outputs from cache)
-        List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(candidates, renameLibs);
+        List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(candidates, renameLibs, loadedMods);
         // Skip last step to save time if an error occured during transformation
         if (ConnectorEarlyLoader.hasEncounteredException()) {
             StartupNotificationManager.addModMessage("JAR TRANSFORMATION ERROR");

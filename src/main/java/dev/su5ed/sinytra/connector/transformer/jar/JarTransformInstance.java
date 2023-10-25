@@ -30,6 +30,7 @@ import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.targets.CommonLaunchHandler;
+import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.slf4j.Logger;
 
@@ -64,7 +65,7 @@ public class JarTransformInstance {
     private final Transformer remappingTransformer;
     private final ClassLookup cleanClassLookup;
 
-    public JarTransformInstance(ClassProvider classProvider) {
+    public JarTransformInstance(ClassProvider classProvider, Iterable<IModFile> loadedMods) {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
         resolver.getMap(SOURCE_NAMESPACE, OBF_NAMESPACE);
@@ -73,7 +74,7 @@ public class JarTransformInstance {
         Path patchDataPath = EmbeddedDependencies.getAdapterData(EmbeddedDependencies.ADAPTER_PATCH_DATA);
         try (Reader reader = Files.newBufferedReader(patchDataPath)) {
             JsonElement json = GSON.fromJson(reader, JsonElement.class);
-            PatchEnvironment.setReferenceMapper(str -> str.startsWith("m_") ? ASMAPI.mapMethod(str) : ASMAPI.mapField(str));
+            PatchEnvironment.setReferenceMapper(str -> str == null ? null : str.startsWith("m_") ? ASMAPI.mapMethod(str) : ASMAPI.mapField(str));
             this.adapterPatches = PatchSerialization.deserialize(json, JsonOps.INSTANCE);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -90,6 +91,8 @@ public class JarTransformInstance {
         this.bfu = new BytecodeFixerUpperFrontend();
         this.remappingTransformer = OptimizedRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), IntermediateMapping.get(SOURCE_NAMESPACE));
         this.cleanClassLookup = createCleanClassLookup();
+
+        MixinPatchTransformer.completeSetup(loadedMods);
     }
 
     public BytecodeFixerUpperFrontend getBfu() {

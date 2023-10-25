@@ -1,6 +1,7 @@
 package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -26,6 +27,7 @@ import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransfor
 import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
 import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.Transformer;
+import net.minecraftforge.forgespi.locating.IModFile;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -54,11 +56,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowConsumer;
+import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 
 public class MixinPatchTransformer implements Transformer {
-    private static final List<Patch> PATCHES = List.of(
+    private static final List<Patch> PATCHES = Lists.newArrayList(
         // TODO Add mirror mixin method that injects into ForgeHooks#onPlaceItemIntoWorld for server side behavior
         Patch.builder()
             .targetClass("net/minecraft/client/Minecraft")
@@ -399,6 +403,7 @@ public class MixinPatchTransformer implements Transformer {
         new EnvironmentStripperTransformer()
     );
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static boolean completedSetup = false;
 
     private final Set<String> mixinPackages;
     private final PatchEnvironment environment;
@@ -531,6 +536,34 @@ public class MixinPatchTransformer implements Transformer {
             }
         }
         return false;
+    }
+
+    public static void completeSetup(Iterable<IModFile> mods) {
+        if (completedSetup) {
+            return;
+        }
+        // Injection point data extracted from coremods/method_redirector.js
+        String[] targetClasses = StreamSupport.stream(mods.spliterator(), false)
+            .filter(m -> m.getModFileInfo() != null && !m.getModInfos().isEmpty() && m.getModInfos().get(0).getModId().equals(ConnectorUtil.FORGE_MODID))
+            .map(m -> m.findResource("coremods/finalize_spawn_targets.json"))
+            .filter(Files::exists)
+            .map(rethrowFunction(path -> {
+                try (Reader reader = Files.newBufferedReader(path)) {
+                    return JsonParser.parseReader(reader);
+                }
+            }))
+            .filter(JsonElement::isJsonArray)
+            .flatMap(json -> json.getAsJsonArray().asList().stream()
+                .map(JsonElement::getAsString))
+            .toArray(String[]::new);
+        if (targetClasses.length > 0) {
+            PATCHES.add(Patch.builder()
+                .targetClass(targetClasses)
+                .targetInjectionPoint("m_6518_(Lnet/minecraft/world/level/ServerLevelAccessor;Lnet/minecraft/world/DifficultyInstance;Lnet/minecraft/world/entity/MobSpawnType;Lnet/minecraft/world/entity/SpawnGroupData;Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/world/entity/SpawnGroupData;")
+                .modifyInjectionPoint("Lnet/minecraftforge/event/ForgeEventFactory;onFinalizeSpawn(Lnet/minecraft/world/entity/Mob;Lnet/minecraft/world/level/ServerLevelAccessor;Lnet/minecraft/world/DifficultyInstance;Lnet/minecraft/world/entity/MobSpawnType;Lnet/minecraft/world/entity/SpawnGroupData;Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/world/entity/SpawnGroupData;")
+                .build());
+        }
+        completedSetup = true;
     }
 
     @Override

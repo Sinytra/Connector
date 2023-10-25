@@ -21,6 +21,7 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.progress.ProgressMeter;
 import net.minecraftforge.fml.loading.progress.StartupNotificationManager;
+import net.minecraftforge.forgespi.locating.IModFile;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -82,7 +83,7 @@ public final class JarTransformer {
         return GENERATED_JAR_PATH;
     }
 
-    public static List<FabricModPath> transform(List<TransformableJar> jars, List<Path> libs) {
+    public static List<FabricModPath> transform(List<TransformableJar> jars, List<Path> libs, Iterable<IModFile> loadedMods) {
         List<FabricModPath> transformed = new ArrayList<>();
 
         List<Path> inputLibs = new ArrayList<>(libs);
@@ -102,7 +103,7 @@ public final class JarTransformer {
                 .flatMap(paths -> Stream.concat(paths.minecraftPaths().stream(), paths.otherArtifacts().stream()))
                 .toList();
             List<Path> allLibs = Stream.concat(inputLibs.stream(), renamerLibs.stream()).toList();
-            transformed.addAll(transformJars(needTransforming, allLibs));
+            transformed.addAll(transformJars(needTransforming, allLibs, loadedMods));
         }
 
         return transformed;
@@ -119,7 +120,7 @@ public final class JarTransformer {
         return new TransformableJar(input, path, cacheFile);
     }
 
-    private static List<FabricModPath> transformJars(List<TransformableJar> paths, List<Path> libs) {
+    private static List<FabricModPath> transformJars(List<TransformableJar> paths, List<Path> libs, Iterable<IModFile> loadedMods) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Transforming Jars", paths.size());
         try {
@@ -129,7 +130,7 @@ public final class JarTransformer {
                 ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
                 ILaunchPluginService.ITransformerLoader loader = name -> classProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
                 setMixinClassProvider(loader);
-                transformInstance = new JarTransformInstance(classProvider);
+                transformInstance = new JarTransformInstance(classProvider, loadedMods);
             } finally {
                 initProgress.complete();
             }

@@ -10,6 +10,7 @@ import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.loading.moddiscovery.ModInfo;
 import net.minecraftforge.fml.loading.progress.ProgressMeter;
 import net.minecraftforge.fml.loading.progress.StartupNotificationManager;
+import net.minecraftforge.forgespi.language.IModInfo;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -20,7 +21,8 @@ import java.util.Set;
 public class ConnectorEarlyLoader {
     private static final Logger LOGGER = LogUtils.getLogger();
     // A list of modids that use the connector language provider
-    private static final Set<String> CONNECTOR_MODS = new HashSet<>();
+    private static final Set<String> CONNECTOR_MODIDS = new HashSet<>();
+    private static final List<IModInfo> CONNECTOR_MODS = new ArrayList<>();
     // If we encounter an exception during setup/load, we store it here and throw it later during FML mod loading,
     // so that it is propagated to the forge error screen.
     private static final List<EarlyLoadingException> LOADING_EXCEPTIONS = new ArrayList<>();
@@ -30,7 +32,11 @@ public class ConnectorEarlyLoader {
      * @return whether a mod with the given modid is loaded via Connector
      */
     public static boolean isConnectorMod(String modid) {
-        return CONNECTOR_MODS.contains(modid);
+        return CONNECTOR_MODIDS.contains(modid);
+    }
+
+    public static List<IModInfo> getConnectorMods() {
+        return CONNECTOR_MODS;
     }
 
     /**
@@ -73,7 +79,7 @@ public class ConnectorEarlyLoader {
     /**
      * Run initial fabric loader setup. Any exceptions thrown are ignored and re-thrown later during FML load.
      *
-     * @see #CONNECTOR_MODS
+     * @see #CONNECTOR_MODIDS
      */
     @SuppressWarnings("unused")
     public static void init() {
@@ -89,7 +95,8 @@ public class ConnectorEarlyLoader {
             List<ModInfo> mods = LoadingModList.get().getMods();
             for (ModInfo mod : mods) {
                 if (mod.getOwningFile().getFileProperties().containsKey(ConnectorUtil.CONNECTOR_MARKER)) {
-                    CONNECTOR_MODS.add(mod.getModId());
+                    CONNECTOR_MODIDS.add(mod.getModId());
+                    CONNECTOR_MODS.add(mod);
                 }
             }
             // Propagate mods to fabric

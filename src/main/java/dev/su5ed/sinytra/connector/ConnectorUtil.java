@@ -25,6 +25,8 @@ public final class ConnectorUtil {
     public static final String FORGE_MODID = "forge";
     public static final long ZIP_TIME = 318211200000L;
     public static final Path CONNECTOR_FOLDER = FMLPaths.MODSDIR.get().resolve(".connector");
+    public static final String CONNECTOR_MODID = "connectormod";
+    public static final String CONNECTOR_ISSUE_TRACKER_URL = "https://github.com/Sinytra/Connector/issues";
     // net.minecraft.util.StringUtil
     private static final Pattern STRIP_COLOR_PATTERN = Pattern.compile("(?i)\\u00A7[0-9A-FK-OR]");
 

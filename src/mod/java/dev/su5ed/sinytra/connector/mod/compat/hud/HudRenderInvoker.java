@@ -1,13 +1,13 @@
 package dev.su5ed.sinytra.connector.mod.compat.hud;
 
-import dev.su5ed.sinytra.connector.mod.ConnectorMod;
+import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
-@EventBusSubscriber(modid = ConnectorMod.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = ConnectorUtil.CONNECTOR_MODID, value = Dist.CLIENT)
 public final class HudRenderInvoker {
 
     @SubscribeEvent

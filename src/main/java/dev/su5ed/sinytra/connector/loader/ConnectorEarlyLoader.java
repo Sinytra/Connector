@@ -102,11 +102,19 @@ public class ConnectorEarlyLoader {
     }
 
     public static void setup() {
+        try {
+            // Setup fabric loader
+            FabricLoaderImpl.INSTANCE.setup();
+        } catch (Throwable t) {
+            LOGGER.error("Encountered an error during fabric loader setup", t);
+            addGenericLoadingException(t, "Encountered an error during fabric loader setup");
+        }
+    }
+
+    public static void preLaunch() {
         LOGGER.debug("Running prelaunch entrypoint");
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] PreLaunch", 0);
         try {
-            // Setup fabric loader state
-            FabricLoaderImpl.INSTANCE.setup();
             // Invoke prelaunch entrypoint
             EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
         } catch (Throwable t) {

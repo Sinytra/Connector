@@ -262,6 +262,15 @@ public class MixinPatchTransformer implements Transformer {
             .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraft/world/entity/LivingEntity")))
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/renderer/GameRenderer")
+            .targetMethod("m_109087_")
+            .targetConstant(9.0)
+            .modifyMixinType(Patch.MODIFY_VAR, builder -> builder
+                .sameTarget()
+                .injectionPoint("INVOKE_ASSIGN", "Lnet/minecraft/world/phys/Vec3;m_82557_(Lnet/minecraft/world/phys/Vec3;)D", v -> v.visit("ordinal", 1))
+                .putValue("ordinal", 3))
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/renderer/ItemInHandRenderer")
             .targetMethod("m_117184_")
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
@@ -370,7 +379,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
             .targetMethod("m_117118_")
             .targetMixinType(Patch.MODIFY_ARG)
-            .targetAnnotationValues(values -> (Integer) values.get("index").get() == 4)
+            .targetAnnotationValues(values -> values.<Integer>getValue("index").map(handle -> handle.get() == 4).orElse(false))
             .targetInjectionPoint("INVOKE", "Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;m_289609_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/HumanoidModel;ZFFFLjava/lang/String;)V")
             .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
             .modifyParams(builder -> builder

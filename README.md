@@ -139,7 +139,7 @@ Here's a minimal configuration example:
       "cloth_config": "cloth-config2",
       "embeddium": [
          "sodium",
-         "rubidium"
+         "magnesium"
       ]
    }
 }
@@ -151,3 +151,25 @@ Let's go over it line-by-line.
 - Secondly, we have `aliases`. This JSON object contains all of our alises for various mods.  
   Keys inside the object represent mod IDs to be aliased. The value can be either a single **string**, or an **array** in case
   we want to provide multiple aliases for one mod.
+
+### Hiding Forge mods presence
+
+Fabric mods tend to integrate with others based on their modid. If you happen to install a Forge version of a mod that
+a Fabric mod wants to integrate with, it might result in a crash, as the two versions' code is different.
+Most of the time, mods provide toggles for integrations in their config. If that's not the case, your other option is
+hiding the Forge mod's presence from Fabric mods entirely, which might help in disabling the problematic integration.
+
+This can be configured in the `connector.json` file, located in your config folder.
+If it doesn't exist yet, Connector will create a new one with empty values.
+
+Inside, the `hiddenMods` field is defined as a list of mod IDs (strings). Forge mod IDs found in this list will be
+excluded from being added to `FabricLoader`, hiding their presence from Fabric mods.
+
+Here's a minimal configuration example:
+```json
+{
+  "hiddenMods": [
+    "examplemod"
+  ]
+}
+```

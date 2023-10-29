@@ -218,8 +218,10 @@ public final class JarTransformer {
             }
             if (json.has("package")) {
                 String pkg = json.get("package").getAsString();
-                String pkgPath = pkg.replace('.', '/') + '/';
-                packages.add(pkgPath);
+                if (!pkg.isEmpty()) {
+                    String pkgPath = pkg.replace('.', '/') + '/';
+                    packages.add(pkgPath);
+                }
             }
         } catch (IOException e) {
             LOGGER.error("Error reading mixin config entry {} in file {}", entry.getName(), input.getAbsolutePath());

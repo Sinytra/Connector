@@ -2,6 +2,7 @@ package dev.su5ed.sinytra.connector.loader;
 
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
+import dev.su5ed.sinytra.connector.locator.ConnectorConfig;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.entrypoint.EntrypointUtils;
@@ -91,14 +92,18 @@ public class ConnectorEarlyLoader {
         LOGGER.debug("Starting early connector loader setup");
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Early Setup", 0);
         try {
+            List<String> hiddenMods = ConnectorConfig.INSTANCE.get().hiddenMods();
             // Find all connector loader mods
-            List<ModInfo> mods = LoadingModList.get().getMods();
-            for (ModInfo mod : mods) {
-                if (mod.getOwningFile().getFileProperties().containsKey(ConnectorUtil.CONNECTOR_MARKER)) {
-                    CONNECTOR_MODIDS.add(mod.getModId());
-                    CONNECTOR_MODS.add(mod);
-                }
-            }
+            List<ModInfo> mods = LoadingModList.get().getMods().stream()
+                .filter(mod -> {
+                    if (mod.getOwningFile().getFileProperties().containsKey(ConnectorUtil.CONNECTOR_MARKER)) {
+                        CONNECTOR_MODIDS.add(mod.getModId());
+                        CONNECTOR_MODS.add(mod);
+                        return true;
+                    }
+                    return !hiddenMods.contains(mod.getModId());
+                })
+                .toList();
             // Propagate mods to fabric
             FabricLoaderImpl.INSTANCE.addFmlMods(mods);
         } catch (Throwable t) {

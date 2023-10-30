@@ -3,6 +3,7 @@ package dev.su5ed.sinytra.connector.locator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
+import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
@@ -21,7 +22,6 @@ import net.minecraftforge.forgespi.language.IModInfo;
 import net.minecraftforge.forgespi.locating.IDependencyLocator;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
-import net.minecraftforge.forgespi.locating.IModProvider;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.jetbrains.annotations.Nullable;
@@ -136,24 +136,29 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         // Deal with split packages (thanks modules)
         List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed, loadedMods, ignoredModFiles);
 
-        List<IModFile> modFiles = new ArrayList<>(moduleSafeJars.stream().map(mod -> createConnectorModFile(mod, this)).toList());
+        List<IModFile> modFiles = new ArrayList<>(moduleSafeJars.stream().map(this::createConnectorModFile).toList());
         // Create mod file for generated adapter mixins jar
         Path generatedAdapterJar = JarTransformer.getGeneratedJarPath();
-        if (Files.exists(generatedAdapterJar)) {;
+        if (Files.exists(generatedAdapterJar)) {
             modFiles.add(createModOrThrow(generatedAdapterJar));
         }
         return modFiles;
     }
 
-    private IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath, IModProvider provider) {
+    private IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath) {
         if (modPath.metadata().generated()) {
-            return createModOrThrow(modPath.paths());
+            return createGameLibraryMod(modPath);
         }
         ModJarMetadata mjm = ConnectorUtil.uncheckThrowable(() -> (ModJarMetadata) MJM_INIT.invoke());
         SecureJar modJar = SecureJar.from(Manifest::new, jar -> mjm, modPath.filter(), modPath.paths());
-        IModFile mod = new ModFile(modJar, provider, modFile -> ConnectorModMetadataParser.createForgeMetadata(modFile, modPath.metadata().modMetadata()));
+        IModFile mod = new ModFile(modJar, this, modFile -> ConnectorModMetadataParser.createForgeMetadata(modFile, modPath.metadata().modMetadata()));
         mjm.setModFile(mod);
         return mod;
+    }
+
+    protected IModFile createGameLibraryMod(SplitPackageMerger.FilteredModPath modPath) {
+        SecureJar sj = SecureJar.from(Manifest::new, jar -> JarMetadata.from(jar, modPath.paths()), modPath.filter(), modPath.paths());
+        return new ModFile(sj, this, this::manifestParser, IModFile.Type.GAMELIBRARY.name());
     }
 
     private IModFile createModOrThrow(Path... paths) {

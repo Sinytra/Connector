@@ -46,6 +46,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
@@ -103,7 +104,7 @@ public class JarTransformInstance {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         if (metadata.generated()) {
-            processGeneratedJar(input, output, stopwatch);
+            processGeneratedJar(input, output, metadata, stopwatch);
             return;
         }
 
@@ -151,7 +152,7 @@ public class JarTransformInstance {
         LOGGER.debug(TRANSFORM_MARKER, "Jar {} transformed in {} ms", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
     }
 
-    private static void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
+    private static void processGeneratedJar(File input, Path output, FabricModFileMetadata metadata, Stopwatch stopwatch) throws IOException {
         Files.copy(input.toPath(), output);
         try (FileSystem fs = FileSystems.newFileSystem(output)) {
             Path path = fs.getPath("META-INF/MANIFEST.MF");
@@ -159,7 +160,9 @@ public class JarTransformInstance {
             if (Files.exists(path)) {
                 manifest.read(Files.newInputStream(path));
             }
-            manifest.getMainAttributes().putValue("FMLModType", "GAMELIBRARY");
+            Attributes attributes = manifest.getMainAttributes();
+            attributes.putValue("FMLModType", "GAMELIBRARY");
+            attributes.putValue("Automatic-Module-Name", metadata.modMetadata().getId());
             Files.createDirectories(path.getParent());
             try (OutputStream os = Files.newOutputStream(path)) {
                 manifest.write(os);

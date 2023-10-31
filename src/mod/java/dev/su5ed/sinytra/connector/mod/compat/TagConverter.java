@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 
 public final class TagConverter {
     private static final String FABRIC_NAMESPACE = "c";
-    private static final Pattern RAW_ORES_PATTERN = Pattern.compile("^raw_.+?_ores$");
+    private static final Pattern RAW_ORES_PATTERN = Pattern.compile("^raw_(.+?)_ores$");
     private static final String TAG_ENTRY_SPLITTER = "_(?!.*_)";
     private static final Collection<String> COMMON_TYPES = Set.of("small_dusts");
     private static final Collection<String> COMMON_GROUP_PREFIXES = Set.of("tools", "gems");
@@ -116,10 +116,16 @@ public final class TagConverter {
     }
 
     private static Pair<String, @Nullable String> computeForgeTagName(String path) {
+        // Group aliases
+        for (Map.Entry<String, String> entry : ALIASES.entrySet()) {
+            if (entry.getKey().equals(path)) {
+                return Pair.of(entry.getValue(), null);
+            }
+        }
         // Special cases
         Matcher matcher = RAW_ORES_PATTERN.matcher(path);
         if (matcher.matches()) {
-            return Pair.of("raw_materials", matcher.group());
+            return Pair.of("raw_materials", matcher.group(1));
         }
         // Generic conversion
         else if (path.contains("_")) {

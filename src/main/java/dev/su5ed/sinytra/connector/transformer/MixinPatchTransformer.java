@@ -79,6 +79,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/gui/screens/TitleScreen")
+            .targetMethod("m_88315_(Lnet/minecraft/client/gui/GuiGraphics;IIF)V")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;m_280488_(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)I")
+            .modifyTarget("lambda$render$12", "lambda$render$13")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/entity/player/Player")
             .targetMethod("m_6728_")
             .targetInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;m_213824_()Z")
@@ -293,6 +299,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_109093_(FJZ)V")
             .targetInjectionPoint("Lnet/minecraft/client/gui/screens/Screen;m_280264_(Lnet/minecraft/client/gui/GuiGraphics;IIF)V")
             .modifyInjectionPoint("Lnet/minecraftforge/client/ForgeHooksClient;drawScreen(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/gui/GuiGraphics;IIF)V")
+            .modifyVariableIndex(0, 1)
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/BoatRenderer")

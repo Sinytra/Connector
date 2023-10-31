@@ -38,6 +38,7 @@ public class ConnectorLoaderService implements ITransformationService {
             FMLLoader.progressWindowTick = original;
             original.run();
         };
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.threadFactory", ConnectorForkJoinThreadFactory.class.getName());
     }
 
     @SuppressWarnings("unchecked")

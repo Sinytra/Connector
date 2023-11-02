@@ -10,8 +10,11 @@ import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.sinytra.connector.transformer.jar.JarTransformer;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
+import net.minecraftforge.fml.loading.ClasspathLocatorUtils;
 import net.minecraftforge.fml.loading.EarlyLoadingException;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.fml.loading.LogMarkers;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
 import net.minecraftforge.fml.loading.StringUtils;
 import net.minecraftforge.fml.loading.moddiscovery.AbstractJarFileModProvider;
@@ -27,17 +30,20 @@ import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.module.ModuleDescriptor;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -82,7 +88,6 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
 
     private List<IModFile> locateFabricMods(Iterable<IModFile> loadedMods) {
         LOGGER.debug(SCAN, "Scanning mods dir {} for mods", FMLPaths.MODSDIR.get());
-        List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
         Path tempDir = ConnectorUtil.CONNECTOR_FOLDER.resolve("temp");
         // Get all existing mod ids
         Collection<SimpleModInfo> loadedModInfos = StreamSupport.stream(loadedMods.spliterator(), false)
@@ -99,10 +104,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .toList();
         Collection<String> loadedModIds = loadedModInfos.stream().filter(mod -> !mod.library()).map(SimpleModInfo::modid).collect(Collectors.toUnmodifiableSet());
         // Discover fabric mod jars
-        List<JarTransformer.TransformableJar> discoveredJars = uncheck(() -> Files.list(FMLPaths.MODSDIR.get()))
-            .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
-            .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
-            .filter(ConnectorLocator::locateFabricModJar)
+        List<JarTransformer.TransformableJar> discoveredJars = Stream.concat(scanModsDir(), scanClasspath())
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
             .filter(jar -> {
                 String modid = jar.modPath().metadata().modMetadata().getId();
@@ -145,6 +147,36 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         return modFiles;
     }
 
+    private Stream<Path> scanModsDir() {
+        List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
+        return uncheck(() -> Files.list(FMLPaths.MODSDIR.get()))
+            .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
+            .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
+            .filter(ConnectorLocator::isFabricModJar);
+    }
+
+    private Stream<Path> scanClasspath() {
+        if (FMLEnvironment.production) {
+            return Stream.of();
+        }
+        try {
+            List<Path> claimed = new ArrayList<>(Arrays.stream(System.getProperty("legacyClassPath", "").split(File.pathSeparator)).map(Path::of).toList());
+            Stream.Builder<Path> ret = Stream.builder();
+            Enumeration<URL> resources = ClassLoader.getSystemClassLoader().getResources(ConnectorUtil.FABRIC_MOD_JSON);
+            while (resources.hasMoreElements()) {
+                URL url = resources.nextElement();
+                Path path = ClasspathLocatorUtils.findJarPathFor(ConnectorUtil.FABRIC_MOD_JSON, ConnectorUtil.FABRIC_MOD_JSON, url);
+                if (claimed.stream().noneMatch(path::equals) && Files.exists(path) && !Files.isDirectory(path) && isFabricModJar(path)) {
+                    ret.add(path);
+                }
+            }
+            return ret.build();
+        } catch (IOException e) {
+            LOGGER.error(LogMarkers.SCAN, "Error trying to find resources", e);
+            throw new RuntimeException(e);
+        }
+    }
+
     private IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath) {
         if (modPath.metadata().generated()) {
             return createGameLibraryMod(modPath);
@@ -169,7 +201,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         return moe.file();
     }
 
-    private static boolean locateFabricModJar(Path path) {
+    private static boolean isFabricModJar(Path path) {
         SecureJar secureJar = SecureJar.from(path);
         String name = secureJar.name();
         if (secureJar.moduleDataProvider().findFile(ConnectorUtil.MODS_TOML).isPresent()) {

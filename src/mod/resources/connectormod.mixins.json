@@ -28,6 +28,7 @@
     "HumanoidArmorLayerMixin",
     "ItemBlockRenderTypesMixin",
     "ItemOverridesMixin",
+    "OptionsMixin",
     "boot.MinecraftMixin",
     "fieldtypes.BlockColorsMixin",
     "fieldtypes.ItemColorsMixin",

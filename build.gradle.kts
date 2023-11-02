@@ -2,6 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
 import net.minecraftforge.gradle.common.util.MavenArtifactDownloader
 import net.minecraftforge.gradle.common.util.RunConfig
+import net.minecraftforge.gradle.userdev.util.MavenPomUtils
 import net.minecraftforge.jarjar.metadata.*
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion
 import org.apache.maven.artifact.versioning.VersionRange
@@ -149,8 +150,6 @@ val fullJar: Jar by tasks.creating(Jar::class) {
         from(tasks.jar.get().manifest)
         attributes("Embedded-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
     }
-
-    archiveClassifier.set("full")
 }
 
 java {
@@ -295,6 +294,8 @@ tasks {
                 "Automatic-Module-Name" to "dev.su5ed.sinytra.connector"
             )
         }
+
+        archiveClassifier.set("slim")
     }
 
     withType<JavaCompile> {
@@ -360,6 +361,24 @@ publishing {
             suppressAllPomMetadataWarnings()
 
             from(components["java"])
+            fg.component(this)
+            pom.withXml {
+                asNode().remove(MavenPomUtils.getDependenciesNode(this))
+            }
+        }
+    }
+    repositories {
+        val env = System.getenv()
+        if (env["MAVEN_URL"] != null) {
+            repositories.maven {
+                url = uri(env["MAVEN_URL"] as String)
+                if (env["MAVEN_USERNAME"] != null) {
+                    credentials {
+                        username = env["MAVEN_USERNAME"]
+                        password = env["MAVEN_PASSWORD"]
+                    }
+                }
+            }
         }
     }
 }

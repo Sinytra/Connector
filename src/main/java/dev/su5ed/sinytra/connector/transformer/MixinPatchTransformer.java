@@ -32,6 +32,7 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnList;
@@ -53,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -75,6 +77,12 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("main([Ljava/lang/String;)V")
             .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/screens/TitleScreen")
+            .targetMethod("m_88315_(Lnet/minecraft/client/gui/GuiGraphics;IIF)V")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;m_280488_(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)I")
+            .modifyTarget("lambda$render$12", "lambda$render$13")
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/entity/player/Player")
@@ -291,6 +299,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_109093_(FJZ)V")
             .targetInjectionPoint("Lnet/minecraft/client/gui/screens/Screen;m_280264_(Lnet/minecraft/client/gui/GuiGraphics;IIF)V")
             .modifyInjectionPoint("Lnet/minecraftforge/client/ForgeHooksClient;drawScreen(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/gui/GuiGraphics;IIF)V")
+            .modifyVariableIndex(0, 1)
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/BoatRenderer")
@@ -402,6 +411,35 @@ public class MixinPatchTransformer implements Transformer {
                 insns.add(new InsnNode(Opcodes.ARETURN));
                 insns.add(cont);
                 methodNode.instructions.insert(insns);
+                return Patch.Result.APPLY;
+            })
+            .build(),
+        // Move redirectors of Map.put to KeyMappingLookup.put
+        Patch.builder()
+            .targetClass("net/minecraft/client/KeyMapping")
+            .targetMethod("m_90854_()V")
+            .targetInjectionPoint("Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+            .modifyInjectionPoint("Lnet/minecraftforge/client/settings/KeyMappingLookup;put(Lcom/mojang/blaze3d/platform/InputConstants$Key;Lnet/minecraft/client/KeyMapping;)V")
+            .targetMixinType(Patch.REDIRECT)
+            .modifyParams(builder -> builder
+                .replace(0, Type.getObjectType("net/minecraftforge/client/settings/KeyMappingLookup"))
+                .replace(1, Type.getObjectType("com/mojang/blaze3d/platform/InputConstants$Key"))
+                .replace(2, Type.getObjectType("net/minecraft/client/KeyMapping")))
+            .transform((classNode, methodNode, methodContext, patchContext) -> {
+                for (ListIterator<AbstractInsnNode> iterator = methodNode.instructions.iterator(); iterator.hasNext(); ) {
+                    AbstractInsnNode insn = iterator.next();
+                    if (insn.getOpcode() == Opcodes.ARETURN) {
+                        methodNode.instructions.insertBefore(insn, new InsnNode(Opcodes.POP));
+                        methodNode.instructions.set(insn, new InsnNode(Opcodes.RETURN));
+                    }
+                    else if (insn instanceof MethodInsnNode minsn && minsn.name.equals("put") && minsn.desc.equals("(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")) {
+                        minsn.desc = "(Lcom/mojang/blaze3d/platform/InputConstants$Key;Lnet/minecraft/client/KeyMapping;)V";
+                        minsn.itf = false;
+                        minsn.setOpcode(Opcodes.INVOKEVIRTUAL);
+                        methodNode.instructions.insert(minsn, new InsnNode(Opcodes.ACONST_NULL));
+                    }
+                }
+                methodNode.desc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getArgumentTypes(methodNode.desc));
                 return Patch.Result.APPLY;
             })
             .build()

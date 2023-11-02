@@ -44,7 +44,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
@@ -183,8 +183,17 @@ public class JarTransformInstance {
             return new ZipClassLookup(zipFile);
         }
         else {
-            String path = Objects.requireNonNull(System.getProperty("connector.clean.path"), "Cannot find clean artifact path");
-            Path cleanPath = Path.of(path);
+            // Search for system property
+            Path cleanPath = Optional.ofNullable(System.getProperty("connector.clean.path"))
+                .map(Path::of)
+                // If not found, attempt to guess the path
+                .or(() -> Optional.ofNullable(System.getProperty("user.home"))
+                    .map(str -> {
+                        String mcpVersion = FMLLoader.versionInfo().mcAndMCPVersion();
+                        return Path.of(str).resolve(".gradle/caches/forge_gradle/mcp_repo/net/minecraft/joined/%s/joined-%s-srg.jar".formatted(mcpVersion, mcpVersion));
+                    }))
+                .filter(Files::exists)
+                .orElseThrow(() -> new RuntimeException("Could not determine clean minecraft artifact path"));
             ClassProvider obfProvider = ClassProvider.fromPaths(cleanPath);
             IMappingFile mapping = FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(OBF_NAMESPACE);
             return new RenamingClassLookup(obfProvider, mapping);

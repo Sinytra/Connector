@@ -26,7 +26,9 @@ public class BytecodeFixerUpperFrontend {
     );
     private static final List<FieldTypeFix> FIELD_TYPE_ADAPTERS = List.of(
         new FieldTypeFix(Type.getObjectType("net/minecraft/core/Holder$Reference"), Type.getObjectType("java/lang/Object"), (list, insn) ->
-            list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/core/Holder$Reference", "get", "()Ljava/lang/Object;")))
+            list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/core/Holder$Reference", "get", "()Ljava/lang/Object;"))),
+        new FieldTypeFix(Type.getObjectType("net/minecraft/resources/ResourceLocation"), Type.getObjectType("java/lang/String"), (list, insn) ->
+            list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/resources/ResourceLocation", "toString", "()Ljava/lang/String;")))
     );
 
     private final BytecodeFixerUpper bfu;

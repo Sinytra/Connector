@@ -14,7 +14,6 @@ import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
 import dev.su5ed.sinytra.adapter.patch.MixinClassGenerator;
 import dev.su5ed.sinytra.adapter.patch.Patch;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
-import dev.su5ed.sinytra.adapter.patch.fixes.BytecodeFixerUpper;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTypePatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInjectorOrdinalPatch;
@@ -77,12 +76,6 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("main([Ljava/lang/String;)V")
             .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/gui/screens/TitleScreen")
-            .targetMethod("m_88315_(Lnet/minecraft/client/gui/GuiGraphics;IIF)V")
-            .targetInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;m_280488_(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)I")
-            .modifyTarget("lambda$render$12", "lambda$render$13")
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/entity/player/Player")
@@ -360,19 +353,6 @@ public class MixinPatchTransformer implements Transformer {
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
-            .targetMethod("m_289609_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/HumanoidModel;ZFFFLjava/lang/String;)V")
-            .modifyTarget("renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
-            .modifyParams(builder -> builder
-                .replace(4, Type.getObjectType("net/minecraft/client/model/Model"))
-                .replace(9, Type.getObjectType("net/minecraft/resources/ResourceLocation"))
-                .lvtFixer((index, insn, list) -> {
-                    if (index == 10) {
-                        list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/resources/ResourceLocation", "toString", "()Ljava/lang/String;"));
-                    }
-                }))
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
             .targetMethod("m_289604_(Lnet/minecraft/world/item/ArmorMaterial;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/armortrim/ArmorTrim;Lnet/minecraft/client/model/HumanoidModel;Z)V")
             .modifyTarget("renderTrim(Lnet/minecraft/world/item/ArmorMaterial;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/armortrim/ArmorTrim;Lnet/minecraft/client/model/Model;Z)V")
             .modifyParams(builder -> builder.replace(5, Type.getObjectType("net/minecraft/client/model/Model")))
@@ -456,7 +436,7 @@ public class MixinPatchTransformer implements Transformer {
     private final PatchEnvironment environment;
     private final List<? extends Patch> patches;
 
-    public MixinPatchTransformer(LVTOffsets lvtOffsets, Set<String> mixinPackages, PatchEnvironment environment, List<? extends Patch> adapterPatches, BytecodeFixerUpper bfu) {
+    public MixinPatchTransformer(LVTOffsets lvtOffsets, Set<String> mixinPackages, PatchEnvironment environment, List<? extends Patch> adapterPatches) {
         this.mixinPackages = mixinPackages;
         this.environment = environment;
         this.patches = ImmutableList.<Patch>builder()
@@ -469,7 +449,7 @@ public class MixinPatchTransformer implements Transformer {
                     .transform(new DynamicInjectorOrdinalPatch())
                     .build(),
                 Patch.interfaceBuilder()
-                    .transform(new FieldTypePatchTransformer(bfu))
+                    .transform(new FieldTypePatchTransformer())
                     .build()
             )
             .build();

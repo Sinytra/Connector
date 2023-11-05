@@ -1,9 +1,9 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
-import dev.su5ed.sinytra.adapter.patch.selector.AnnotationValueHandle;
 import dev.su5ed.sinytra.adapter.patch.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.Patch;
-import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
+import dev.su5ed.sinytra.adapter.patch.PatchContext;
+import dev.su5ed.sinytra.adapter.patch.selector.AnnotationValueHandle;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;
@@ -21,7 +21,7 @@ public class EnvironmentStripperTransformer implements ClassTransform {
     private static final EnvType CURRENT_ENV = FabricLoader.getInstance().getEnvironmentType();
 
     @Override
-    public Patch.Result apply(ClassNode classNode, @Nullable AnnotationValueHandle<?> annotation, PatchEnvironment environment) {
+    public Patch.Result apply(ClassNode classNode, @Nullable AnnotationValueHandle<?> annotation, PatchContext context) {
         boolean applied = false;
         for (Iterator<MethodNode> it = classNode.methods.iterator(); it.hasNext(); ) {
             MethodNode method = it.next();

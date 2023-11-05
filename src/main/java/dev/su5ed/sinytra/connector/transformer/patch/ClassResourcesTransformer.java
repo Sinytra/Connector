@@ -1,9 +1,9 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
-import dev.su5ed.sinytra.adapter.patch.selector.AnnotationValueHandle;
 import dev.su5ed.sinytra.adapter.patch.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.Patch;
-import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
+import dev.su5ed.sinytra.adapter.patch.PatchContext;
+import dev.su5ed.sinytra.adapter.patch.selector.AnnotationValueHandle;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -25,7 +25,7 @@ public class ClassResourcesTransformer implements ClassTransform {
     record Replacement(MethodInsnNode methodInsn, AbstractInsnNode paramInsn) {}
 
     @Override
-    public Patch.Result apply(ClassNode classNode, @Nullable AnnotationValueHandle<?> annotation, PatchEnvironment environment) {
+    public Patch.Result apply(ClassNode classNode, @Nullable AnnotationValueHandle<?> annotation, PatchContext context) {
         boolean applied = false;
         for (MethodNode method : classNode.methods) {
             List<Replacement> replacements = new ArrayList<>();

@@ -13,8 +13,10 @@ import dev.su5ed.sinytra.adapter.patch.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
 import dev.su5ed.sinytra.adapter.patch.MixinClassGenerator;
 import dev.su5ed.sinytra.adapter.patch.Patch;
+import dev.su5ed.sinytra.adapter.patch.PatchContext;
 import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
+import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTypePatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInjectorOrdinalPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
@@ -23,8 +25,6 @@ import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
-import dev.su5ed.sinytra.connector.transformer.patch.FieldTypeAdapter;
-import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.forgespi.locating.IModFile;
 import org.objectweb.asm.ClassReader;
@@ -95,26 +95,6 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;curePotionEffects(Lnet/minecraft/world/item/ItemStack;)Z")
             .build(),
         Patch.builder()
-            .targetClass("net/minecraft/world/entity/Entity")
-            .targetMethod("changeDimension(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraftforge/common/util/ITeleporter;)Lnet/minecraft/world/entity/Entity;")
-            .targetInjectionPoint("Lnet/minecraft/server/level/ServerLevel;m_8617_(Lnet/minecraft/server/level/ServerLevel;)V")
-            .targetMixinType(Patch.REDIRECT)
-            .modifyTarget("lambda$changeDimension$13")
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/renderer/LevelRenderer")
-            .targetMethod("m_109514_(Lnet/minecraft/sounds/SoundEvent;Lnet/minecraft/core/BlockPos;)V")
-            .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_93055_(Lnet/minecraft/network/chat/Component;)V")
-            .modifyTarget("playStreamingMusic(Lnet/minecraft/sounds/SoundEvent;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/item/RecordItem;)V")
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/gui/screens/inventory/AbstractContainerScreen")
-            .targetMethod("m_280072_")
-            .targetInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;m_280677_(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;II)V")
-            .modifyInjectionPoint("Lnet/minecraft/client/gui/GuiGraphics;renderTooltip(Lnet/minecraft/client/gui/Font;Ljava/util/List;Ljava/util/Optional;Lnet/minecraft/world/item/ItemStack;II)V")
-            .modifyParams(builder -> builder.insert(3, Type.getObjectType("net/minecraft/world/item/ItemStack")).targetType(ModifyMethodParams.TargetType.INJECTION_POINT))
-            .build(),
-        Patch.builder()
             .targetClass("net/minecraft/world/entity/LivingEntity")
             .targetMethod("m_21208_()V")
             .targetMixinType(Patch.MODIFY_CONST)
@@ -165,6 +145,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("Lnet/minecraft/client/renderer/LightTexture;m_252983_(Lorg/joml/Vector3f;)V")
             .modifyParams(builder -> builder.substitute(17, 16))
             .build(),
+        // TODO Automate
         Patch.builder()
             .targetClass("net/minecraft/client/Minecraft")
             .targetMethod("m_285666_")
@@ -280,12 +261,7 @@ public class MixinPatchTransformer implements Transformer {
                 .sameTarget()
                 .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;"))
             .modifyParams(builder -> builder
-                .replace(0, Type.getObjectType("net/minecraft/world/item/ItemStack"))
-                .lvtFixer((index, insn, list) -> {
-                    if (index == 1) {
-                        list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/item/ItemStack", ASMAPI.mapMethod("m_41720_"), "()Lnet/minecraft/world/item/Item;"));
-                    }
-                }))
+                .replace(0, Type.getObjectType("net/minecraft/world/item/ItemStack")))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/GameRenderer")
@@ -299,12 +275,6 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_7392_")
             .targetInjectionPoint("INVOKE", "Ljava/util/Map;get(Ljava/lang/Object;)Ljava/lang/Object;")
             .modifyTarget("getModelWithLocation")
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/renderer/chunk/ChunkRenderDispatcher")
-            .targetMethod("<init>")
-            .modifyTarget("<init>(Lnet/minecraft/client/multiplayer/ClientLevel;Lnet/minecraft/client/renderer/LevelRenderer;Ljava/util/concurrent/Executor;ZLnet/minecraft/client/renderer/ChunkBufferBuilderPack;I)V")
-            .modifyVariableIndex(6, 1)
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/item/ItemStack")
@@ -426,7 +396,7 @@ public class MixinPatchTransformer implements Transformer {
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
         new ClassResourcesTransformer(),
-        new FieldTypeAdapter(),
+        new FieldTypeUsageTransformer(),
         new EnvironmentStripperTransformer()
     );
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -603,7 +573,7 @@ public class MixinPatchTransformer implements Transformer {
         reader.accept(node, 0);
 
         for (ClassTransform transform : CLASS_TRANSFORMS) {
-            patchResult = patchResult.or(transform.apply(node, null, this.environment));
+            patchResult = patchResult.or(transform.apply(node, null, new PatchContext(node, this.environment)));
         }
 
         if (isInMixinPackage(className)) {

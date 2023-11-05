@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -189,7 +190,8 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     }
 
     protected IModFile createGameLibraryMod(SplitPackageMerger.FilteredModPath modPath) {
-        SecureJar sj = SecureJar.from(Manifest::new, jar -> JarMetadata.from(jar, modPath.paths()), modPath.filter(), modPath.paths());
+        BiPredicate<String, String> moduleDescriptorFilter = (p, b) -> !p.equals("module-info.class") && !p.endsWith("/module-info.class");
+        SecureJar sj = SecureJar.from(Manifest::new, jar -> JarMetadata.from(jar, modPath.paths()), moduleDescriptorFilter.and(Objects.requireNonNullElse(modPath.filter(), (a, b) -> true)), modPath.paths());
         return new ModFile(sj, this, this::manifestParser, IModFile.Type.GAMELIBRARY.name());
     }
 

@@ -5,16 +5,28 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = Gui.class, priority = 200)
 public abstract class GuiMixin implements GuiExtensions {
+    @Unique
+    private boolean connector_didFinishPreRender;
+
+    public boolean isConnector_didFinishPreRender() {
+        return this.connector_didFinishPreRender;
+    }
+
+    public void resetConnector_didFinishPreRender() {
+        this.connector_didFinishPreRender = false;
+    }
 
     @Override
     public void connector_preRender(GuiGraphics guiGraphics, float tickDelta) {
         // Let mods mixin into this method
+        this.connector_didFinishPreRender = true;
     }
 
     @Override
@@ -34,6 +46,11 @@ public abstract class GuiMixin implements GuiExtensions {
 
     @Override
     public void connector_renderEffects(GuiGraphics guiGraphics, float tickDelta) {
+        // Let mods mixin into this method
+    }
+
+    @Override
+    public void connector_beforeDebugEnabled(GuiGraphics guiGraphics, float tickDelta) {
         // Let mods mixin into this method
     }
 

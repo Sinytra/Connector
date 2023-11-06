@@ -20,7 +20,6 @@ import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTypePatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInjectorOrdinalPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
-import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
@@ -172,20 +171,6 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("Lnet/minecraft/world/level/block/FireBlock;m_221150_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;I)V")
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/FireBlock;tryCatchFire(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V")
             .build(),
-        // Move HUD rendering calls at Options.renderDebug to a lambda in Forge's vanilla gui overlay enum class
-        Patch.builder()
-            .targetClass("net/minecraft/client/gui/Gui")
-            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
-            .targetInjectionPoint("Lnet/minecraft/client/Options;f_92063_:Z")
-            .modifyTarget("lambda$static$18(Lnet/minecraftforge/client/gui/overlay/ForgeGui;Lnet/minecraft/client/gui/GuiGraphics;FII)V")
-            .modifyInjectionPoint("HEAD", "")
-            .modifyMethodAccess(new ModifyMethodAccess.AccessChange(true, Opcodes.ACC_STATIC))
-            .modifyParams(builder -> builder
-                .replace(0, Type.getObjectType("net/minecraftforge/client/gui/overlay/ForgeGui"))
-                .insert(3, Type.INT_TYPE)
-                .insert(4, Type.INT_TYPE))
-            .modifyTargetClasses(classes -> classes.add(Type.getObjectType("net/minecraftforge/client/gui/overlay/VanillaGuiOverlay")))
-            .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
@@ -217,6 +202,13 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
             .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_280523_(Lnet/minecraft/client/gui/GuiGraphics;)V")
             .modifyTarget("connector_renderEffects")
+            .modifyInjectionPoint("HEAD", "")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
+            .targetInjectionPoint("FIELD", "Lnet/minecraft/client/Options;f_92063_:Z")
+            .modifyTarget("connector_beforeDebugEnabled")
             .modifyInjectionPoint("HEAD", "")
             .build(),
         Patch.builder()

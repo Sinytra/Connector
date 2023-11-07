@@ -4,12 +4,12 @@ import com.google.gson.Gson;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.spongepowered.asm.util.Constants;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -36,13 +36,16 @@ public class RefmapRemapper implements Transformer {
 
     public record RefmapFiles(SrgRemappingReferenceMapper.SimpleRefmap merged, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> files) {}
 
-    public static RefmapFiles processRefmaps(File input, Collection<String> refmaps, SrgRemappingReferenceMapper remapper) throws IOException {
+    public static RefmapFiles processRefmaps(Path input, Collection<String> refmaps, SrgRemappingReferenceMapper remapper, List<Path> libs) throws IOException {
         SrgRemappingReferenceMapper.SimpleRefmap results = new SrgRemappingReferenceMapper.SimpleRefmap(Map.of(), Map.of());
         Map<String, SrgRemappingReferenceMapper.SimpleRefmap> refmapFiles = new HashMap<>();
-        try (FileSystem fs = FileSystems.newFileSystem(input.toPath())) {
+        try (FileSystem fs = FileSystems.newFileSystem(input)) {
             for (String refmap : refmaps) {
                 Path refmapPath = fs.getPath(refmap);
-                if (Files.exists(refmapPath)) {
+                if (Files.notExists(refmapPath)) {
+                    refmapPath = findRefmapOnClasspath(refmap, input, libs);
+                }
+                if (refmapPath != null) {
                     byte[] data = Files.readAllBytes(refmapPath);
                     SrgRemappingReferenceMapper.SimpleRefmap remapped = remapRefmapInPlace(data, remapper);
                     refmapFiles.put(refmap, remapped);
@@ -54,6 +57,32 @@ public class RefmapRemapper implements Transformer {
             }
         }
         return new RefmapFiles(results, refmapFiles);
+    }
+
+    @Nullable
+    private static Path findRefmapOnClasspath(String resource, Path exclude, List<Path> libs) {
+        for (Path lib : libs) {
+            if (lib == exclude) {
+                continue;
+            }
+            Path basePath;
+            if (Files.isDirectory(lib)) {
+                basePath = lib;
+            } else {
+                try {
+                    FileSystem fs = FileSystems.newFileSystem(lib);
+                    basePath = fs.getPath("");
+                } catch (Exception e) {
+                    LOGGER.error("Error opening jar file", e);
+                    return null;
+                }
+            }
+            Path path = basePath.resolve(resource);
+            if (Files.exists(path)) {
+                return path;
+            }
+        }
+        return null;
     }
 
     private final Collection<String> visibleMixinConfigs;

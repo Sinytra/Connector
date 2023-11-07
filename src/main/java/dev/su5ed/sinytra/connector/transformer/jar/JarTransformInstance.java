@@ -65,8 +65,9 @@ public class JarTransformInstance {
     private final BytecodeFixerUpperFrontend bfu;
     private final Transformer remappingTransformer;
     private final ClassLookup cleanClassLookup;
+    private final List<Path> libs;
 
-    public JarTransformInstance(ClassProvider classProvider, Iterable<IModFile> loadedMods) {
+    public JarTransformInstance(ClassProvider classProvider, Iterable<IModFile> loadedMods, List<Path> libs) {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
         resolver.getMap(SOURCE_NAMESPACE, OBF_NAMESPACE);
@@ -92,6 +93,7 @@ public class JarTransformInstance {
         this.bfu = new BytecodeFixerUpperFrontend();
         this.remappingTransformer = OptimizedRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), IntermediateMapping.get(SOURCE_NAMESPACE));
         this.cleanClassLookup = createCleanClassLookup();
+        this.libs = libs;
 
         MixinPatchTransformer.completeSetup(loadedMods);
     }
@@ -114,7 +116,7 @@ public class JarTransformInstance {
         }
 
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
-        RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input, metadata.refmaps(), this.remapper);
+        RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input.toPath(), metadata.refmaps(), this.remapper, this.libs);
         IMappingFile srgToIntermediary = resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 

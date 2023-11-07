@@ -130,7 +130,7 @@ public final class JarTransformer {
                 ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
                 ILaunchPluginService.ITransformerLoader loader = name -> classProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
                 setMixinClassProvider(loader);
-                transformInstance = new JarTransformInstance(classProvider, loadedMods);
+                transformInstance = new JarTransformInstance(classProvider, loadedMods, libs);
             } finally {
                 initProgress.complete();
             }

@@ -5,8 +5,12 @@ import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import cpw.mods.modlauncher.api.LamdbaExceptionUtils;
 import cpw.mods.modlauncher.api.ServiceRunner;
 import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.Version;
+import net.fabricmc.loader.impl.metadata.EntrypointMetadata;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,6 +19,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -38,8 +43,10 @@ public final class ConnectorUtil {
         // I'm sorry for hardcoding this, but it seems to be the best way around
         "fabric_api"
     );
+    private static final String MIXINEXTRAS_MODID = "com_github_llamalad7_mixinextras";
+    private static final Version MIXINEXTRAS_ENTRYPOINT_VERSION = LamdbaExceptionUtils.uncheck(() -> Version.parse("0.2.0-beta.6"));
     // Never run entrypoints matching these values
-    public static final Collection<String> DISABLED_ENTRYPOINTS = Set.of(
+    public static final Collection<String> DISABLED_MIXINEXTRAS_ENTRYPOINTS = Set.of(
         // Mixinextras initializes itself from within its own mixin config plugin.
         // Attempting to initialize it from an entrypoint at the GAME layer will result in an "attempted duplicate class definition" error
         // It is redundant and no longer required, as mentioned in https://gist.github.com/LlamaLad7/ec597b6d02d39b8a2e35559f9fcce42f#initialization
@@ -180,6 +187,15 @@ public final class ConnectorUtil {
 
     public static String stripColor(String str) {
         return str != null ? STRIP_COLOR_PATTERN.matcher(str).replaceAll("") : null;
+    }
+
+    public static List<EntrypointMetadata> filterMixinExtrasEntrypoints(List<EntrypointMetadata> entrypoints) {
+        return FabricLoader.getInstance().getModContainer(MIXINEXTRAS_MODID)
+            .filter(mod -> mod.getMetadata().getVersion().compareTo(MIXINEXTRAS_ENTRYPOINT_VERSION) >= 0)
+            .map(mod -> entrypoints.stream()
+                .filter(metadata -> !DISABLED_MIXINEXTRAS_ENTRYPOINTS.contains(metadata.getValue()))
+                .toList())
+            .orElse(entrypoints);
     }
 
     @FunctionalInterface

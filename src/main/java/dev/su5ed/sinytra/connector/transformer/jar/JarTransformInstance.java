@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.nio.file.FileSystem;
@@ -46,8 +45,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 
@@ -157,17 +154,10 @@ public class JarTransformInstance {
     private static void processGeneratedJar(File input, Path output, FabricModFileMetadata metadata, Stopwatch stopwatch) throws IOException {
         Files.copy(input.toPath(), output);
         try (FileSystem fs = FileSystems.newFileSystem(output)) {
-            Path path = fs.getPath("META-INF/MANIFEST.MF");
-            Manifest manifest = new Manifest();
-            if (Files.exists(path)) {
-                manifest.read(Files.newInputStream(path));
-            }
-            Attributes attributes = manifest.getMainAttributes();
-            attributes.putValue("FMLModType", "GAMELIBRARY");
-            attributes.putValue("Automatic-Module-Name", metadata.modMetadata().getId());
-            Files.createDirectories(path.getParent());
-            try (OutputStream os = Files.newOutputStream(path)) {
-                manifest.write(os);
+            Path packMetadata = fs.getPath(ModMetadataGenerator.RESOURCE);
+            if (Files.notExists(packMetadata)) {
+                byte[] data = ModMetadataGenerator.generatePackMetadataFile(metadata.modMetadata().getId());
+                Files.write(packMetadata, data);
             }
         }
         stopwatch.stop();

@@ -77,6 +77,13 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/entity/Entity")
+            .targetMethod("m_204031_(Lnet/minecraft/tags/TagKey;D)Z")
+            .targetInjectionPoint("Lnet/minecraft/world/entity/Entity;m_146899_()Z")
+            .targetMixinType(Patch.MODIFY_EXPR_VAL)
+            .modifyTarget("updateFluidHeightAndDoFluidPushing()V")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/entity/player/Player")
             .targetMethod("m_6728_")
             .targetInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;m_213824_()Z")

@@ -90,9 +90,7 @@ public class ConnectorLoaderModMetadata implements LoaderModMetadata {
 
     @Override
     public List<EntrypointMetadata> getEntrypoints(String type) {
-        return this.wrapped.getEntrypoints(type).stream()
-            .filter(metadata -> !ConnectorUtil.DISABLED_ENTRYPOINTS.contains(metadata.getValue()))
-            .toList();
+        return ConnectorUtil.filterMixinExtrasEntrypoints(this.wrapped.getEntrypoints(type));
     }
 
     @Override

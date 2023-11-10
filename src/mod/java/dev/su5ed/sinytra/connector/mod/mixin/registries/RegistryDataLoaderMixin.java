@@ -1,11 +1,16 @@
 package dev.su5ed.sinytra.connector.mod.mixin.registries;
 
+import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import net.minecraft.core.Registry;
+import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.registries.DataPackRegistriesHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.Mixin;
@@ -56,10 +61,32 @@ public abstract class RegistryDataLoaderMixin {
 
     @Redirect(method = "loadRegistryContents", at = @At(value = "INVOKE", target = "Lnet/minecraft/resources/RegistryDataLoader;registryDirPath(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/String;"))
     private static String modifyRegistryDirPath(ResourceLocation location, RegistryOps.RegistryInfoLookup lookup, ResourceManager manager, ResourceKey<? extends Registry<?>> registryKey) {
-        if (!location.getNamespace().equals(ResourceLocation.DEFAULT_NAMESPACE) && connector_injectedRegistries.contains(registryKey)) {
+        if (!location.getNamespace().equals(ResourceLocation.DEFAULT_NAMESPACE) && (connector_injectedRegistries.contains(registryKey) || connector$shouldOmitPrefix(location, registryKey, manager))) {
             CONNECTOR_LOGGER.info("Using path as content location for registry {}", registryKey.location());
             return location.getPath();
         }
         return registryDirPath(location);
+    }
+
+    @Unique
+    private static boolean connector$shouldOmitPrefix(ResourceLocation location, ResourceKey<? extends Registry<?>> registryKey, ResourceManager manager) {
+        // Check if the registry has been registered
+        if (DataPackRegistriesHooks.getDataPackRegistries().stream().noneMatch(data -> registryKey.equals(data.key()))) {
+            String modid = location.getNamespace();
+            // If the namespace is one of a fabric mod, omit the prefix
+            if (ConnectorEarlyLoader.isConnectorMod(modid)) {
+                return true;
+            }
+            // If the namespace is of a known forge mod, it must stay prefixed
+            if (ModList.get().isLoaded(modid)) {
+                return false;
+            }
+            // In case the namespace does not belong to any mod, make an educated guess
+            // Omit the prefix in cases where no resources exist at the prefixed path, but exist at the standard one
+            if (FileToIdConverter.json(ForgeHooks.prefixNamespace(location)).listMatchingResources(manager).isEmpty()) {
+                return !FileToIdConverter.json(location.getPath()).listMatchingResources(manager).isEmpty();
+            }
+        }
+        return false;
     }
 }

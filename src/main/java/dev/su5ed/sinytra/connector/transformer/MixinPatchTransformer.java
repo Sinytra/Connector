@@ -79,8 +79,13 @@ public class MixinPatchTransformer implements Transformer {
         Patch.builder()
             .targetClass("net/minecraft/world/entity/Entity")
             .targetMethod("m_204031_(Lnet/minecraft/tags/TagKey;D)Z")
+            .targetInjectionPoint("Lnet/minecraft/world/phys/Vec3;m_82553_()D")
+            .modifyTarget("lambda$updateFluidHeightAndDoFluidPushing$26")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/entity/Entity")
+            .targetMethod("m_204031_(Lnet/minecraft/tags/TagKey;D)Z")
             .targetInjectionPoint("Lnet/minecraft/world/entity/Entity;m_146899_()Z")
-            .targetMixinType(Patch.MODIFY_EXPR_VAL)
             .modifyTarget("updateFluidHeightAndDoFluidPushing()V")
             .build(),
         Patch.builder()
@@ -172,6 +177,9 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/world/level/block/FireBlock")
             .targetMethod("m_221150_")
             .modifyTarget("tryCatchFire")
+            .modifyParams(b -> b
+                .insert(5, Type.getObjectType("net/minecraft/core/Direction"))
+                .targetType(ModifyMethodParams.TargetType.METHOD))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/level/block/FireBlock")

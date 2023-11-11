@@ -114,13 +114,6 @@ public class MixinPatchTransformer implements Transformer {
             .modifyTarget("sinkInFluid(Lnet/minecraftforge/fluids/FluidType;)V")
             .build(),
         Patch.builder()
-            .targetClass("net/minecraft/client/renderer/entity/layers/ElytraLayer")
-            .targetMethod("m_6494_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V")
-            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
-            .targetMixinType(Patch.MODIFY_EXPR_VAL)
-            .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
-            .build(),
-        Patch.builder()
             .targetClass("net/minecraft/world/item/BoneMealItem")
             .targetMethod("m_40627_")
             .modifyTarget("applyBonemeal(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;)Z")

@@ -18,6 +18,7 @@ import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTypePatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInheritedInjectionPointPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInjectorOrdinalPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
@@ -185,6 +186,13 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/world/level/block/FireBlock")
             .targetInjectionPoint("Lnet/minecraft/world/level/block/FireBlock;m_221150_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;I)V")
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/FireBlock;tryCatchFire(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+            .modifyTarget("Lnet/minecraftforge/client/gui/overlay/ForgeGui;renderArmor(Lnet/minecraft/client/gui/GuiGraphics;II)V")
+            .modifyParams(b -> b.insert(1, Type.INT_TYPE).insert(2, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
@@ -600,7 +608,12 @@ public class MixinPatchTransformer implements Transformer {
     @Override
     public Collection<? extends Entry> getExtras() {
         List<Entry> entries = new ArrayList<>();
+        Patch patch = Patch.builder()
+            .transform(new DynamicInheritedInjectionPointPatch())
+            .build();
         this.environment.getClassGenerator().getGeneratedMixinClasses().forEach((name, cls) -> {
+            patch.apply(cls.node(), this.environment);
+
             ClassWriter writer = new ClassWriter(0);
             cls.node().accept(writer);
             byte[] bytes = writer.toByteArray();

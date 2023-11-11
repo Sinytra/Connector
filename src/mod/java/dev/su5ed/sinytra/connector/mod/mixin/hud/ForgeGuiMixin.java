@@ -21,5 +21,5 @@ public class ForgeGuiMixin {
     @Inject(method = "renderHUDText", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Options;renderDebug:Z", opcode = Opcodes.GETFIELD))
     private void onRenderDebug(int width, int height, GuiGraphics guiGraphics, CallbackInfo ci) {
         ((GuiExtensions) this).connector_beforeDebugEnabled(guiGraphics, Minecraft.getInstance().getPartialTick());
-    } 
+    }
 }

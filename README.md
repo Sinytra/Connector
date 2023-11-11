@@ -21,13 +21,14 @@ on [MinecraftForge](https://minecraftforge.net). Its goal is to bring the two pl
 developers time and effort maintaining their mods for multiple platforms at once, as well as allowing players to play
 all their favourite mods in one modpack.
 
-#### Resources
+#### Recommendations
 
 - Visit the [Mod Compatibility Thread](https://github.com/Sinytra/Connector/discussions/12) to can find information about known working / incompatible mods
 - To learn more about how Connector works, read our [Introductory blog post](https://github.com/Sinytra/Connector/discussions/11)
 - You may also like the [Forgified Fabric API](https://github.com/Sinytra/ForgifiedFabricAPI), a port of the Fabric API to Forge
 - Check out [Connector Extras](https://github.com/Sinytra/ConnectorExtras) for an improved experience
   and better compatibility with third-party APIs
+- If you're using Embeddium with Fabric mods installed, also install [Lazurite](https://modrinth.com/mod/lazurite) for proper FRAPI compatibility
 
 ## Usage Guide
 

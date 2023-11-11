@@ -3,7 +3,6 @@ package dev.su5ed.sinytra.connector.locator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
-import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.jarhandling.SecureJar;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
@@ -178,19 +177,11 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     }
 
     private IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath) {
-        if (modPath.metadata().generated()) {
-            return createGameLibraryMod(modPath);
-        }
         ModJarMetadata mjm = ConnectorUtil.uncheckThrowable(() -> (ModJarMetadata) MJM_INIT.invoke());
         SecureJar modJar = SecureJar.from(Manifest::new, jar -> mjm, modPath.filter(), modPath.paths());
-        IModFile mod = new ModFile(modJar, this, modFile -> ConnectorModMetadataParser.createForgeMetadata(modFile, modPath.metadata().modMetadata()));
+        IModFile mod = new ModFile(modJar, this, modFile -> ConnectorModMetadataParser.createForgeMetadata(modFile, modPath.metadata().modMetadata(), modPath.metadata().generated()));
         mjm.setModFile(mod);
         return mod;
-    }
-
-    protected IModFile createGameLibraryMod(SplitPackageMerger.FilteredModPath modPath) {
-        SecureJar sj = SecureJar.from(Manifest::new, jar -> JarMetadata.from(jar, modPath.paths()), modPath.filter(), modPath.paths());
-        return new ModFile(sj, this, this::manifestParser, IModFile.Type.GAMELIBRARY.name());
     }
 
     private IModFile createModOrThrow(Path... paths) {

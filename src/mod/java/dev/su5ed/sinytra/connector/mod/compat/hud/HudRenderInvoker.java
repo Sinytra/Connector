@@ -13,7 +13,11 @@ public final class HudRenderInvoker {
     @SubscribeEvent
     public static void beforeRenderHud(RenderGuiEvent.Pre event) {
         if (Minecraft.getInstance().gui instanceof GuiExtensions ext) {
+            ext.resetConnector_didFinishPreRender();
             ext.connector_preRender(event.getGuiGraphics(), event.getPartialTick());
+            if (!ext.isConnector_didFinishPreRender()) {
+                event.setCanceled(true);
+            }
         }
     }
 

@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.nio.file.FileSystem;
@@ -46,8 +45,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 
@@ -65,8 +62,9 @@ public class JarTransformInstance {
     private final BytecodeFixerUpperFrontend bfu;
     private final Transformer remappingTransformer;
     private final ClassLookup cleanClassLookup;
+    private final List<Path> libs;
 
-    public JarTransformInstance(ClassProvider classProvider, Iterable<IModFile> loadedMods) {
+    public JarTransformInstance(ClassProvider classProvider, Iterable<IModFile> loadedMods, List<Path> libs) {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
         resolver.getMap(SOURCE_NAMESPACE, OBF_NAMESPACE);
@@ -92,6 +90,7 @@ public class JarTransformInstance {
         this.bfu = new BytecodeFixerUpperFrontend();
         this.remappingTransformer = OptimizedRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), IntermediateMapping.get(SOURCE_NAMESPACE));
         this.cleanClassLookup = createCleanClassLookup();
+        this.libs = libs;
 
         MixinPatchTransformer.completeSetup(loadedMods);
     }
@@ -114,13 +113,13 @@ public class JarTransformInstance {
         }
 
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
-        RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input, metadata.refmaps(), this.remapper);
+        RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input.toPath(), metadata.refmaps(), this.remapper, this.libs);
         IMappingFile srgToIntermediary = resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
-        PatchEnvironment environment = new PatchEnvironment(refmap.merged().mappings, this.cleanClassLookup);
-        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches, this.bfu.unwrap());
+        PatchEnvironment environment = new PatchEnvironment(refmap.merged().mappings, this.cleanClassLookup, this.bfu.unwrap());
+        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches);
         RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.visibleMixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())
@@ -155,17 +154,10 @@ public class JarTransformInstance {
     private static void processGeneratedJar(File input, Path output, FabricModFileMetadata metadata, Stopwatch stopwatch) throws IOException {
         Files.copy(input.toPath(), output);
         try (FileSystem fs = FileSystems.newFileSystem(output)) {
-            Path path = fs.getPath("META-INF/MANIFEST.MF");
-            Manifest manifest = new Manifest();
-            if (Files.exists(path)) {
-                manifest.read(Files.newInputStream(path));
-            }
-            Attributes attributes = manifest.getMainAttributes();
-            attributes.putValue("FMLModType", "GAMELIBRARY");
-            attributes.putValue("Automatic-Module-Name", metadata.modMetadata().getId());
-            Files.createDirectories(path.getParent());
-            try (OutputStream os = Files.newOutputStream(path)) {
-                manifest.write(os);
+            Path packMetadata = fs.getPath(ModMetadataGenerator.RESOURCE);
+            if (Files.notExists(packMetadata)) {
+                byte[] data = ModMetadataGenerator.generatePackMetadataFile(metadata.modMetadata().getId());
+                Files.write(packMetadata, data);
             }
         }
         stopwatch.stop();

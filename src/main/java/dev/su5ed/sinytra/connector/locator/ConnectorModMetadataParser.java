@@ -29,11 +29,11 @@ public final class ConnectorModMetadataParser {
     private static final Pattern VALID_VERSION = Pattern.compile("^\\d+.*");
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static IModFileInfo createForgeMetadata(IModFile modFile, ConnectorLoaderModMetadata metadata) {
+    public static IModFileInfo createForgeMetadata(IModFile modFile, ConnectorLoaderModMetadata metadata, boolean lowCode) {
         String modid = metadata.getId();
 
         Config config = Config.inMemory();
-        config.add("modLoader", "javafml");
+        config.add("modLoader", lowCode ? "lowcodefml" : "javafml");
         config.add("loaderVersion", "[0, )");
         Collection<String> licenses = metadata.getLicense();
         config.add("license", licenses.isEmpty() ? DEFAULT_LICENSE : String.join(", ", metadata.getLicense()));

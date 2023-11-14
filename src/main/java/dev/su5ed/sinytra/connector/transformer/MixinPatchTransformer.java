@@ -183,8 +183,16 @@ public class MixinPatchTransformer implements Transformer {
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_168688_(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/entity/player/Player;IIIIFIIIZ)V")
             .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
-            .modifyTarget("Lnet/minecraftforge/client/gui/overlay/ForgeGui;renderArmor(Lnet/minecraft/client/gui/GuiGraphics;II)V")
+            .modifyTarget("renderHealth(IILnet/minecraft/client/gui/GuiGraphics;)V")
+            .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+            .modifyTarget("renderArmor(Lnet/minecraft/client/gui/GuiGraphics;II)V")
             .modifyParams(b -> b.insert(1, Type.INT_TYPE).insert(2, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
             .build(),
         Patch.builder()

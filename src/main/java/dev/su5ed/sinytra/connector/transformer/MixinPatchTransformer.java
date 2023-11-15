@@ -2,7 +2,6 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -441,7 +440,7 @@ public class MixinPatchTransformer implements Transformer {
             .build();
     }
 
-    public void finalize(Path zipRoot, Collection<String> configs, SrgRemappingReferenceMapper.SimpleRefmap refmap) throws IOException {
+    public void finalize(Path zipRoot, Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> refmapFiles, Set<String> dirtyRefmaps) throws IOException {
         Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.getClassGenerator().getGeneratedMixinClasses();
         if (!generatedMixinClasses.isEmpty()) {
             for (String config : configs) {
@@ -464,8 +463,14 @@ public class MixinPatchTransformer implements Transformer {
 
                                 // Update refmap
                                 if (json.has("refmap")) {
-                                    for (MixinClassGenerator.GeneratedClass generatedClass : mixins.values()) {
-                                        moveRefmapMappings(generatedClass.originalName(), generatedClass.generatedName(), json.get("refmap").getAsString(), zipRoot, refmap);
+                                    String refmapName = json.get("refmap").getAsString();
+                                    if (dirtyRefmaps.contains(refmapName)) {
+                                        SrgRemappingReferenceMapper.SimpleRefmap refmap = refmapFiles.get(refmapName);
+                                        Path path = zipRoot.resolve(refmapName);
+                                        if (Files.exists(path)) {
+                                            String refmapString = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(refmap);
+                                            Files.writeString(path, refmapString, StandardCharsets.UTF_8);
+                                        }
                                     }
                                 }
                             }
@@ -501,30 +506,6 @@ public class MixinPatchTransformer implements Transformer {
                         }
                     }));
             }
-        }
-    }
-
-    private void moveRefmapMappings(String oldClass, String newClass, String refmap, Path root, SrgRemappingReferenceMapper.SimpleRefmap oldRefmap) throws IOException {
-        Map<String, String> mappingsEntry = oldRefmap.mappings.get(oldClass);
-        if (mappingsEntry == null) {
-            return;
-        }
-        Map<String, String> dataMappingsEntry = oldRefmap.data.get("searge").get(oldClass);
-        if (dataMappingsEntry == null) {
-            return;
-        }
-        Path path = root.resolve(refmap);
-        if (Files.notExists(path)) {
-            return;
-        }
-        try (Reader reader = Files.newBufferedReader(path)) {
-            SrgRemappingReferenceMapper.SimpleRefmap configRefmap = new Gson().fromJson(reader, SrgRemappingReferenceMapper.SimpleRefmap.class);
-
-            configRefmap.mappings.put(newClass, mappingsEntry);
-            configRefmap.data.get("searge").put(newClass, dataMappingsEntry);
-
-            String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(configRefmap);
-            Files.writeString(path, output, StandardCharsets.UTF_8);
         }
     }
 

@@ -21,6 +21,7 @@ import dev.su5ed.sinytra.connector.transformer.ModMetadataGenerator;
 import dev.su5ed.sinytra.connector.transformer.OptimizedRenamingTransformer;
 import dev.su5ed.sinytra.connector.transformer.RefmapRemapper;
 import dev.su5ed.sinytra.connector.transformer.SrgRemappingReferenceMapper;
+import dev.su5ed.sinytra.connector.transformer.patch.ConnectorRefmapHolder;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.MappingResolverImpl;
 import net.minecraftforge.coremod.api.ASMAPI;
@@ -118,7 +119,8 @@ public class JarTransformInstance {
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
-        PatchEnvironment environment = new PatchEnvironment(refmap.merged().mappings, this.cleanClassLookup, this.bfu.unwrap());
+        ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
+        PatchEnvironment environment = new PatchEnvironment(refmapHolder, this.cleanClassLookup, this.bfu.unwrap());
         MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches);
         RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.visibleMixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
@@ -140,7 +142,7 @@ public class JarTransformInstance {
             renamer.run(input, output.toFile());
 
             try (FileSystem zipFile = FileSystems.newFileSystem(output)) {
-                patchTransformer.finalize(zipFile.getPath("/"), metadata.mixinConfigs(), refmap.merged());
+                patchTransformer.finalize(zipFile.getPath("/"), metadata.mixinConfigs(), refmap.files(), refmapHolder.getDirtyRefmaps());
             }
         } catch (Throwable t) {
             LOGGER.error("Encountered error while transforming jar file " + input.getAbsolutePath(), t);

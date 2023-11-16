@@ -83,6 +83,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("INVOKE", "Lnet/minecraft/world/level/StructureManager;m_220521_()Lnet/minecraft/core/RegistryAccess;")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/item/Item")
+            .targetMethod("m_7203_")
+            .targetInjectionPoint("Lnet/minecraft/world/item/Item;m_41473_()Lnet/minecraft/world/food/FoodProperties;")
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;getFoodProperties(Lnet/minecraft/world/entity/LivingEntity;)Lnet/minecraft/world/food/FoodProperties;")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/entity/Entity")
             .targetMethod("m_204031_(Lnet/minecraft/tags/TagKey;D)Z")
             .targetInjectionPoint("Lnet/minecraft/world/phys/Vec3;m_82553_()D")

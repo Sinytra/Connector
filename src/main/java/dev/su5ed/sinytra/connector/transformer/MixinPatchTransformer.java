@@ -77,6 +77,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/level/NaturalSpawner")
+            .targetMethod("m_220443_")
+            .targetInjectionPoint("Lnet/minecraft/world/level/levelgen/structure/structures/NetherFortressStructure;f_228517_:Lnet/minecraft/util/random/WeightedRandomList;")
+            .modifyInjectionPoint("INVOKE", "Lnet/minecraft/world/level/StructureManager;m_220521_()Lnet/minecraft/core/RegistryAccess;")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/entity/Entity")
             .targetMethod("m_204031_(Lnet/minecraft/tags/TagKey;D)Z")
             .targetInjectionPoint("Lnet/minecraft/world/phys/Vec3;m_82553_()D")

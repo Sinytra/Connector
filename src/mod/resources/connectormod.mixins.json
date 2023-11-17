@@ -10,6 +10,7 @@
     "ForgeHooksMixin",
     "LivingEntityMixin",
     "PoiTypesMixin",
+    "PlayerListMixin",
     "item.IForgeItemMixin",
     "lang.PathPackResourcesAnonMixin",
     "lang.PathPackResourcesMixin",

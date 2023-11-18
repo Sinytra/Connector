@@ -145,10 +145,14 @@ val fullJar: Jar by tasks.creating(Jar::class) {
         into("adapter_data")
         include("*.json")
     }
-    from(modJar)
+    // Despite not being part of jarjar metadata, the mod jar must be located in this directory
+    // in order to be deobfuscated by FG in userdev environments
+    into("META-INF/jarjar/") {
+        from(modJar)
+    }
     manifest {
         from(tasks.jar.get().manifest)
-        attributes("Embedded-Dependencies-Mod" to modJar.archiveFile.get().asFile.name)
+        attributes("Embedded-Dependencies-Mod" to "META-INF/jarjar/" + modJar.archiveFile.get().asFile.name)
     }
 }
 

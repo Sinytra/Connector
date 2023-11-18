@@ -2,7 +2,6 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -78,6 +77,18 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/level/NaturalSpawner")
+            .targetMethod("m_220443_")
+            .targetInjectionPoint("Lnet/minecraft/world/level/levelgen/structure/structures/NetherFortressStructure;f_228517_:Lnet/minecraft/util/random/WeightedRandomList;")
+            .modifyInjectionPoint("INVOKE", "Lnet/minecraft/world/level/StructureManager;m_220521_()Lnet/minecraft/core/RegistryAccess;")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/item/Item")
+            .targetMethod("m_7203_")
+            .targetInjectionPoint("Lnet/minecraft/world/item/Item;m_41473_()Lnet/minecraft/world/food/FoodProperties;")
+            .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;getFoodProperties(Lnet/minecraft/world/entity/LivingEntity;)Lnet/minecraft/world/food/FoodProperties;")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/entity/Entity")
             .targetMethod("m_204031_(Lnet/minecraft/tags/TagKey;D)Z")
             .targetInjectionPoint("Lnet/minecraft/world/phys/Vec3;m_82553_()D")
@@ -112,13 +123,6 @@ public class MixinPatchTransformer implements Transformer {
             .targetMixinType(Patch.MODIFY_CONST)
             .extractMixin("net/minecraftforge/common/extensions/IForgeLivingEntity")
             .modifyTarget("sinkInFluid(Lnet/minecraftforge/fluids/FluidType;)V")
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/renderer/entity/layers/ElytraLayer")
-            .targetMethod("m_6494_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V")
-            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
-            .targetMixinType(Patch.MODIFY_EXPR_VAL)
-            .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/item/BoneMealItem")
@@ -190,8 +194,16 @@ public class MixinPatchTransformer implements Transformer {
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_168688_(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/entity/player/Player;IIIIFIIIZ)V")
             .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
-            .modifyTarget("Lnet/minecraftforge/client/gui/overlay/ForgeGui;renderArmor(Lnet/minecraft/client/gui/GuiGraphics;II)V")
+            .modifyTarget("renderHealth(IILnet/minecraft/client/gui/GuiGraphics;)V")
+            .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+            .modifyTarget("renderArmor(Lnet/minecraft/client/gui/GuiGraphics;II)V")
             .modifyParams(b -> b.insert(1, Type.INT_TYPE).insert(2, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
             .build(),
         Patch.builder()
@@ -440,7 +452,7 @@ public class MixinPatchTransformer implements Transformer {
             .build();
     }
 
-    public void finalize(Path zipRoot, Collection<String> configs, SrgRemappingReferenceMapper.SimpleRefmap refmap) throws IOException {
+    public void finalize(Path zipRoot, Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> refmapFiles, Set<String> dirtyRefmaps) throws IOException {
         Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.getClassGenerator().getGeneratedMixinClasses();
         if (!generatedMixinClasses.isEmpty()) {
             for (String config : configs) {
@@ -463,8 +475,14 @@ public class MixinPatchTransformer implements Transformer {
 
                                 // Update refmap
                                 if (json.has("refmap")) {
-                                    for (MixinClassGenerator.GeneratedClass generatedClass : mixins.values()) {
-                                        moveRefmapMappings(generatedClass.originalName(), generatedClass.generatedName(), json.get("refmap").getAsString(), zipRoot, refmap);
+                                    String refmapName = json.get("refmap").getAsString();
+                                    if (dirtyRefmaps.contains(refmapName)) {
+                                        SrgRemappingReferenceMapper.SimpleRefmap refmap = refmapFiles.get(refmapName);
+                                        Path path = zipRoot.resolve(refmapName);
+                                        if (Files.exists(path)) {
+                                            String refmapString = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(refmap);
+                                            Files.writeString(path, refmapString, StandardCharsets.UTF_8);
+                                        }
                                     }
                                 }
                             }
@@ -500,30 +518,6 @@ public class MixinPatchTransformer implements Transformer {
                         }
                     }));
             }
-        }
-    }
-
-    private void moveRefmapMappings(String oldClass, String newClass, String refmap, Path root, SrgRemappingReferenceMapper.SimpleRefmap oldRefmap) throws IOException {
-        Map<String, String> mappingsEntry = oldRefmap.mappings.get(oldClass);
-        if (mappingsEntry == null) {
-            return;
-        }
-        Map<String, String> dataMappingsEntry = oldRefmap.data.get("searge").get(oldClass);
-        if (dataMappingsEntry == null) {
-            return;
-        }
-        Path path = root.resolve(refmap);
-        if (Files.notExists(path)) {
-            return;
-        }
-        try (Reader reader = Files.newBufferedReader(path)) {
-            SrgRemappingReferenceMapper.SimpleRefmap configRefmap = new Gson().fromJson(reader, SrgRemappingReferenceMapper.SimpleRefmap.class);
-
-            configRefmap.mappings.put(newClass, mappingsEntry);
-            configRefmap.data.get("searge").put(newClass, dataMappingsEntry);
-
-            String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(configRefmap);
-            Files.writeString(path, output, StandardCharsets.UTF_8);
         }
     }
 

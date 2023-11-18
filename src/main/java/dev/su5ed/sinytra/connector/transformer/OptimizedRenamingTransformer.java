@@ -1,5 +1,6 @@
 package dev.su5ed.sinytra.connector.transformer;
 
+import dev.su5ed.sinytra.adapter.patch.util.MethodQualifier;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.fart.internal.ClassProviderImpl;
@@ -28,7 +29,6 @@ import java.util.stream.Stream;
 
 public final class OptimizedRenamingTransformer extends RenamingTransformer {
     private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$_]+;$";
-    private static final String METHOD_DESC_PATTERN = "^(?<desc>\\((?:\\[*[ZCBSIFJD]|\\[*L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$";
 
     public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, Map<String, String> flatMappings) {
         RenamingClassProvider reverseProvider = new RenamingClassProvider(classProvider, mappingFile, mappingFile.reverse(), log);
@@ -196,14 +196,18 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                         return 'L' + mapped + ';';
                     }
                 }
-                else if (str.matches(METHOD_DESC_PATTERN)) {
-                    return mapMethodDesc(str);
+
+                MethodQualifier qualifier = MethodQualifier.create(str).orElse(null);
+                if (qualifier != null && qualifier.desc() != null) {
+                    String owner = qualifier.owner() != null ? mapDesc(qualifier.owner()) : "";
+                    String name = qualifier.name() != null ? this.flatMappings.getOrDefault(qualifier.name(), qualifier.name()) : "";
+                    String desc = qualifier.desc() != null ? mapMethodDesc(qualifier.desc()) : "";
+                    return owner + name + desc;
                 }
-                else {
-                    String mapped = this.flatMappings.get(str);
-                    if (mapped != null) {
-                        return mapped;
-                    }
+
+                String mapped = this.flatMappings.get(str);
+                if (mapped != null) {
+                    return mapped;
                 }
             }
             return super.mapValue(value);

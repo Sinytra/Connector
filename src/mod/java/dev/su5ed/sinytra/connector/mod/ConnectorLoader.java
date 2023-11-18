@@ -2,6 +2,7 @@ package dev.su5ed.sinytra.connector.mod;
 
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
@@ -45,6 +46,7 @@ public class ConnectorLoader {
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Loading mods", 0);
         try {
             loading = true;
+            LazyEntityAttributes.inject();
 
             // Invoke entry points
             EntrypointUtils.invoke("main", ModInitializer.class, ModInitializer::onInitialize);
@@ -55,6 +57,7 @@ public class ConnectorLoader {
                 EntrypointUtils.invoke("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
             }
 
+            LazyEntityAttributes.release();
             loading = false;
             finishedLoading = true;
         } catch (Throwable t) {

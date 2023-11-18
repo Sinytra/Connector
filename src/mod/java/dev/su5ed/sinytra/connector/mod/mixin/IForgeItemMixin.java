@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.mod.mixin.item;
+package dev.su5ed.sinytra.connector.mod.mixin;
 
 import net.minecraft.world.entity.monster.piglin.PiglinAi;
 import net.minecraft.world.item.ItemStack;

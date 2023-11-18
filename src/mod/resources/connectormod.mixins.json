@@ -6,12 +6,10 @@
   "compatibilityLevel": "JAVA_17",
   "plugin": "dev.su5ed.sinytra.connector.mod.ConnectorBootstrap",
   "mixins": [
-    "AttributeSupplierAccessor",
     "ForgeHooksMixin",
-    "LivingEntityMixin",
     "PoiTypesMixin",
     "PlayerListMixin",
-    "item.IForgeItemMixin",
+    "IForgeItemMixin",
     "lang.PathPackResourcesAnonMixin",
     "lang.PathPackResourcesMixin",
     "network.ConnectionTypeMixin",
@@ -21,10 +19,9 @@
     "registries.BuiltInRegistriesMixin",
     "registries.ForgeRegistryMixin",
     "registries.RegistryDataLoaderMixin",
-    "tags.TagLoaderMixin"
+    "TagLoaderMixin"
   ],
   "client": [
-    "CreativeModeInventoryScreenMixin",
     "ForgeHooksClientMixin",
     "HumanoidArmorLayerMixin",
     "ItemBlockRenderTypesMixin",

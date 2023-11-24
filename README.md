@@ -2,12 +2,12 @@
   <img src="https://github.com/Sinytra/Connector/assets/51261569/80106b55-dbd3-43d3-a00e-17075f03bcba">
 </p>
 <p align="center">
-  <img src="https://github.com/Sinytra/Connector/actions/workflows/build.yml/badge.svg">
-  <img src="https://img.shields.io/github/v/release/Sinytra/Connector?style=flat&label=Release&include_prereleases&sort=semver">
-  <img src="https://cf.way2muchnoise.eu/title/sinytra-connector.svg">
-  <img src="https://img.shields.io/modrinth/dt/u58R1TMW?color=00AF5C&label=modrinth&style=flat&logo=modrinth">
-  <img src="https://raw.githubusercontent.com/Sinytra/.github/main/badges/forgified-fabric-api/compacter.svg">
-  <img src="https://discordapp.com/api/guilds/1141048834177388746/widget.png?style=shield">
+  <a href="https://github.com/Sinytra/Connector/actions/workflows/build.yml"><img src="https://github.com/Sinytra/Connector/actions/workflows/build.yml/badge.svg"></a>
+  <a href="https://github.com/Sinytra/Connector/releases/latest"><img src="https://img.shields.io/github/v/release/Sinytra/Connector?style=flat&label=Release&include_prereleases&sort=semver"></a>
+  <a href="https://legacy.curseforge.com/minecraft/mc-mods/sinytra-connector"><img src="https://cf.way2muchnoise.eu/title/sinytra-connector.svg"></a>
+  <a href="https://modrinth.com/mod/connector"><img src="https://img.shields.io/modrinth/dt/u58R1TMW?color=00AF5C&label=modrinth&style=flat&logo=modrinth"></a>
+  <a href="https://github.com/Sinytra/ForgifiedFabricAPI"><img src="https://raw.githubusercontent.com/Sinytra/.github/main/badges/forgified-fabric-api/compacter.svg"></a>
+  <a href="https://discord.gg/mamk7z3TKZ"><img src="https://discordapp.com/api/guilds/1141048834177388746/widget.png?style=shield"></a>
 </p>
 
 > [!WARNING]  

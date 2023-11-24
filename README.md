@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/Sinytra/Connector/assets/51261569/a2f69db8-8807-4c4d-bb65-4bd197ef3fc2">
+  <img src="https://github.com/Sinytra/Connector/assets/51261569/57d70232-4bf6-43b6-b7d1-f6d35cca831a">
 </p>
 <p align="center">
   <img src="https://github.com/Sinytra/Connector/actions/workflows/build.yml/badge.svg">

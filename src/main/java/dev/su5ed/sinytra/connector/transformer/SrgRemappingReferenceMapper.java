@@ -73,7 +73,8 @@ public class SrgRemappingReferenceMapper {
         String mappedName = node != null ? node.getMapped() : name != null ? name : "";
 
         String mappedOwner = owner != null ? this.mappingFile.remapDescriptor(owner) : "";
-        return mappedOwner + mappedName + separator + this.mappingFile.remapDescriptor(desc);
+        String mappedDesc = desc != null ? this.mappingFile.remapDescriptor(desc) : "";
+        return mappedOwner + mappedName + separator + mappedDesc;
     }
 
     public static class SimpleRefmap {

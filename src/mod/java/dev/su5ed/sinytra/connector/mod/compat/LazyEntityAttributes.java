@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.compat;
 
-import dev.su5ed.sinytra.connector.mod.mixin.AttributeSupplierAccessor;
+import cpw.mods.modlauncher.api.LamdbaExceptionUtils;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -8,20 +8,44 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
 import net.minecraftforge.common.ForgeHooks;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
 import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
+import net.minecraftforge.registries.RegistryObject;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 public class LazyEntityAttributes {
+    private static final MethodHandle REGISTRY_OBJECT_SET_VALUE = LamdbaExceptionUtils.uncheck(() -> MethodHandles.privateLookupIn(RegistryObject.class, MethodHandles.lookup()).findSetter(RegistryObject.class, "value", Object.class));
+    private static final List<RegistryObject<Attribute>> ATTRIBUTES = List.of(ForgeMod.SWIM_SPEED, ForgeMod.NAMETAG_DISTANCE, ForgeMod.ENTITY_GRAVITY, ForgeMod.STEP_HEIGHT_ADDITION);
     private static final Map<Supplier<? extends Attribute>, PlaceholderAttribute> PLACEHOLDERS = new HashMap<>();
 
-    public static Attribute getLazyAttribute(Supplier<? extends Attribute> original) {
-        return PLACEHOLDERS.computeIfAbsent(original, s -> new PlaceholderAttribute());
+    public static void inject() {
+        for (RegistryObject<Attribute> registryObject : ATTRIBUTES) {
+            Attribute lazyAttribute = PLACEHOLDERS.computeIfAbsent(registryObject, s -> new PlaceholderAttribute());
+            try {
+                REGISTRY_OBJECT_SET_VALUE.invoke(registryObject, lazyAttribute);
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public static void release() {
+        for (RegistryObject<Attribute> registryObject : ATTRIBUTES) {
+            try {
+                REGISTRY_OBJECT_SET_VALUE.invoke(registryObject, null);
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private static class PlaceholderAttribute extends Attribute {
@@ -43,7 +67,7 @@ public class LazyEntityAttributes {
                     Map<Attribute, AttributeInstance> instances = ObfuscationReflectionHelper.getPrivateValue(AttributeSupplier.class, value, ASMAPI.mapField("f_22241_"));
                     if (!madeMutable.get()) {
                         instances = new HashMap<>(instances);
-                        ((AttributeSupplierAccessor) value).setInstances(instances);
+                        value.instances = instances;
                         madeMutable.set(true);
                     }
                     Attribute original = originalSupplier.get();

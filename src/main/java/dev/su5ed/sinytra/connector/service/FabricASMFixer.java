@@ -31,7 +31,7 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
 public class FabricASMFixer {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String FABRIC_ASM_MODID = "mm";
+    private static final Set<String> FABRIC_ASM_MODIDS = Set.of("mm", "mm_shedaniel");
     private static final String MINECRAFT_MODULE = "minecraft";
     public static final List<URL> URLS = new ArrayList<>();
 
@@ -57,7 +57,7 @@ public class FabricASMFixer {
 
     public static void injectMinecraftModuleReader() {
         try {
-            if (!FabricLoader.getInstance().isModLoaded(FABRIC_ASM_MODID)) {
+            if (FABRIC_ASM_MODIDS.stream().noneMatch(FabricLoader.getInstance()::isModLoaded)) {
                 return;
             }
             ModuleLayer layer = Launcher.INSTANCE.findLayerManager().orElseThrow().getLayer(IModuleLayerManager.Layer.GAME).orElseThrow();
@@ -115,7 +115,7 @@ public class FabricASMFixer {
     }
 
     private static class FabricASMGeneratedClassesProvider implements SecureJar.ModuleDataProvider {
-        private static final String GEN_PACKAGE = "com.chocohead.gen.mixin";
+        private static final Set<String> GEN_PACKAGES = Set.of("com.chocohead.gen.mixin", "me.shedaniel.gen.mixin");
         private ModuleDescriptor descriptor;
 
         @Override
@@ -127,7 +127,7 @@ public class FabricASMFixer {
         public ModuleDescriptor descriptor() {
             if (descriptor == null) {
                 descriptor = ModuleDescriptor.newAutomaticModule(name())
-                    .packages(Set.of(GEN_PACKAGE))
+                    .packages(GEN_PACKAGES)
                     .build();
             }
             return descriptor;

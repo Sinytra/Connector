@@ -2,6 +2,7 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.Maps;
 import com.google.gson.GsonBuilder;
+import dev.su5ed.sinytra.adapter.patch.util.MethodQualifier;
 import net.minecraftforge.srgutils.IMappingFile;
 
 import java.util.HashMap;
@@ -13,7 +14,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SrgRemappingReferenceMapper {
-    private static final Pattern METHOD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-zA-Z0-9_]+|<[a-z0-9_]+>)?(?<desc>\\((?:\\[?[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_$]+;)*\\)(?:[VZCBSIFJD]|\\[?L[a-zA-Z0-9/_;$]+))$");
     private static final Pattern FIELD_REF_PATTERN = Pattern.compile("^(?<owner>L[a-zA-Z0-9/_$]+;)?(?<name>[a-zA-Z0-9_]+):(?<desc>.+)$");
 
     private final IMappingFile mappingFile;
@@ -54,7 +54,7 @@ public class SrgRemappingReferenceMapper {
     }
 
     private String remapRef(String reference) {
-        Matcher methodMatcher = METHOD_REF_PATTERN.matcher(reference);
+        Matcher methodMatcher = MethodQualifier.METHOD_QUALIFIER_PATTERN.matcher(reference);
         if (methodMatcher.matches()) {
             return remapRefMapEntry(methodMatcher, "", (name, desc) -> this.methods.get(name + desc));
         }

@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SrgRemappingReferenceMapper {
-    private static final Pattern METHOD_REF_PATTERN = Pattern.compile("^(?<owner>L.+?;)?+(?<name>[\\w$]+)?(?<desc>\\((?:\\[*(?:[ZCBSIFJD]|L[\\w/$]+;))*\\)(?:\\[*(?:[VZCBSIFJD]|L[\\w/$]+;)))?$");
+    private static final Pattern METHOD_REF_PATTERN = Pattern.compile("^(?<owner>L.+?;)?+(?<name>[\\w$<>]+)?(?<desc>\\((?:\\[*(?:[ZCBSIFJD]|L[\\w/$]+;))*\\)(?:\\[*(?:[VZCBSIFJD]|L[\\w/$]+;)))?$");
     private static final Pattern FIELD_REF_PATTERN = Pattern.compile("^(?<owner>L[\\w/$]+;)?(?<name>\\w+):(?<desc>.+)$");
 
     private final IMappingFile mappingFile;

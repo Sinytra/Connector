@@ -1,6 +1,6 @@
 name: Bug Report
-description: Report an issue you've encountered
-labels: [bug]
+description: Report an issue you've encountered.
+labels: [bug, pending]
 body:
   - type: markdown
     attributes:
@@ -8,15 +8,26 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking your time to report this bug!
-        Make sure you are running the latest version before reporting.
-  - type: input
+        Thank you for taking your time to report this bug! Before opening an issue, please make sure that:
+        - You are running the latest version of Connector and its dependencies.
+        - This bug wasn't already reported, fixed in the dev build or closed as not planned.
+  - type: textarea
     id: description
     attributes:
       label: Describe the bug
       description: "A clear and concise description of what the bug is."
     validations:
       required: true
+  - type: input
+    id: intended-behavior
+    attributes:
+      label: Intended behavior
+      description: "The expected behavior."
+  - type: input
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      description: "What actually happens to your game."
   - type: textarea
     id: repro
     attributes:
@@ -37,7 +48,8 @@ body:
       label: Logs
       description: |
         If applicable (crash, error output in console), please provide your crash report or latest.log
-        To upload logs, use an external site to post the crash report, such as [Ubuntu Pastebin](https://paste.ubuntu.com/), [Pastebin](http://pastebin.com/), or [Github Gist](https://gist.github.com/)
+        To upload logs, use an external site to upload the crash report, such as [**MCLogs (Recommended)**](https://mclo.gs/), [Paste.GG](https://paste.gg/), or [Pastebin](http://pastebin.com/)
+        You can upload additional files here.
   - type: textarea
     id: context
     attributes:

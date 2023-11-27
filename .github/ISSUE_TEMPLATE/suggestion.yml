@@ -1,0 +1,20 @@
+name: Suggestion
+description: Feel free to give us suggestions and enhancement ideas!
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: "## Welcome!"
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking your time to give us suggestions! Before opening an issue, please make sure that:
+        - This feature does not exist in the latest build.
+        - This suggestion wasn't already reported, fixed in the dev build or closed as not planned.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the feature
+      description: "A clear and concise description of what the feature/change is."
+    validations:
+      required: true

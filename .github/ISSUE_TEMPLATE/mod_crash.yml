@@ -1,6 +1,6 @@
-name: Mod Incompatibility
-description: Report an incompatible mod
-labels: [compat]
+name: Mod Crash
+description: Report one or more mod(pack)s that crashes the game.
+labels: [compat, crash, pending]
 body:
   - type: markdown
     attributes:
@@ -8,25 +8,26 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for taking your time to report this incompatibility!
-        Make sure you are running the latest version of Connector and its dependencies before reporting.
+        Thank you for taking your time to report this incompatibility! Before opening an issue, please make sure that:
+        - You are running the latest version of Connector and its dependencies.
+        - This bug wasn't already reported, fixed in the dev build or closed as not planned.
   - type: input
     id: mod
     attributes: 
-      label: Mod Name
-      description: "Name of the problematic mod"
-      placeholder: "Examplemod"
+      label: Mod Name(s)
+      description: "Name of the problematic mod."
+      placeholder: "Mod Name"
     validations:
       required: true
   - type: input
     id: homepage
     attributes: 
-      label: Mod Homepage
+      label: Mod Homepage(s)
       description: "A link to the mod's homepage. This can be its CurseForge, Modrinth, Github repository or something else."
       placeholder: "https://example.com"
     validations:
       required: true
-  - type: input
+  - type: textarea
     id: description
     attributes:
       label: Describe the bug
@@ -53,7 +54,8 @@ body:
       description: |
         If applicable (crash, error output in console), please provide your crash report.
         Otherwise, we recommend uploading the debug.log found in your `.minecraft/logs` directory.
-        To upload logs, use an external site to post the crash report, such as [Ubuntu Pastebin](https://paste.ubuntu.com/), [Pastebin](http://pastebin.com/), or [Github Gist](https://gist.github.com/)
+        To upload logs, use an external site to upload the crash report, such as [**MCLogs (Recommended)**](https://mclo.gs/), [Paste.GG](https://paste.gg/), or [Pastebin](http://pastebin.com/)
+        You can upload additional files here.
     validations:
       required: true
   - type: textarea

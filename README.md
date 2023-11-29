@@ -24,7 +24,7 @@ on [MinecraftForge](https://minecraftforge.net). Its goal is to bring the two pl
 developers time and effort maintaining their mods for multiple platforms at once, as well as allowing players to play
 all their favourite mods in one modpack.
 
-### Recommendations
+### 🔗 Related Projects
 
 - Visit the [Mod Compatibility Thread](https://github.com/Sinytra/Connector/discussions/12) to can find information about known working / incompatible mods
 - To learn more about how Connector works, read our [Introductory blog post](https://github.com/Sinytra/Connector/discussions/11)

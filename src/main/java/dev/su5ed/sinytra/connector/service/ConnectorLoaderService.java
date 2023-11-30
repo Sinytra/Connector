@@ -20,6 +20,7 @@ import java.util.Set;
 
 public class ConnectorLoaderService implements ITransformationService {
     private static final String NAME = "connector_loader";
+    private static final String AUTHLIB_MODULE = "authlib";
 
     @Override
     public String name() {
@@ -73,7 +74,10 @@ public class ConnectorLoaderService implements ITransformationService {
     @Override
     public List<Resource> completeScan(IModuleLayerManager layerManager) {
         LoadingModList.get().getErrors().addAll(ConnectorEarlyLoader.getLoadingExceptions());
-        return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(new FabricASMFixer.FabricASMGeneratedClassesSecureJar())));
+        return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(
+            new FabricASMFixer.FabricASMGeneratedClassesSecureJar(),
+            ModuleLayerMigrator.moveModule(AUTHLIB_MODULE)
+        )));
     }
 
     @Override

@@ -96,8 +96,10 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         }
 
         public void mapAnnotationValues(List<Object> values) {
-            for (int i = 1; i < values.size(); i += 2) {
-                values.set(i, mapAnnotationValue(values.get(i)));
+            if (values != null) {
+                for (int i = 1; i < values.size(); i += 2) {
+                    values.set(i, mapAnnotationValue(values.get(i)));
+                }
             }
         }
 

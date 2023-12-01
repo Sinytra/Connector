@@ -2,6 +2,7 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import dev.su5ed.sinytra.adapter.patch.selector.AnnotationHandle;
 import dev.su5ed.sinytra.adapter.patch.util.MethodQualifier;
+import dev.su5ed.sinytra.connector.transformer.jar.IntermediateMapping;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.fart.internal.ClassProviderImpl;
@@ -42,7 +43,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
     private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$_]+;$";
     private static final String FQN_CLASS_NAME_PATTERN = "^([a-zA-Z0-9$_]+\\.)*[a-zA-Z0-9$_]+$";
 
-    public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, Map<String, String> flatMappings) {
+    public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, IntermediateMapping flatMappings) {
         RenamingClassProvider reverseProvider = new RenamingClassProvider(classProvider, mappingFile, mappingFile.reverse(), log);
         EnhancedRemapper enhancedRemapper = new RelocatingEnhancedRemapper(reverseProvider, mappingFile, flatMappings, log);
         return new OptimizedRenamingTransformer(enhancedRemapper, false);
@@ -87,10 +88,10 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
     }
 
     private static class PostProcessRemapper {
-        private final Map<String, String> flatMappings;
+        private final IntermediateMapping flatMappings;
         private final Remapper remapper;
 
-        public PostProcessRemapper(Map<String, String> flatMappings, Remapper remapper) {
+        public PostProcessRemapper(IntermediateMapping flatMappings, Remapper remapper) {
             this.flatMappings = flatMappings;
             this.remapper = remapper;
         }
@@ -119,13 +120,13 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         public Object mapValue(Object value) {
             if (value instanceof String str) {
                 if (str.matches(CLASS_DESC_PATTERN)) {
-                    String mapped = flatMappings.get(str.substring(1, str.length() - 1));
+                    String mapped = flatMappings.map(str.substring(1, str.length() - 1));
                     if (mapped != null) {
                         return 'L' + mapped + ';';
                     }
                 }
                 else if (str.matches(FQN_CLASS_NAME_PATTERN)) {
-                    String mapped = flatMappings.get(str.replace('.', '/'));
+                    String mapped = flatMappings.map(str.replace('.', '/'));
                     if (mapped != null) {
                         return mapped.replace('/', '.');
                     }
@@ -134,12 +135,12 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                 MethodQualifier qualifier = MethodQualifier.create(str).orElse(null);
                 if (qualifier != null && qualifier.desc() != null) {
                     String owner = qualifier.owner() != null ? this.remapper.mapDesc(qualifier.owner()) : "";
-                    String name = qualifier.name() != null ? this.flatMappings.getOrDefault(qualifier.name(), qualifier.name()) : "";
-                    String desc = qualifier.desc() != null ? this.remapper.mapMethodDesc(qualifier.desc()) : "";
+                    String name = qualifier.name() != null ? this.flatMappings.mapMethod(qualifier.name(), qualifier.desc()) : "";
+                    String desc = this.remapper.mapMethodDesc(qualifier.desc());
                     return owner + name + desc;
                 }
 
-                String mapped = this.flatMappings.get(str);
+                String mapped = this.flatMappings.map(str);
                 if (mapped != null) {
                     return mapped;
                 }
@@ -194,16 +195,16 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
     }
 
     private static class RelocatingEnhancedRemapper extends EnhancedRemapper {
-        private final Map<String, String> flatMappings;
+        private final IntermediateMapping flatMappings;
 
-        public RelocatingEnhancedRemapper(ClassProvider classProvider, IMappingFile map, Map<String, String> flatMappings, Consumer<String> log) {
+        public RelocatingEnhancedRemapper(ClassProvider classProvider, IMappingFile map, IntermediateMapping flatMappings, Consumer<String> log) {
             super(classProvider, map, log);
             this.flatMappings = flatMappings;
         }
 
         @Override
         public String map(final String key) {
-            String fastMapped = this.flatMappings.get(key);
+            String fastMapped = this.flatMappings.map(key);
             if (fastMapped != null) {
                 return fastMapped;
             }
@@ -212,7 +213,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
 
         @Override
         public String mapFieldName(String owner, String name, String descriptor) {
-            String fastMapped = this.flatMappings.get(name);
+            String fastMapped = this.flatMappings.mapField(name, descriptor);
             if (fastMapped != null) {
                 return fastMapped;
             }
@@ -240,12 +241,12 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                         int interfacePrefix = name.indexOf("$");
                         if (interfacePrefix > -1 && name.lastIndexOf("$") == interfacePrefix) {
                             String actualName = name.substring(interfacePrefix + 1);
-                            String fastMapped = this.flatMappings.get(actualName);
+                            String fastMapped = this.flatMappings.mapMethod(actualName, descriptor);
                             String mapped = fastMapped != null ? fastMapped : mapMethodName(owner, actualName, descriptor);
                             return name.substring(0, interfacePrefix + 1) + mapped;
                         }
                     }
-                    return this.flatMappings.get(name);
+                    return this.flatMappings.mapMethod(name, descriptor);
                 })
                 .orElseGet(() -> super.mapMethodName(owner, name, descriptor));
         }

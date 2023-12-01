@@ -44,6 +44,7 @@ public class IntermediateMapping {
                 Collection<String> prefixes = MAPPING_PREFIXES.get(sourceNamespace);
                 MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
                 Map<String, String> resolved = new HashMap<>();
+                Map<String, IMappingFile.INode> buffer = new HashMap<>();
                 Map<String, String> extendedMappings = new HashMap<>();
                 resolver.getCurrentMap(sourceNamespace).getClasses().stream()
                     .flatMap(cls -> Stream.concat(Stream.of(cls), Stream.concat(cls.getFields().stream(), cls.getMethods().stream()))
@@ -53,11 +54,13 @@ public class IntermediateMapping {
                         String mapped = node.getMapped();
                         String mapping = resolved.get(original);
                         if (mapping != null && !mapping.equals(mapped)) {
-                            extendedMappings.put(getMappingKey(node), mapped);
                             resolved.remove(original);
+                            extendedMappings.put(getMappingKey(buffer.remove(original)), mapping);
+                            extendedMappings.put(getMappingKey(node), mapped);
                         }
                         else if (!extendedMappings.containsKey(getMappingKey(node))) {
                             resolved.put(original, mapped);
+                            buffer.put(original, node);
                         }
                     });
                 IntermediateMapping mapping = new IntermediateMapping(resolved, extendedMappings);

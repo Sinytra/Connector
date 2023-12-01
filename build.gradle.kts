@@ -28,6 +28,7 @@ val versionMc: String by project
 val versionForge: String by project
 val versionForgeAutoRenamingTool: String by project
 val versionFabricLoader: String by project
+val versionFabricLoaderUpstream: String by project
 val versionAccessWidener: String by project
 val versionFabricApi: String by project
 val versionMixin: String by project
@@ -153,6 +154,7 @@ val fullJar: Jar by tasks.creating(Jar::class) {
     manifest {
         from(tasks.jar.get().manifest)
         attributes("Embedded-Dependencies-Mod" to "META-INF/jarjar/" + modJar.archiveFile.get().asFile.name)
+        attributes("Fabric-Loader-Version" to versionFabricLoaderUpstream)
     }
 }
 

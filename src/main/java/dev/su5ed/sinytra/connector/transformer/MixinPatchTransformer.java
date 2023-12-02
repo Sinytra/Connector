@@ -167,6 +167,14 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("Lnet/minecraft/client/renderer/LightTexture;m_252983_(Lorg/joml/Vector3f;)V")
             .modifyParams(builder -> builder.substitute(17, 16))
             .build(),
+        // This code is being removed by forge, mixins to it can be safely disabled
+        Patch.builder()
+            .targetClass("net/minecraft/server/players/PlayerList")
+            .targetMethod("m_11239_")
+            .targetInjectionPoint("Lnet/minecraft/world/entity/player/Player;m_7755_()Lnet/minecraft/network/chat/Component;")
+            .targetMixinType(Patch.REDIRECT)
+            .disable()
+            .build(),
         // TODO Automate
         Patch.builder()
             .targetClass("net/minecraft/client/Minecraft")

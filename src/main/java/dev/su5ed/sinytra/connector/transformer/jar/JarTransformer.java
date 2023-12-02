@@ -66,6 +66,7 @@ public final class JarTransformer {
     // Keep this outside of BytecodeFixerUpperFrontend to prevent unnecessary static init of patches when we only need the jar path
     private static final Path GENERATED_JAR_PATH = ConnectorUtil.CONNECTOR_FOLDER.resolve("adapter/adapter_generated_mixins.jar");
     private static final String LOOM_GENERATED_PROPERTY = "fabric-loom:generated";
+    private static final String LOOM_REMAP_ATTRIBUTE = "Fabric-Loom-Remap";
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static final VarHandle TRANSFORMER_LOADER_FIELD = uncheck(() -> MethodHandles.privateLookupIn(MixinLaunchPluginLegacy.class, MethodHandles.lookup()).findVarHandle(MixinLaunchPluginLegacy.class, "transformerLoader", ILaunchPluginService.ITransformerLoader.class));
@@ -203,10 +204,18 @@ public final class JarTransformer {
                     }
                 });
             Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
-            CustomValue generatedValue = metadata.getCustomValue(LOOM_GENERATED_PROPERTY);
-            boolean generated = generatedValue != null && generatedValue.getType() == CustomValue.CvType.BOOLEAN && generatedValue.getAsBoolean();
+            boolean generated = isGeneratedLibraryJarMetadata(manifestAttributes, metadata);
             return new FabricModFileMetadata(metadata, visibleConfigs, configs, refmaps, mixinPackages, manifestAttributes, containsAT, generated);
         }
+    }
+
+    private static boolean isGeneratedLibraryJarMetadata(Attributes manifestAttributes, LoaderModMetadata metadata) {
+        CustomValue generatedValue = metadata.getCustomValue(LOOM_GENERATED_PROPERTY);
+        if (generatedValue != null && generatedValue.getType() == CustomValue.CvType.BOOLEAN && generatedValue.getAsBoolean()) {
+            String loomRemapAttribute = manifestAttributes.getValue(LOOM_REMAP_ATTRIBUTE);
+            return loomRemapAttribute == null || !loomRemapAttribute.equals("true");
+        }
+        return false;
     }
 
     private static void readMixinConfigPackages(File input, JarFile jarFile, ZipEntry entry, Set<String> refmaps, Set<String> packages) {

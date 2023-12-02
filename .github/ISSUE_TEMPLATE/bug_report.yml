@@ -1,15 +1,22 @@
 name: Bug Report
 description: Report an issue you've encountered
-labels: [bug]
+labels: [ bug ]
 body:
   - type: markdown
     attributes:
-      value: "## Welcome!"
+      value: "## 👋 Welcome!"
   - type: markdown
     attributes:
       value: |
-        Thank you for taking your time to report this bug!
-        Make sure you are running the latest version before reporting.
+        ### 📋 Checklist
+        Thank you for taking your time to report this bug!  
+        Before reporting, please make ensure that:
+        - You are using the **latest** available version of Connector and its dependencies
+        - You've installed a **minimal set of mods** required to reproduce the issue. 
+          Issues with modpacks and excessive amount of mods will *not* be accepted, as they take a long time to diagnose.
+          Knowing which mods are causing problems allows us to focus on fixing the issue as soon as possible.  
+          If you're unsure which mods might be at fault, try using [binary search](https://www.reddit.com/r/feedthebeast/comments/evpy6r/tips_for_modpack_authors_how_to_find_misbehaving/) - removing half of installed mods
+          repeatedly until the faulty mod is found.
   - type: input
     id: description
     attributes:
@@ -36,10 +43,10 @@ body:
     attributes:
       label: Logs
       description: |
-        If applicable (crash, error output in console), please provide your crash report or latest.log
-        To upload logs, use an external site to post the crash report, such as [Ubuntu Pastebin](https://paste.ubuntu.com/), [Pastebin](http://pastebin.com/), or [Github Gist](https://gist.github.com/)
+        If applicable (crash, error output in console), please provide your debug.log **and** crash report
+        To upload logs, use an external paste site, such as [Github Gist](https://gist.github.com/) (recommended), [Ubuntu Pastebin](https://paste.ubuntu.com/) or [Pastebin](http://pastebin.com)
   - type: textarea
     id: context
     attributes:
       label: Additional context
-      description: "Add any other context about the problem here, such as the modpack you're playing or other mods that might be causing this bug."
+      description: "Add any other context about the problem here, such as your current environment or other mods that might be causing this bug."

@@ -6,7 +6,7 @@ import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.loader.impl.entrypoint.EntrypointUtils;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.progress.ProgressMeter;
@@ -49,12 +49,13 @@ public class ConnectorLoader {
             LazyEntityAttributes.inject();
 
             // Invoke entry points
-            EntrypointUtils.invoke("main", ModInitializer.class, ModInitializer::onInitialize);
+            FabricLoader loader = FabricLoader.getInstance();
+            loader.invokeEntrypoints("main", ModInitializer.class, ModInitializer::onInitialize);
             if (FMLEnvironment.dist == Dist.CLIENT) {
-                EntrypointUtils.invoke("client", ClientModInitializer.class, ClientModInitializer::onInitializeClient);
+                loader.invokeEntrypoints("client", ClientModInitializer.class, ClientModInitializer::onInitializeClient);
             }
             else {
-                EntrypointUtils.invoke("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
+                loader.invokeEntrypoints("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
             }
 
             LazyEntityAttributes.release();

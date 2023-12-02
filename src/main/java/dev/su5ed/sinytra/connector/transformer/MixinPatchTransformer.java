@@ -77,6 +77,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/item/ShovelItem")
+            .targetMethod("m_6225_")
+            .targetInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;m_60795_()Z")
+            .modifyInjectionPoint("Lnet/minecraft/world/level/Level;m_46859_(Lnet/minecraft/core/BlockPos;)Z")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/level/NaturalSpawner")
             .targetMethod("m_220443_")
             .targetInjectionPoint("Lnet/minecraft/world/level/levelgen/structure/structures/NetherFortressStructure;f_228517_:Lnet/minecraft/util/random/WeightedRandomList;")
@@ -160,6 +166,14 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_109881_")
             .targetInjectionPoint("Lnet/minecraft/client/renderer/LightTexture;m_252983_(Lorg/joml/Vector3f;)V")
             .modifyParams(builder -> builder.substitute(17, 16))
+            .build(),
+        // This code is being removed by forge, mixins to it can be safely disabled
+        Patch.builder()
+            .targetClass("net/minecraft/server/players/PlayerList")
+            .targetMethod("m_11239_")
+            .targetInjectionPoint("Lnet/minecraft/world/entity/player/Player;m_7755_()Lnet/minecraft/network/chat/Component;")
+            .targetMixinType(Patch.REDIRECT)
+            .disable()
             .build(),
         // TODO Automate
         Patch.builder()

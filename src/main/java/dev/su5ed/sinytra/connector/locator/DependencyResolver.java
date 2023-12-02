@@ -102,7 +102,8 @@ public final class DependencyResolver {
     }
 
     private static ModCandidate createFabricLoaderMod() {
-        ModMetadata metadata = new BuiltinModMetadata.Builder("fabricloader", Objects.requireNonNullElse(FabricLoader.class.getPackage().getImplementationVersion(), "0.0NONE"))
+        String version = EmbeddedDependencies.getFabricLoaderVersion();
+        ModMetadata metadata = new BuiltinModMetadata.Builder("fabricloader", Objects.requireNonNullElse(version, "0.0NONE"))
             .setName("Fabric Loader")
             .build();
         GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(Collections.singletonList(Path.of(uncheck(() -> FabricLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI()))), metadata);

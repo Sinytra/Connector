@@ -1,5 +1,6 @@
 package dev.su5ed.sinytra.connector.transformer;
 
+import dev.su5ed.sinytra.connector.transformer.jar.IntermediateMapping;
 import net.fabricmc.accesswidener.AccessWidenerReader;
 import net.fabricmc.accesswidener.AccessWidenerVisitor;
 import net.fabricmc.loader.impl.MappingResolverImpl;
@@ -14,12 +15,12 @@ public class AccessWidenerTransformer implements Transformer {
 
     private final String resource;
     private final MappingResolverImpl resolver;
-    private final Map<String, String> flatMapping;
+    private final IntermediateMapping fastMapping;
 
-    public AccessWidenerTransformer(String resource, MappingResolverImpl namedMappingFile, Map<String, String> flatMapping) {
+    public AccessWidenerTransformer(String resource, MappingResolverImpl namedMappingFile, IntermediateMapping fastMapping) {
         this.resource = resource;
         this.resolver = namedMappingFile;
-        this.flatMapping = flatMapping;
+        this.fastMapping = fastMapping;
     }
 
     @Override
@@ -102,7 +103,7 @@ public class AccessWidenerTransformer implements Transformer {
             String mappedName = AccessWidenerTransformer.this.resolver.mapMethodName(this.sourceNamespace, owner, name, descriptor);
             // Mods might target inherited methods that are not part of the mapping file, we'll try to remap them using the flat mapping instead
             if (name.equals(mappedName)) {
-                mappedName = AccessWidenerTransformer.this.flatMapping.getOrDefault(name, name);
+                mappedName = AccessWidenerTransformer.this.fastMapping.mapMethodOrDefault(name, descriptor);
             }
             String mappedDescriptor = AccessWidenerTransformer.this.resolver.mapDescriptor(this.sourceNamespace, descriptor);
             this.builder.append(modifier).append(" ")

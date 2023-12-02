@@ -2,13 +2,16 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
 import net.minecraftforge.gradle.common.util.MavenArtifactDownloader
 import net.minecraftforge.gradle.common.util.RunConfig
+import net.minecraftforge.gradle.userdev.tasks.JarJar
 import net.minecraftforge.gradle.userdev.util.MavenPomUtils
 import net.minecraftforge.jarjar.metadata.*
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion
 import org.apache.maven.artifact.versioning.VersionRange
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import java.time.LocalDateTime
+import kotlin.io.path.inputStream
 
 plugins {
     java
@@ -28,6 +31,7 @@ val versionMc: String by project
 val versionForge: String by project
 val versionForgeAutoRenamingTool: String by project
 val versionFabricLoader: String by project
+val versionFabricLoaderUpstream: String by project
 val versionAccessWidener: String by project
 val versionFabricApi: String by project
 val versionMixin: String by project
@@ -91,33 +95,26 @@ val dummyFabricLoaderLangJar: Jar by tasks.creating(Jar::class) {
     )
     archiveClassifier.set("fabricloader")
 }
-// Generate JarJar metadata manually so that we control both the version and the file path
-val createJarJarMetadata: Task by tasks.creating {
-    val jarPath = "META-INF/jarjar/" + dummyFabricLoaderLangJar.archiveFile.get().asFile.name
-    val output = project.layout.buildDirectory.dir("createJarJarMetadata").get().file("metadata.json")
-    inputs.property("jarPath", jarPath)
-    outputs.file(output)
-    extra["output"] = output
-    doFirst {
-        val metadata = Metadata(
-            listOf(
-                ContainedJarMetadata(
-                    ContainedJarIdentifier("dev.su5ed.sinytra", "fabric-loader"),
-                    ContainedVersion(VersionRange.createFromVersion("[$dummyFabricLoaderVersion,)"), DefaultArtifactVersion(dummyFabricLoaderVersion)),
-                    jarPath,
-                    false
-                )
-            )
-        )
-        Files.deleteIfExists(output.asFile.toPath())
-        Files.write(output.asFile.toPath(), MetadataIOHandler.toLines(metadata), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
-    }
-}
-val modJar: Jar by tasks.creating(Jar::class) {
+val modJar: JarJar by tasks.creating(JarJar::class) {
+    dependsOn(dummyFabricLoaderLangJar)
     from(mod.output)
-    into("META-INF/jarjar/") {
-        from(createJarJarMetadata)
-        from(dummyFabricLoaderLangJar)
+    inputs.file(dummyFabricLoaderLangJar.archiveFile)
+    configurations = listOf(project.configurations.jarJar.get())
+    (includedDependencies as ConfigurableFileCollection).from(dummyFabricLoaderLangJar)
+    doLast {
+        FileSystems.newFileSystem(archiveFile.get().asFile.toPath()).use { fs ->
+            val jarPath = "META-INF/jarjar/" + dummyFabricLoaderLangJar.archiveFile.get().asFile.name
+            val metadataPath = fs.getPath("META-INF/jarjar/metadata.json")
+            val metadata = metadataPath.inputStream().use { ins -> MetadataIOHandler.fromStream(ins).orElseThrow() }
+            metadata.jars() += ContainedJarMetadata(
+                ContainedJarIdentifier("dev.su5ed.sinytra", "fabric-loader"),
+                ContainedVersion(VersionRange.createFromVersion("[$dummyFabricLoaderVersion,)"), DefaultArtifactVersion(dummyFabricLoaderVersion)),
+                jarPath,
+                false
+            )
+            Files.deleteIfExists(metadataPath)
+            Files.write(metadataPath, MetadataIOHandler.toLines(metadata), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)   
+        }
     }
     manifest.attributes(
         "Implementation-Version" to project.version,
@@ -153,6 +150,7 @@ val fullJar: Jar by tasks.creating(Jar::class) {
     manifest {
         from(tasks.jar.get().manifest)
         attributes("Embedded-Dependencies-Mod" to "META-INF/jarjar/" + modJar.archiveFile.get().asFile.name)
+        attributes("Fabric-Loader-Version" to versionFabricLoaderUpstream)
     }
 }
 
@@ -274,8 +272,11 @@ dependencies {
     shade(group = "io.github.steelwoolmc", name = "mixin-transmogrifier", version = versionMixinTransmog)
     adapterData(group = "dev.su5ed.sinytra.adapter", name = "adapter", version = versionAdapter)
 
-    compileOnly(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
     annotationProcessor(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
+    compileOnly(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.3.1")!!) {
+        jarJar.ranged(this, "[0.3.1,)")
+    }
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))
 

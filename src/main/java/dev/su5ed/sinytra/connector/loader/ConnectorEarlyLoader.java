@@ -3,9 +3,9 @@ package dev.su5ed.sinytra.connector.loader;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.locator.ConnectorConfig;
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
-import net.fabricmc.loader.impl.entrypoint.EntrypointUtils;
 import net.minecraftforge.fml.loading.EarlyLoadingException;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.loading.moddiscovery.ModInfo;
@@ -128,7 +128,7 @@ public class ConnectorEarlyLoader {
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] PreLaunch", 0);
         try {
             // Invoke prelaunch entrypoint
-            EntrypointUtils.invoke("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
+            FabricLoader.getInstance().invokeEntrypoints("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
         } catch (Throwable t) {
             LOGGER.error("Encountered an error in prelaunch entrypoint", t);
             addGenericLoadingException(t, "Encountered an error in prelaunch entrypoint");

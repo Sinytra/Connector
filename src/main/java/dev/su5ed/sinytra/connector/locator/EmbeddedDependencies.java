@@ -34,6 +34,8 @@ public final class EmbeddedDependencies {
     private static final Logger LOGGER = LogUtils.getLogger();
     // Manifest attribute name prefix for embedded dependencies
     private static final String JIJ_ATTRIBUTE_PREFIX = "Embedded-Dependencies-";
+    // Fabric Loader upstream version included by Connector
+    private static final String FABRIC_LOADER_VERSION = "Fabric-Loader-Version";
     // Embedded mod jar name
     private static final String MOD_JIJ_DEP = "Mod";
 
@@ -70,6 +72,10 @@ public final class EmbeddedDependencies {
     @Nullable
     public static String getJarCacheVersion() {
         return JAR_CACHE_VERSION.get();
+    }
+
+    public static String getFabricLoaderVersion() {
+        return ATTRIBUTES.getValue(FABRIC_LOADER_VERSION);
     }
 
     /**

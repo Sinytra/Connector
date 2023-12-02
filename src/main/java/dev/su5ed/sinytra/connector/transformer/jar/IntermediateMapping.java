@@ -87,25 +87,33 @@ public class IntermediateMapping {
         this.extendedMappings = extendedMappings;
     }
 
+    @Nullable
     public String map(String name) {
-        return this.mappings.getOrDefault(name, name);
+        return this.mappings.get(name);
     }
 
+    @Nullable
     public String mapField(String name, @Nullable String desc) {
         String mapped = this.mappings.get(name);
         if (mapped == null) {
             String qualifier = name + ":" + desc;
-            mapped = this.extendedMappings.get(qualifier);
+            return this.extendedMappings.get(qualifier);
         }
+        return mapped;
+    }
+
+    public String mapMethodOrDefault(String name, String desc) {
+        String mapped = mapMethod(name, desc);
         return mapped != null ? mapped : name;
     }
 
+    @Nullable
     public String mapMethod(String name, String desc) {
         String mapped = this.mappings.get(name);
         if (mapped == null) {
             String qualifier = name + desc;
-            mapped = this.extendedMappings.get(qualifier);
+            return this.extendedMappings.get(qualifier);
         }
-        return mapped != null ? mapped : name;
+        return mapped;
     }
 }

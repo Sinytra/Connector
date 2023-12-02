@@ -103,7 +103,7 @@ public class AccessWidenerTransformer implements Transformer {
             String mappedName = AccessWidenerTransformer.this.resolver.mapMethodName(this.sourceNamespace, owner, name, descriptor);
             // Mods might target inherited methods that are not part of the mapping file, we'll try to remap them using the flat mapping instead
             if (name.equals(mappedName)) {
-                mappedName = AccessWidenerTransformer.this.fastMapping.mapMethod(name, descriptor);
+                mappedName = AccessWidenerTransformer.this.fastMapping.mapMethodOrDefault(name, descriptor);
             }
             String mappedDescriptor = AccessWidenerTransformer.this.resolver.mapDescriptor(this.sourceNamespace, descriptor);
             this.builder.append(modifier).append(" ")

@@ -135,7 +135,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                 MethodQualifier qualifier = MethodQualifier.create(str).orElse(null);
                 if (qualifier != null && qualifier.desc() != null) {
                     String owner = qualifier.owner() != null ? this.remapper.mapDesc(qualifier.owner()) : "";
-                    String name = qualifier.name() != null ? this.flatMappings.mapMethod(qualifier.name(), qualifier.desc()) : "";
+                    String name = qualifier.name() != null ? this.flatMappings.mapMethodOrDefault(qualifier.name(), qualifier.desc()) : "";
                     String desc = this.remapper.mapMethodDesc(qualifier.desc());
                     return owner + name + desc;
                 }
@@ -234,6 +234,10 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
 
         @Override
         public String mapMethodName(String owner, String name, String descriptor) {
+            String fastMapped = this.flatMappings.mapMethod(name, descriptor);
+            if (fastMapped != null) {
+                return fastMapped;
+            }
             return this.classProvider.getClass(owner)
                 .map(cls -> {
                     // Handle methods belonging to interfaces added through @Implements
@@ -241,12 +245,12 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                         int interfacePrefix = name.indexOf("$");
                         if (interfacePrefix > -1 && name.lastIndexOf("$") == interfacePrefix) {
                             String actualName = name.substring(interfacePrefix + 1);
-                            String fastMapped = this.flatMappings.mapMethod(actualName, descriptor);
-                            String mapped = fastMapped != null ? fastMapped : mapMethodName(owner, actualName, descriptor);
+                            String fastMappedLambda = this.flatMappings.mapMethod(actualName, descriptor);
+                            String mapped = fastMappedLambda != null ? fastMappedLambda : mapMethodName(owner, actualName, descriptor);
                             return name.substring(0, interfacePrefix + 1) + mapped;
                         }
                     }
-                    return this.flatMappings.mapMethod(name, descriptor);
+                    return null;
                 })
                 .orElseGet(() -> super.mapMethodName(owner, name, descriptor));
         }

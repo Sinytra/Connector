@@ -10,7 +10,7 @@ body:
       value: |
         ### 📋 Checklist
         Thank you for taking your time to report this bug!  
-        Before reporting, please make ensure that:
+        Before reporting, please ensure that:
         - You are using the **latest** available version of Connector and its dependencies
         - You've installed a **minimal set of mods** required to reproduce the issue. 
           Issues with modpacks and excessive amount of mods will *not* be accepted, as they take a long time to diagnose.

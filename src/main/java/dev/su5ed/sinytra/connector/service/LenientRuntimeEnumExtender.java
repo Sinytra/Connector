@@ -22,9 +22,12 @@ public class LenientRuntimeEnumExtender extends RuntimeEnumExtender {
             FieldNode node = values.get(0);
             if ((node.access & Opcodes.ACC_FINAL) == 0) {
                 // It is likely a mixin already made the field mutable
-                // Make it final before it is processed and de-finalized again by super
+                // Make it final before it is processed
                 node.access |= Opcodes.ACC_FINAL;
-                return super.processClassWithFlags(phase, classNode, classType, reason);
+                int result = super.processClassWithFlags(phase, classNode, classType, reason);
+                // Return to original state
+                node.access &= ~Opcodes.ACC_FINAL;
+                return result;
             }
         }
         // Let super deal with this

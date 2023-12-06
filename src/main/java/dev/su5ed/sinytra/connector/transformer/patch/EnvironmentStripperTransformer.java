@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import java.util.Iterator;
@@ -30,15 +31,13 @@ public class EnvironmentStripperTransformer implements ClassTransform {
                 applied = true;
             }
         }
-        // Field stripping is currently broken in fabric-loader, therefore we skip it until the issue is fixed upstream
-        // https://github.com/FabricMC/fabric-loader/issues/833
-//        for (Iterator<FieldNode> it = classNode.fields.iterator(); it.hasNext(); ) {
-//            FieldNode field = it.next();
-//            if (remove(field.invisibleAnnotations)) {
-//                it.remove();
-//                applied = true;
-//            }
-//        }
+        for (Iterator<FieldNode> it = classNode.fields.iterator(); it.hasNext(); ) {
+            FieldNode field = it.next();
+            if (remove(field.invisibleAnnotations)) {
+                it.remove();
+                applied = true;
+            }
+        }
         return applied ? Patch.Result.APPLY : Patch.Result.PASS;
     }
 

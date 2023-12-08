@@ -337,6 +337,23 @@ public class MixinPatchTransformer implements Transformer {
             .modifyParams(builder -> builder.insert(1, Type.BOOLEAN_TYPE))
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
             .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/entity/layers/ElytraLayer")
+            .targetMethod("m_6494_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(Patch.REDIRECT)
+            .modifyParams(builder -> builder
+                .insert(0, Type.getObjectType("net/minecraft/client/renderer/entity/layers/ElytraLayer"))
+                .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
+                .targetType(ModifyMethodParams.TargetType.INJECTION_POINT))
+            .divertRedirector(adapter -> {
+                adapter.visitVarInsn(Opcodes.ALOAD, 1);
+                adapter.visitVarInsn(Opcodes.ALOAD, 2);
+                adapter.visitVarInsn(Opcodes.ALOAD, 3);
+                adapter.invokevirtual("net/minecraft/client/renderer/entity/layers/ElytraLayer", "shouldRender", "(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z", false);
+            })
+            .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
+            .build(),
         // Disable potential duplicate attempts at making shaders IDs namespace aware - Forge already does this for us.
         // Attempts at doing so again will fail.
         Patch.builder()
@@ -455,9 +472,9 @@ public class MixinPatchTransformer implements Transformer {
             .addAll(PATCHES)
             .add(
                 Patch.builder()
+                    .transform(new DynamicInjectorOrdinalPatch())
                     .transform(new DynamicLVTPatch(() -> lvtOffsets))
                     .transform(new DynamicAnonymousShadowFieldTypePatch())
-                    .transform(new DynamicInjectorOrdinalPatch())
                     .build(),
                 Patch.interfaceBuilder()
                     .transform(new FieldTypePatchTransformer())

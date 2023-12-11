@@ -22,7 +22,6 @@ import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInjectorOrdinalPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
-import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.forgespi.locating.IModFile;
@@ -453,7 +452,6 @@ public class MixinPatchTransformer implements Transformer {
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
-        new ClassResourcesTransformer(),
         new FieldTypeUsageTransformer(),
         new EnvironmentStripperTransformer()
     );

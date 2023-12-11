@@ -21,6 +21,8 @@ import dev.su5ed.sinytra.connector.transformer.ModMetadataGenerator;
 import dev.su5ed.sinytra.connector.transformer.OptimizedRenamingTransformer;
 import dev.su5ed.sinytra.connector.transformer.RefmapRemapper;
 import dev.su5ed.sinytra.connector.transformer.SrgRemappingReferenceMapper;
+import dev.su5ed.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
+import dev.su5ed.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.ConnectorRefmapHolder;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.MappingResolverImpl;
@@ -116,6 +118,7 @@ public class JarTransformInstance {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input.toPath(), metadata.refmaps(), this.remapper, this.libs);
         IMappingFile srgToIntermediary = resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
+        IMappingFile intermediaryToSrg = resolver.getCurrentMap(SOURCE_NAMESPACE);
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
@@ -127,6 +130,9 @@ public class JarTransformInstance {
             .add(new JarSignatureStripper())
             .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary))
             .add(accessorRedirectTransformer)
+            .add(new ClassNodeTransformer(
+                new ClassAnalysingTransformer(intermediaryToSrg, IntermediateMapping.get(SOURCE_NAMESPACE))
+            ))
             .add(this.remappingTransformer)
             .add(patchTransformer)
             .add(refmapRemapper)

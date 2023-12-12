@@ -20,6 +20,7 @@ import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTy
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInheritedInjectionPointPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInjectorOrdinalPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.DynamicModifyVarAtReturnPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
@@ -473,6 +474,7 @@ public class MixinPatchTransformer implements Transformer {
                     .transform(new DynamicInjectorOrdinalPatch())
                     .transform(new DynamicLVTPatch(() -> lvtOffsets))
                     .transform(new DynamicAnonymousShadowFieldTypePatch())
+                    .transform(new DynamicModifyVarAtReturnPatch())
                     .build(),
                 Patch.interfaceBuilder()
                     .transform(new FieldTypePatchTransformer())

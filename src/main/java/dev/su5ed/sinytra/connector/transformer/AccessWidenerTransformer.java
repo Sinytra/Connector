@@ -120,6 +120,10 @@ public class AccessWidenerTransformer implements Transformer {
         public void visitField(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
             this.classFields.computeIfAbsent(owner, n -> new HashMap<>())
                 .compute(name, (value, existing) -> existing == null || access.ordinal() > existing.ordinal() ? access : existing);
+            // Make parent class accessible / extensible if necessary
+            if (access != AccessWidenerReader.AccessType.MUTABLE) {
+                visitClass(owner, access, false);
+            }
         }
     }
 }

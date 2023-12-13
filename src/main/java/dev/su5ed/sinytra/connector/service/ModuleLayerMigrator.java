@@ -26,7 +26,7 @@ import java.util.jar.Manifest;
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 
 public class ModuleLayerMigrator {
-    private static final MethodHandles.Lookup TRUSTED_LOOKUP = uncheck(() -> {
+    public static final MethodHandles.Lookup TRUSTED_LOOKUP = uncheck(() -> {
         Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
         theUnsafe.setAccessible(true);
         Unsafe unsafe = (Unsafe) theUnsafe.get(null);

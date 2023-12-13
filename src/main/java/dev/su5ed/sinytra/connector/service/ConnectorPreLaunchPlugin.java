@@ -23,6 +23,8 @@ public class ConnectorPreLaunchPlugin implements ILaunchPluginService {
 
     @Override
     public void initializeLaunch(ITransformerLoader transformerLoader, NamedPath[] specialPaths) {
+        // Apply provider inheritance fix from newer SJH versions
+        ServiceProviderInheritanceWorkaround.apply();
         // Decorate mixin config's with mod IDs, enabling method prefix functionality
         FabricMixinBootstrap.init();
         // Setup Fabric Loader

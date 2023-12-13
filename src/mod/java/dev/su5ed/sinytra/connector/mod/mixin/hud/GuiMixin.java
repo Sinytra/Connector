@@ -15,10 +15,12 @@ public abstract class GuiMixin implements GuiExtensions {
     @Unique
     private boolean connector_didFinishPreRender;
 
+    @Override
     public boolean isConnector_didFinishPreRender() {
         return this.connector_didFinishPreRender;
     }
 
+    @Override
     public void resetConnector_didFinishPreRender() {
         this.connector_didFinishPreRender = false;
     }

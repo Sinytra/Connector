@@ -2,6 +2,7 @@ package dev.su5ed.sinytra.connector.mod;
 
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.mod.compat.FluidHandlerCompat;
+import dev.su5ed.sinytra.connector.mod.compat.LateRenderTypesInit;
 import dev.su5ed.sinytra.connector.mod.compat.LateSheetsInit;
 import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -23,7 +24,7 @@ public class ConnectorMod {
 
     public ConnectorMod() {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
-        bus.addListener(ConnectorMod::onClientSetup);
+        bus.addListener(EventPriority.HIGHEST, ConnectorMod::onClientSetup);
         FluidHandlerCompat.init(bus);
         if (FMLLoader.getDist().isClient()) {
             bus.addListener(ConnectorMod::onLoadComplete);
@@ -36,6 +37,7 @@ public class ConnectorMod {
     }
 
     private static void onClientSetup(FMLClientSetupEvent event) {
+        LateRenderTypesInit.regenerateRenderTypeIds();
         clientLoadComplete = true;
     }
 

@@ -9,7 +9,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
-import dev.su5ed.sinytra.adapter.patch.PatchContextImpl;
 import dev.su5ed.sinytra.adapter.patch.api.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.api.MixinClassGenerator;
 import dev.su5ed.sinytra.adapter.patch.api.MixinConstants;
@@ -161,6 +160,18 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("Lnet/minecraft/world/phys/Vec3;m_82557_(Lnet/minecraft/world/phys/Vec3;)D")
             .modifyTarget("canReach(Lnet/minecraft/core/BlockPos;D)Z")
             .extractMixin("net/minecraftforge/common/extensions/IForgePlayer")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/entity/vehicle/Boat")
+            .targetMethod("m_38394_", "m_38393_", "m_38371_", "m_7840_")
+            .targetInjectionPoint("Lnet/minecraft/world/level/material/FluidState;m_205070_(Lnet/minecraft/tags/TagKey;)Z")
+            .targetMixinType(MixinConstants.REDIRECT)
+            .modifyInjectionPoint("Lnet/minecraft/world/entity/vehicle/Boat;canBoatInFluid(Lnet/minecraft/world/level/material/FluidState;)Z")
+            .modifyParams(b -> b
+                .targetType(ModifyMethodParams.TargetType.INJECTION_POINT)
+                .ignoreOffset()
+                .insert(0, Type.getObjectType("net/minecraft/world/entity/vehicle/Boat"))
+                .inline(2, i -> i.getstatic("net/minecraft/tags/FluidTags", "f_13131_", "Lnet/minecraft/tags/TagKey;")))
             .build(),
         // There exists a variable in this method that is an exact copy of the previous one. It gets removed by forge binpatches that follow recompiled java code.
         Patch.builder()

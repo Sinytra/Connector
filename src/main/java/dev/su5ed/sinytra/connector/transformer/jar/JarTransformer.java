@@ -10,7 +10,6 @@ import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.sinytra.connector.locator.DependencyResolver;
-import dev.su5ed.sinytra.connector.transformer.AccessWidenerTransformer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.metadata.CustomValue;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
@@ -184,7 +183,7 @@ public final class JarTransformer {
             } catch (ParseMetadataException e) {
                 throw new RuntimeException(e);
             }
-            boolean containsAT = jarFile.getEntry(AccessWidenerTransformer.AT_PATH) != null;
+            boolean containsAT = jarFile.getEntry(ConnectorUtil.AT_PATH) != null;
 
             Set<String> refmaps = new HashSet<>();
             Set<String> mixinPackages = new HashSet<>();

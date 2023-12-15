@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
-import dev.su5ed.sinytra.adapter.patch.Patch;
+import dev.su5ed.sinytra.adapter.patch.api.Patch;
 import net.minecraftforge.fart.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -35,7 +35,19 @@ public class ClassNodeTransformer implements Transformer {
         return entry;
     }
 
+    @Override
+    public ResourceEntry process(ResourceEntry entry) {
+        for (ClassProcessor processor : this.processors) {
+            entry = processor.process(entry);
+        }
+        return entry;
+    }
+
     public interface ClassProcessor {
         Patch.Result process(ClassNode node);
+
+        default ResourceEntry process(ResourceEntry entry) {
+            return entry;
+        }
     }
 }

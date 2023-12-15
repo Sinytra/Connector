@@ -1,6 +1,7 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
-import dev.su5ed.sinytra.adapter.patch.Patch;
+import dev.su5ed.sinytra.adapter.patch.api.Patch;
+import dev.su5ed.sinytra.adapter.patch.util.AdapterUtil;
 import dev.su5ed.sinytra.connector.transformer.jar.IntermediateMapping;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.jetbrains.annotations.Nullable;
@@ -11,8 +12,6 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.objectweb.asm.tree.analysis.Analyzer;
-import org.objectweb.asm.tree.analysis.AnalyzerException;
 import org.objectweb.asm.tree.analysis.SourceInterpreter;
 import org.objectweb.asm.tree.analysis.SourceValue;
 
@@ -36,18 +35,10 @@ public class ClassAnalysingTransformer implements ClassNodeTransformer.ClassProc
     public Patch.Result process(ClassNode node) {
         boolean applied = false;
         for (MethodNode method : node.methods) {
-            List<Replacement> replacements = new ArrayList<>();
-            ScanningSourceInterpreter i = new ScanningSourceInterpreter(Opcodes.ASM9, replacements);
-            Analyzer<SourceValue> analyzer = new Analyzer<>(i);
-
-            try {
-                analyzer.analyze(method.name, method);
-            } catch (AnalyzerException e) {
-                throw new RuntimeException(e);
-            }
+            ScanningSourceInterpreter i = AdapterUtil.analyzeMethod(method, new ScanningSourceInterpreter(Opcodes.ASM9));
 
             applied |= i.remapApplied();
-            for (Replacement replacement : replacements) {
+            for (Replacement replacement : i.getReplacements()) {
                 method.instructions.insert(replacement.paramInsn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/Class", "getClassLoader", "()Ljava/lang/ClassLoader;"));
                 replacement.methodInsn.owner = "java/lang/ClassLoader";
                 applied = true;
@@ -58,17 +49,20 @@ public class ClassAnalysingTransformer implements ClassNodeTransformer.ClassProc
 
     private class ScanningSourceInterpreter extends SourceInterpreter {
         private static final Type STR_TYPE = Type.getType(String.class);
-        private final List<Replacement> replacements;
+        private final List<Replacement> replacements = new ArrayList<>();
         private final Collection<MethodInsnNode> seen = new HashSet<>();
         private boolean remapApplied = false;
 
-        public ScanningSourceInterpreter(int api, List<Replacement> replacements) {
+        public ScanningSourceInterpreter(int api) {
             super(api);
-            this.replacements = replacements;
         }
 
         public boolean remapApplied() {
             return this.remapApplied;
+        }
+
+        public List<Replacement> getReplacements() {
+            return this.replacements;
         }
 
         @Override

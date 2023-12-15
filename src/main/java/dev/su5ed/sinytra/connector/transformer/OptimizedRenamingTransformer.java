@@ -44,8 +44,8 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
     private static final String FQN_CLASS_NAME_PATTERN = "^([a-zA-Z0-9$_]+\\.)*[a-zA-Z0-9$_]+$";
 
     public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, IntermediateMapping flatMappings) {
-        RenamingClassProvider reverseProvider = new RenamingClassProvider(classProvider, mappingFile, mappingFile.reverse(), log);
-        EnhancedRemapper enhancedRemapper = new RelocatingEnhancedRemapper(reverseProvider, mappingFile, flatMappings, log);
+        IntermediaryClassProvider reverseProvider = new IntermediaryClassProvider(classProvider, mappingFile, mappingFile.reverse(), log);
+        EnhancedRemapper enhancedRemapper = new MixinAwareEnhancedRemapper(reverseProvider, mappingFile, flatMappings, log);
         return new OptimizedRenamingTransformer(enhancedRemapper, false);
     }
 
@@ -60,7 +60,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         // Remap raw values (usually found in reflection calls) and unmapped mixin annotations
         // This is done in a "post-processing" phase rather than inside the main remapper's mapValue method
         // so that we're able to determine the "remap" mixin annotation value ahead of time, and only remap it when necessary
-        PostProcessRemapper postProcessRemapper = new PostProcessRemapper(((RelocatingEnhancedRemapper) this.remapper).flatMappings, this.remapper);
+        PostProcessRemapper postProcessRemapper = new PostProcessRemapper(((MixinAwareEnhancedRemapper) this.remapper).flatMappings, this.remapper);
         for (MethodNode method : node.methods) {
             if (method.visibleAnnotations != null) {
                 // If remap has been set to false during compilation, we must manually map the annotation values ourselves instead of relying on the provided refmap
@@ -87,15 +87,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         }
     }
 
-    private static class PostProcessRemapper {
-        private final IntermediateMapping flatMappings;
-        private final Remapper remapper;
-
-        public PostProcessRemapper(IntermediateMapping flatMappings, Remapper remapper) {
-            this.flatMappings = flatMappings;
-            this.remapper = remapper;
-        }
-
+    private record PostProcessRemapper(IntermediateMapping flatMappings, Remapper remapper) {
         public void mapAnnotationValues(List<Object> values) {
             if (values != null) {
                 for (int i = 1; i < values.size(); i += 2) {
@@ -149,14 +141,14 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         }
     }
 
-    private static final class RenamingClassProvider implements ClassProvider {
+    private static final class IntermediaryClassProvider implements ClassProvider {
         private final ClassProvider upstream;
         private final IMappingFile forwardMapping;
         private final EnhancedRemapper remapper;
 
         private final Map<String, Optional<IClassInfo>> classCache = new ConcurrentHashMap<>();
 
-        private RenamingClassProvider(ClassProvider upstream, IMappingFile forwardMapping, IMappingFile reverseMapping, Consumer<String> log) {
+        private IntermediaryClassProvider(ClassProvider upstream, IMappingFile forwardMapping, IMappingFile reverseMapping, Consumer<String> log) {
             this.upstream = upstream;
             this.forwardMapping = forwardMapping;
             this.remapper = new EnhancedRemapper(upstream, reverseMapping, log);
@@ -194,10 +186,10 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         }
     }
 
-    private static class RelocatingEnhancedRemapper extends EnhancedRemapper {
+    private static class MixinAwareEnhancedRemapper extends EnhancedRemapper {
         private final IntermediateMapping flatMappings;
 
-        public RelocatingEnhancedRemapper(ClassProvider classProvider, IMappingFile map, IntermediateMapping flatMappings, Consumer<String> log) {
+        public MixinAwareEnhancedRemapper(ClassProvider classProvider, IMappingFile map, IntermediateMapping flatMappings, Consumer<String> log) {
             super(classProvider, map, log);
             this.flatMappings = flatMappings;
         }

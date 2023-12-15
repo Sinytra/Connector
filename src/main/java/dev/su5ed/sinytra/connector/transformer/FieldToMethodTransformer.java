@@ -2,6 +2,8 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableMap;
 import com.mojang.logging.LogUtils;
+import dev.su5ed.sinytra.adapter.patch.api.Patch;
+import dev.su5ed.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import net.fabricmc.accesswidener.AccessWidenerReader;
 import net.fabricmc.accesswidener.AccessWidenerVisitor;
 import net.fabricmc.accesswidener.AccessWidenerWriter;
@@ -9,8 +11,6 @@ import net.fabricmc.accesswidener.ForwardingVisitor;
 import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.srgutils.IMappingFile;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
@@ -24,7 +24,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 
-public class FieldToMethodTransformer implements Transformer {
+public class FieldToMethodTransformer implements ClassNodeTransformer.ClassProcessor {
     public static final Map<String, Map<String, String>> REPLACEMENTS = ImmutableMap.<String, Map<String, String>>builder()
         // Extracted from forge's coremods/field_to_method.js
         .put("net.minecraft.world.level.biome.Biome", Map.of(
@@ -85,27 +85,18 @@ public class FieldToMethodTransformer implements Transformer {
     }
 
     @Override
-    public ClassEntry process(ClassEntry entry) {
-        ClassReader reader = new ClassReader(entry.getData());
-        ClassNode node = new ClassNode();
-        reader.accept(node, 0);
-
-        if (processClass(node)) {
-            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-            node.accept(writer);
-            return ClassEntry.create(entry.getName(), entry.getTime(), writer.toByteArray());
-        }
-        return entry;
+    public Patch.Result process(ClassNode node) {
+        return processClass(node) ? Patch.Result.APPLY : Patch.Result.PASS;
     }
 
     @Override
-    public ResourceEntry process(ResourceEntry entry) {
+    public Transformer.ResourceEntry process(Transformer.ResourceEntry entry) {
         if (entry.getName().equals(this.accessWidenerResource)) {
             AccessWidenerWriter writer = new AccessWidenerWriter();
             AccessWidenerVisitor filter = new FilteringAccessWidenerVisitor(this.mappedReplacements.keySet(), writer);
             AccessWidenerReader reader = new AccessWidenerReader(filter);
             reader.read(entry.getData());
-            return ResourceEntry.create(entry.getName(), entry.getTime(), writer.write());
+            return Transformer.ResourceEntry.create(entry.getName(), entry.getTime(), writer.write());
         }
         return entry;
     }

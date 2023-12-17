@@ -8,21 +8,22 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
-import dev.su5ed.sinytra.adapter.patch.ClassTransform;
 import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
-import dev.su5ed.sinytra.adapter.patch.MixinClassGenerator;
-import dev.su5ed.sinytra.adapter.patch.Patch;
-import dev.su5ed.sinytra.adapter.patch.PatchContext;
-import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
+import dev.su5ed.sinytra.adapter.patch.api.ClassTransform;
+import dev.su5ed.sinytra.adapter.patch.api.MixinClassGenerator;
+import dev.su5ed.sinytra.adapter.patch.api.MixinConstants;
+import dev.su5ed.sinytra.adapter.patch.api.Patch;
+import dev.su5ed.sinytra.adapter.patch.api.PatchContext;
+import dev.su5ed.sinytra.adapter.patch.api.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
-import dev.su5ed.sinytra.adapter.patch.transformer.DynamicAnonymousShadowFieldTypePatch;
-import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInheritedInjectionPointPatch;
-import dev.su5ed.sinytra.adapter.patch.transformer.DynamicInjectorOrdinalPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
+import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicAnonymousShadowFieldTypePatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicInheritedInjectionPointPatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicInjectorOrdinalPatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicModifyVarAtReturnPatch;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
-import dev.su5ed.sinytra.connector.transformer.patch.ClassResourcesTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.forgespi.locating.IModFile;
@@ -126,7 +127,7 @@ public class MixinPatchTransformer implements Transformer {
         Patch.builder()
             .targetClass("net/minecraft/world/entity/LivingEntity")
             .targetMethod("m_21208_()V")
-            .targetMixinType(Patch.MODIFY_CONST)
+            .targetMixinType(MixinConstants.MODIFY_CONST)
             .extractMixin("net/minecraftforge/common/extensions/IForgeLivingEntity")
             .modifyTarget("sinkInFluid(Lnet/minecraftforge/fluids/FluidType;)V")
             .build(),
@@ -160,6 +161,18 @@ public class MixinPatchTransformer implements Transformer {
             .modifyTarget("canReach(Lnet/minecraft/core/BlockPos;D)Z")
             .extractMixin("net/minecraftforge/common/extensions/IForgePlayer")
             .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/world/entity/vehicle/Boat")
+            .targetMethod("m_38394_", "m_38393_", "m_38371_", "m_7840_")
+            .targetInjectionPoint("Lnet/minecraft/world/level/material/FluidState;m_205070_(Lnet/minecraft/tags/TagKey;)Z")
+            .targetMixinType(MixinConstants.REDIRECT)
+            .modifyInjectionPoint("Lnet/minecraft/world/entity/vehicle/Boat;canBoatInFluid(Lnet/minecraft/world/level/material/FluidState;)Z")
+            .modifyParams(b -> b
+                .targetType(ModifyMethodParams.TargetType.INJECTION_POINT)
+                .ignoreOffset()
+                .insert(0, Type.getObjectType("net/minecraft/world/entity/vehicle/Boat"))
+                .inline(2, i -> i.getstatic("net/minecraft/tags/FluidTags", "f_13131_", "Lnet/minecraft/tags/TagKey;")))
+            .build(),
         // There exists a variable in this method that is an exact copy of the previous one. It gets removed by forge binpatches that follow recompiled java code.
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/LightTexture")
@@ -172,7 +185,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/server/players/PlayerList")
             .targetMethod("m_11239_")
             .targetInjectionPoint("Lnet/minecraft/world/entity/player/Player;m_7755_()Lnet/minecraft/network/chat/Component;")
-            .targetMixinType(Patch.REDIRECT)
+            .targetMixinType(MixinConstants.REDIRECT)
             .disable()
             .build(),
         // TODO Automate
@@ -264,7 +277,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/world/entity/player/Player")
             .targetMethod("m_7909_(F)V")
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
-            .targetMixinType(Patch.WRAP_OPERATION)
+            .targetMixinType(MixinConstants.WRAP_OPERATION)
             .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canPerformAction(Lnet/minecraftforge/common/ToolAction;)Z")
             .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraftforge/common/ToolAction")))
             .build(),
@@ -272,7 +285,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/client/renderer/entity/FishingHookRenderer")
             .targetMethod("render(Lnet/minecraft/world/entity/projectile/FishingHook;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
-            .targetMixinType(Patch.WRAP_OPERATION)
+            .targetMixinType(MixinConstants.WRAP_OPERATION)
             .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canPerformAction(Lnet/minecraftforge/common/ToolAction;)Z")
             .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraftforge/common/ToolAction")))
             .build(),
@@ -280,7 +293,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/world/level/block/PowderSnowBlock")
             .targetMethod("m_154255_(Lnet/minecraft/world/entity/Entity;)Z")
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
-            .targetMixinType(Patch.WRAP_OPERATION)
+            .targetMixinType(MixinConstants.WRAP_OPERATION)
             .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canWalkOnPowderedSnow(Lnet/minecraft/world/entity/LivingEntity;)Z")
             .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraft/world/entity/LivingEntity")))
             .build(),
@@ -288,7 +301,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/client/renderer/GameRenderer")
             .targetMethod("m_109087_")
             .targetConstant(9.0)
-            .modifyMixinType(Patch.MODIFY_VAR, builder -> builder
+            .modifyMixinType(MixinConstants.MODIFY_VAR, builder -> builder
                 .sameTarget()
                 .injectionPoint("INVOKE_ASSIGN", "Lnet/minecraft/world/phys/Vec3;m_82557_(Lnet/minecraft/world/phys/Vec3;)D", v -> v.visit("ordinal", 1))
                 .putValue("ordinal", 3))
@@ -297,8 +310,8 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/client/renderer/ItemInHandRenderer")
             .targetMethod("m_117184_")
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
-            .targetMixinType(Patch.MODIFY_ARG)
-            .modifyMixinType(Patch.REDIRECT, builder -> builder
+            .targetMixinType(MixinConstants.MODIFY_ARG)
+            .modifyMixinType(MixinConstants.REDIRECT, builder -> builder
                 .sameTarget()
                 .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;"))
             .modifyParams(builder -> builder
@@ -337,6 +350,23 @@ public class MixinPatchTransformer implements Transformer {
             .modifyParams(builder -> builder.insert(1, Type.BOOLEAN_TYPE))
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
             .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/renderer/entity/layers/ElytraLayer")
+            .targetMethod("m_6494_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V")
+            .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
+            .targetMixinType(MixinConstants.REDIRECT)
+            .modifyParams(builder -> builder
+                .insert(0, Type.getObjectType("net/minecraft/client/renderer/entity/layers/ElytraLayer"))
+                .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
+                .targetType(ModifyMethodParams.TargetType.INJECTION_POINT))
+            .divertRedirector(adapter -> {
+                adapter.visitVarInsn(Opcodes.ALOAD, 1);
+                adapter.visitVarInsn(Opcodes.ALOAD, 2);
+                adapter.visitVarInsn(Opcodes.ALOAD, 3);
+                adapter.invokevirtual("net/minecraft/client/renderer/entity/layers/ElytraLayer", "shouldRender", "(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z", false);
+            })
+            .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
+            .build(),
         // Disable potential duplicate attempts at making shaders IDs namespace aware - Forge already does this for us.
         // Attempts at doing so again will fail.
         Patch.builder()
@@ -344,7 +374,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("<init>", "m_172566_")
             .targetInjectionPoint("NEW", "net/minecraft/resources/ResourceLocation")
             .targetInjectionPoint("NEW", "(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;")
-            .targetMixinType(Patch.REDIRECT)
+            .targetMixinType(MixinConstants.REDIRECT)
             .disable()
             .build(),
         Patch.builder()
@@ -352,14 +382,14 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_110030_")
             .targetInjectionPoint("NEW", "net/minecraft/resources/ResourceLocation")
             .targetInjectionPoint("NEW", "(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;")
-            .targetMixinType(Patch.REDIRECT)
+            .targetMixinType(MixinConstants.REDIRECT)
             .disable()
             .build(),
         // Move arg modifier to the forge method, which replaces all usages of the vanilla one
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
             .targetMethod("m_289609_")
-            .targetMixinType(Patch.MODIFY_ARG)
+            .targetMixinType(MixinConstants.MODIFY_ARG)
             .modifyTarget("renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
             .build(),
         Patch.builder()
@@ -378,7 +408,7 @@ public class MixinPatchTransformer implements Transformer {
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
             .targetMethod("m_117118_")
-            .targetMixinType(Patch.MODIFY_ARG)
+            .targetMixinType(MixinConstants.MODIFY_ARG)
             .targetAnnotationValues(values -> values.<Integer>getValue("index").map(handle -> handle.get() == 4).orElse(false))
             .targetInjectionPoint("INVOKE", "Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;m_289609_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/HumanoidModel;ZFFFLjava/lang/String;)V")
             .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
@@ -411,7 +441,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_90854_()V")
             .targetInjectionPoint("Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
             .modifyInjectionPoint("Lnet/minecraftforge/client/settings/KeyMappingLookup;put(Lcom/mojang/blaze3d/platform/InputConstants$Key;Lnet/minecraft/client/KeyMapping;)V")
-            .targetMixinType(Patch.REDIRECT)
+            .targetMixinType(MixinConstants.REDIRECT)
             .modifyParams(builder -> builder
                 .replace(0, Type.getObjectType("net/minecraftforge/client/settings/KeyMappingLookup"))
                 .replace(1, Type.getObjectType("com/mojang/blaze3d/platform/InputConstants$Key"))
@@ -436,8 +466,6 @@ public class MixinPatchTransformer implements Transformer {
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
-        new ClassResourcesTransformer(),
-        new FieldTypeUsageTransformer(),
         new EnvironmentStripperTransformer()
     );
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -455,9 +483,11 @@ public class MixinPatchTransformer implements Transformer {
             .addAll(PATCHES)
             .add(
                 Patch.builder()
+                    .transform(new FieldTypeUsageTransformer())
+                    .transform(new DynamicInjectorOrdinalPatch())
                     .transform(new DynamicLVTPatch(() -> lvtOffsets))
                     .transform(new DynamicAnonymousShadowFieldTypePatch())
-                    .transform(new DynamicInjectorOrdinalPatch())
+                    .transform(new DynamicModifyVarAtReturnPatch())
                     .build(),
                 Patch.interfaceBuilder()
                     .transform(new FieldTypePatchTransformer())
@@ -467,7 +497,7 @@ public class MixinPatchTransformer implements Transformer {
     }
 
     public void finalize(Path zipRoot, Collection<String> configs, Map<String, SrgRemappingReferenceMapper.SimpleRefmap> refmapFiles, Set<String> dirtyRefmaps) throws IOException {
-        Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.getClassGenerator().getGeneratedMixinClasses();
+        Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.classGenerator().getGeneratedMixinClasses();
         if (!generatedMixinClasses.isEmpty()) {
             for (String config : configs) {
                 Path entry = zipRoot.resolve(config);
@@ -596,7 +626,7 @@ public class MixinPatchTransformer implements Transformer {
         reader.accept(node, 0);
 
         for (ClassTransform transform : CLASS_TRANSFORMS) {
-            patchResult = patchResult.or(transform.apply(node, null, new PatchContext(node, this.environment)));
+            patchResult = patchResult.or(transform.apply(node, null, PatchContext.create(node, this.environment)));
         }
 
         if (isInMixinPackage(className)) {
@@ -619,7 +649,7 @@ public class MixinPatchTransformer implements Transformer {
         Patch patch = Patch.builder()
             .transform(new DynamicInheritedInjectionPointPatch())
             .build();
-        this.environment.getClassGenerator().getGeneratedMixinClasses().forEach((name, cls) -> {
+        this.environment.classGenerator().getGeneratedMixinClasses().forEach((name, cls) -> {
             patch.apply(cls.node(), this.environment);
 
             ClassWriter writer = new ClassWriter(0);

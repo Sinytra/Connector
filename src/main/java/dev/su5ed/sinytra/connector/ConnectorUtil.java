@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 public final class ConnectorUtil {
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
     public static final String MODS_TOML = "META-INF/mods.toml";
+    public static final String AT_PATH = "META-INF/accesstransformer.cfg";
     public static final String CONNECTOR_MARKER = "connector_transformed";
     public static final String FORGE_MODID = "forge";
     public static final long ZIP_TIME = 318211200000L;

@@ -1,5 +1,6 @@
 package dev.su5ed.sinytra.connector.transformer;
 
+import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.jar.IntermediateMapping;
 import net.fabricmc.accesswidener.AccessWidenerReader;
 import net.fabricmc.accesswidener.AccessWidenerVisitor;
@@ -11,8 +12,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AccessWidenerTransformer implements Transformer {
-    public static final String AT_PATH = "META-INF/accesstransformer.cfg";
-
     private final String resource;
     private final MappingResolverImpl resolver;
     private final IntermediateMapping fastMapping;
@@ -27,7 +26,7 @@ public class AccessWidenerTransformer implements Transformer {
     public ResourceEntry process(ResourceEntry entry) {
         if (entry.getName().equals(this.resource)) {
             String content = mapAccessWidener(entry.getData());
-            return ResourceEntry.create(AT_PATH, entry.getTime(), content.getBytes(StandardCharsets.UTF_8));
+            return ResourceEntry.create(ConnectorUtil.AT_PATH, entry.getTime(), content.getBytes(StandardCharsets.UTF_8));
         }
         return entry;
     }
@@ -120,6 +119,10 @@ public class AccessWidenerTransformer implements Transformer {
         public void visitField(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
             this.classFields.computeIfAbsent(owner, n -> new HashMap<>())
                 .compute(name, (value, existing) -> existing == null || access.ordinal() > existing.ordinal() ? access : existing);
+            // Make parent class accessible / extensible if necessary
+            if (access != AccessWidenerReader.AccessType.MUTABLE) {
+                visitClass(owner, access, false);
+            }
         }
     }
 }

@@ -1,15 +1,14 @@
 package dev.su5ed.sinytra.connector.transformer;
 
-import dev.su5ed.sinytra.adapter.patch.Patch;
-import dev.su5ed.sinytra.adapter.patch.PatchContext;
-import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
-import dev.su5ed.sinytra.adapter.patch.selector.MethodContext;
+import dev.su5ed.sinytra.adapter.patch.api.MethodContext;
+import dev.su5ed.sinytra.adapter.patch.api.Patch;
+import dev.su5ed.sinytra.adapter.patch.api.PatchContext;
+import dev.su5ed.sinytra.adapter.patch.api.PatchEnvironment;
+import dev.su5ed.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.RedirectAccessorToMethod;
 import net.minecraftforge.coremod.api.ASMAPI;
-import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
@@ -29,7 +28,7 @@ import java.util.stream.Stream;
 
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowConsumer;
 
-public class AccessorRedirectTransformer implements Transformer {
+public class AccessorRedirectTransformer implements ClassNodeTransformer.ClassProcessor {
     private static final String PREFIX = "connector$redirect$";
     public static final List<? extends Patch> PATCHES = FieldToMethodTransformer.REPLACEMENTS.entrySet().stream()
         .flatMap(entry -> entry.getValue().entrySet().stream()
@@ -77,13 +76,9 @@ public class AccessorRedirectTransformer implements Transformer {
     }
 
     @Override
-    public ClassEntry process(ClassEntry entry) {
-        ClassReader reader = new ClassReader(entry.getData());
-        ClassNode classNode = new ClassNode();
-        reader.accept(classNode, 0);
-
+    public Patch.Result process(ClassNode node) {
         boolean applied = false;
-        for (MethodNode method : classNode.methods) {
+        for (MethodNode method : node.methods) {
             for (AbstractInsnNode insn : method.instructions) {
                 if (insn instanceof MethodInsnNode minsn) {
                     Map<String, String> renames = this.methodRenames.get(minsn.owner);
@@ -97,14 +92,7 @@ public class AccessorRedirectTransformer implements Transformer {
                 }
             }
         }
-
-        if (applied) {
-            ClassWriter writer = new ClassWriter(0);
-            classNode.accept(writer);
-            byte[] data = writer.toByteArray();
-            return ClassEntry.create(entry.getName(), entry.getTime(), data);
-        }
-        return entry;
+        return applied ? Patch.Result.APPLY : Patch.Result.PASS;
     }
 
     private void analyzeClass(Path path, List<? extends Patch> accessorAnalysisPatches, PatchEnvironment environment) throws IOException {

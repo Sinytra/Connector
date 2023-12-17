@@ -6,8 +6,9 @@ import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
 import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
-import dev.su5ed.sinytra.adapter.patch.Patch;
-import dev.su5ed.sinytra.adapter.patch.PatchEnvironment;
+import dev.su5ed.sinytra.adapter.patch.api.GlobalReferenceMapper;
+import dev.su5ed.sinytra.adapter.patch.api.Patch;
+import dev.su5ed.sinytra.adapter.patch.api.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.serialization.PatchSerialization;
 import dev.su5ed.sinytra.adapter.patch.util.provider.ClassLookup;
 import dev.su5ed.sinytra.adapter.patch.util.provider.ZipClassLookup;
@@ -21,6 +22,8 @@ import dev.su5ed.sinytra.connector.transformer.ModMetadataGenerator;
 import dev.su5ed.sinytra.connector.transformer.OptimizedRenamingTransformer;
 import dev.su5ed.sinytra.connector.transformer.RefmapRemapper;
 import dev.su5ed.sinytra.connector.transformer.SrgRemappingReferenceMapper;
+import dev.su5ed.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
+import dev.su5ed.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.ConnectorRefmapHolder;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.MappingResolverImpl;
@@ -74,7 +77,7 @@ public class JarTransformInstance {
         Path patchDataPath = EmbeddedDependencies.getAdapterData(EmbeddedDependencies.ADAPTER_PATCH_DATA);
         try (Reader reader = Files.newBufferedReader(patchDataPath)) {
             JsonElement json = GSON.fromJson(reader, JsonElement.class);
-            PatchEnvironment.setReferenceMapper(str -> str == null ? null : str.startsWith("m_") ? ASMAPI.mapMethod(str) : ASMAPI.mapField(str));
+            GlobalReferenceMapper.setReferenceMapper(str -> str == null ? null : str.startsWith("m_") ? ASMAPI.mapMethod(str) : ASMAPI.mapField(str));
             this.adapterPatches = PatchSerialization.deserialize(json, JsonOps.INSTANCE);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -116,17 +119,21 @@ public class JarTransformInstance {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input.toPath(), metadata.refmaps(), this.remapper, this.libs);
         IMappingFile srgToIntermediary = resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
+        IMappingFile intermediaryToSrg = resolver.getCurrentMap(SOURCE_NAMESPACE);
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
         ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
-        PatchEnvironment environment = new PatchEnvironment(refmapHolder, this.cleanClassLookup, this.bfu.unwrap());
+        PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap());
         MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches);
         RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.visibleMixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())
-            .add(new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary))
-            .add(accessorRedirectTransformer)
+            .add(new ClassNodeTransformer(
+                new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary),
+                accessorRedirectTransformer,
+                new ClassAnalysingTransformer(intermediaryToSrg, IntermediateMapping.get(SOURCE_NAMESPACE))
+            ))
             .add(this.remappingTransformer)
             .add(patchTransformer)
             .add(refmapRemapper)

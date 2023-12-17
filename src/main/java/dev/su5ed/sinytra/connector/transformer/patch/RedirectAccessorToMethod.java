@@ -1,10 +1,11 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
 import com.mojang.logging.LogUtils;
-import dev.su5ed.sinytra.adapter.patch.MethodTransform;
-import dev.su5ed.sinytra.adapter.patch.Patch;
-import dev.su5ed.sinytra.adapter.patch.PatchContext;
-import dev.su5ed.sinytra.adapter.patch.selector.MethodContext;
+import dev.su5ed.sinytra.adapter.patch.api.MethodContext;
+import dev.su5ed.sinytra.adapter.patch.api.MethodTransform;
+import dev.su5ed.sinytra.adapter.patch.api.MixinConstants;
+import dev.su5ed.sinytra.adapter.patch.api.Patch;
+import dev.su5ed.sinytra.adapter.patch.api.PatchContext;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
@@ -20,12 +21,12 @@ public record RedirectAccessorToMethod(String value) implements MethodTransform 
 
     @Override
     public Collection<String> getAcceptedAnnotations() {
-        return Set.of(Patch.ACCESSOR);
+        return Set.of(MixinConstants.ACCESSOR);
     }
 
     @Override
     public Patch.Result apply(ClassNode classNode, MethodNode methodNode, MethodContext methodContext, PatchContext context) {
-        AnnotationVisitor visitor = methodNode.visitAnnotation(Patch.INVOKER, true);
+        AnnotationVisitor visitor = methodNode.visitAnnotation(MixinConstants.INVOKER, true);
         visitor.visit("value", this.value);
         visitor.visitEnd();
 

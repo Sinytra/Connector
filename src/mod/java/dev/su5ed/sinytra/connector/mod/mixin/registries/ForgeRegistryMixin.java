@@ -1,5 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.mixin.registries;
 
+import com.google.common.collect.BiMap;
 import com.mojang.serialization.Lifecycle;
 import dev.su5ed.sinytra.connector.mod.ConnectorLoader;
 import net.minecraft.core.Holder;
@@ -7,14 +8,23 @@ import net.minecraft.core.MappedRegistry;
 import net.minecraftforge.registries.ForgeRegistry;
 import net.minecraftforge.registries.GameData;
 import net.minecraftforge.registries.IForgeRegistry;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Desc;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Mixin(ForgeRegistry.class)
 public abstract class ForgeRegistryMixin<V> implements IForgeRegistry<V> {
+    @Shadow
+    @Final
+    private BiMap<Object, V> owners;
+
     // Mixin AP complained about not finding the target method, so we use @Desc instead of a string
     @Inject(target = @Desc(value = "getDelegateOrThrow", args = Object.class, ret = Holder.Reference.class), at = @At("HEAD"), cancellable = true, remap = false)
     private void getDelegateOrThrow(V value, CallbackInfoReturnable<Holder.Reference<V>> cir) {
@@ -30,5 +40,14 @@ public abstract class ForgeRegistryMixin<V> implements IForgeRegistry<V> {
                 }
             }));
         }
+    }
+
+    @Inject(method = "makeSnapshot", at = @At("HEAD"), remap = false)
+    private void resetOwners(CallbackInfoReturnable<ForgeRegistry.Snapshot> cir) {
+        // When POI Types have their blockstate lists modified by mods, it breaks value -> key lookup
+        // Resetting the owners map hash cache fixes the issue
+        Map<Object, V> copy = new HashMap<>(this.owners);
+        this.owners.clear();
+        this.owners.putAll(copy);
     }
 }

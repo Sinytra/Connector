@@ -63,8 +63,16 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowConsumer;
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 
 public class MixinPatchTransformer implements Transformer {
+    private static final List<Patch> PRIORITY_PATCHES = Lists.newArrayList(
+        Patch.builder()
+            .targetClass("net/minecraft/world/item/ItemStack")
+            .targetMethod("m_41661_")
+            .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;")
+            .modifyTarget("connector_useOn")
+            .modifyInjectionPoint("RETURN", "", true)
+            .build()
+    );
     private static final List<Patch> PATCHES = Lists.newArrayList(
-        // TODO Add mirror mixin method that injects into ForgeHooks#onPlaceItemIntoWorld for server side behavior
         Patch.builder()
             .targetClass("net/minecraft/client/Minecraft")
             .targetMethod("<init>")
@@ -346,12 +354,6 @@ public class MixinPatchTransformer implements Transformer {
             .modifyTarget("getModelWithLocation")
             .build(),
         Patch.builder()
-            .targetClass("net/minecraft/world/item/ItemStack")
-            .targetMethod("m_41661_")
-            .modifyTarget("lambda$useOn$3")
-            .modifyParams(builder -> builder.insert(1, Type.getObjectType("net/minecraft/world/item/context/UseOnContext")))
-            .build(),
-        Patch.builder()
             .targetClass("net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen")
             .targetMethod("m_280113_")
             .targetInjectionPoint("Lcom/google/common/collect/Ordering;sortedCopy(Ljava/lang/Iterable;)Ljava/util/List;")
@@ -494,6 +496,7 @@ public class MixinPatchTransformer implements Transformer {
         this.mixinPackages = mixinPackages;
         this.environment = environment;
         this.patches = ImmutableList.<Patch>builder()
+            .addAll(PRIORITY_PATCHES)
             .addAll(adapterPatches)
             .addAll(PATCHES)
             .add(
@@ -650,6 +653,8 @@ public class MixinPatchTransformer implements Transformer {
             }
         }
 
+        // TODO if a mixin method is extracted, roll back the status from compute frames to apply,
+        // Alternatively, change the order of patches so that extractmixin comes first
         if (patchResult != Patch.Result.PASS) {
             ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | (patchResult == Patch.Result.COMPUTE_FRAMES ? ClassWriter.COMPUTE_FRAMES : 0));
             node.accept(writer);

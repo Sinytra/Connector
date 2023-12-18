@@ -13,9 +13,34 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ForgeGui.class)
 public class ForgeGuiMixin {
 
-    @Inject(method = "renderFood", at = @At("HEAD"), remap = false)
+    @Inject(method = "renderHealth", at = @At("HEAD"), remap = false, cancellable = true)
+    private void onRenderHealth(int width, int height, GuiGraphics guiGraphics, CallbackInfo ci) {
+        GuiExtensions ext = (GuiExtensions) this;
+        ext.resetConnector_didFinishStatusBarRender();
+        ext.connector_renderHealth(guiGraphics);
+        if (!ext.isConnector_didFinishStatusBarRender()) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "renderArmor", at = @At("HEAD"), remap = false, cancellable = true)
+    private void onRenderArmor(GuiGraphics guiGraphics, int width, int height, CallbackInfo ci) {
+        GuiExtensions ext = (GuiExtensions) this;
+        if (!ext.isConnector_didFinishStatusBarRender()) {
+            ci.cancel();
+        } else {
+            ext.connector_renderArmor(guiGraphics);
+        }
+    }
+
+    @Inject(method = "renderFood", at = @At("HEAD"), remap = false, cancellable = true)
     private void onRenderFood(int width, int height, GuiGraphics guiGraphics, CallbackInfo ci) {
-        ((GuiExtensions) this).connector_renderFood(guiGraphics);
+        GuiExtensions ext = (GuiExtensions) this;
+        if (!ext.isConnector_didFinishStatusBarRender()) {
+            ci.cancel();
+        } else {
+            ext.connector_renderFood(guiGraphics);
+        }
     }
 
     @Inject(method = "renderHUDText", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Options;renderDebug:Z", opcode = Opcodes.GETFIELD))

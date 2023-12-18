@@ -7,9 +7,17 @@ public interface GuiExtensions {
 
     void resetConnector_didFinishPreRender();
 
+    boolean isConnector_didFinishStatusBarRender();
+
+    void resetConnector_didFinishStatusBarRender();
+
     void connector_preRender(GuiGraphics guiGraphics, float tickDelta);
 
     void connector_postRender(GuiGraphics guiGraphics, float tickDelta);
+
+    void connector_renderHealth(GuiGraphics guiGraphics);
+
+    void connector_renderArmor(GuiGraphics guiGraphics);
 
     void connector_renderFood(GuiGraphics guiGraphics);
 

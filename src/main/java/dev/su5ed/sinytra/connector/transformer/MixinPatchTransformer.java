@@ -228,13 +228,6 @@ public class MixinPatchTransformer implements Transformer {
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
-            .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
-            .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
-            .modifyTarget("renderArmor(Lnet/minecraft/client/gui/GuiGraphics;II)V")
-            .modifyParams(b -> b.insert(1, Type.INT_TYPE).insert(2, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
             .targetInjectionPoint("HEAD", "")
             .modifyTarget("connector_preRender")
@@ -243,6 +236,7 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280421_(Lnet/minecraft/client/gui/GuiGraphics;F)V")
             .targetInjectionPoint("RETURN", "")
+            .targetInjectionPoint("TAIL", "")
             .modifyTarget("connector_postRender")
             .build(),
         Patch.builder()
@@ -251,6 +245,19 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("Lnet/minecraft/util/profiling/ProfilerFiller;m_6182_(Ljava/lang/String;)V")
             .modifyTarget("connector_renderFood")
             .modifyInjectionPoint("HEAD", "")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .targetInjectionPoint("HEAD", "")
+            .modifyTarget("connector_renderHealth")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+            .modifyTarget("renderArmor(Lnet/minecraft/client/gui/GuiGraphics;II)V")
+            .modifyParams(b -> b.insert(1, Type.INT_TYPE).insert(2, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
@@ -272,6 +279,14 @@ public class MixinPatchTransformer implements Transformer {
             .targetInjectionPoint("FIELD", "Lnet/minecraft/client/Options;f_92063_:Z")
             .modifyTarget("connector_beforeDebugEnabled")
             .modifyInjectionPoint("HEAD", "")
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280250_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .targetInjectionPoint("HEAD", "")
+            .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+            .modifyTarget("renderHealthMount(IILnet/minecraft/client/gui/GuiGraphics;)V")
+            .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/world/entity/player/Player")
@@ -652,7 +667,7 @@ public class MixinPatchTransformer implements Transformer {
         this.environment.classGenerator().getGeneratedMixinClasses().forEach((name, cls) -> {
             patch.apply(cls.node(), this.environment);
 
-            ClassWriter writer = new ClassWriter(0);
+            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
             cls.node().accept(writer);
             byte[] bytes = writer.toByteArray();
             entries.add(ClassEntry.create(name + ".class", ConnectorUtil.ZIP_TIME, bytes));

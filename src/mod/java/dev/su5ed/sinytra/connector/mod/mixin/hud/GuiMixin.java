@@ -14,6 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GuiMixin implements GuiExtensions {
     @Unique
     private boolean connector_didFinishPreRender;
+    @Unique
+    private boolean connector_didFinishHealthBarRender;
 
     @Override
     public boolean isConnector_didFinishPreRender() {
@@ -26,6 +28,16 @@ public abstract class GuiMixin implements GuiExtensions {
     }
 
     @Override
+    public boolean isConnector_didFinishStatusBarRender() {
+        return this.connector_didFinishHealthBarRender;
+    }
+
+    @Override
+    public void resetConnector_didFinishStatusBarRender() {
+        this.connector_didFinishHealthBarRender = false;
+    }
+
+    @Override
     public void connector_preRender(GuiGraphics guiGraphics, float tickDelta) {
         // Let mods mixin into this method
         this.connector_didFinishPreRender = true;
@@ -33,6 +45,17 @@ public abstract class GuiMixin implements GuiExtensions {
 
     @Override
     public void connector_postRender(GuiGraphics guiGraphics, float tickDelta) {
+        // Let mods mixin into this method
+    }
+
+    @Override
+    public void connector_renderHealth(GuiGraphics guiGraphics) {
+        // Let mods mixin into this method
+        this.connector_didFinishHealthBarRender = true;
+    }
+
+    @Override
+    public void connector_renderArmor(GuiGraphics guiGraphics) {
         // Let mods mixin into this method
     }
 

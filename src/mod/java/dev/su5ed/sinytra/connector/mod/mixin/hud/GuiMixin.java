@@ -10,37 +10,28 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Mixin(value = Gui.class, priority = 200)
 public abstract class GuiMixin implements GuiExtensions {
     @Unique
-    private boolean connector_didFinishPreRender;
-    @Unique
-    private boolean connector_didFinishHealthBarRender;
+    private Map<String, Boolean> connector_renderStates = new HashMap<>();
 
     @Override
-    public boolean isConnector_didFinishPreRender() {
-        return this.connector_didFinishPreRender;
+    public boolean connector_getRenderState(String phase) {
+        return this.connector_renderStates.getOrDefault(phase, false);
     }
 
     @Override
-    public void resetConnector_didFinishPreRender() {
-        this.connector_didFinishPreRender = false;
-    }
-
-    @Override
-    public boolean isConnector_didFinishStatusBarRender() {
-        return this.connector_didFinishHealthBarRender;
-    }
-
-    @Override
-    public void resetConnector_didFinishStatusBarRender() {
-        this.connector_didFinishHealthBarRender = false;
+    public void connector_setRenderState(String phase, boolean value) {
+        this.connector_renderStates.put(phase, value);
     }
 
     @Override
     public void connector_preRender(GuiGraphics guiGraphics, float tickDelta) {
         // Let mods mixin into this method
-        this.connector_didFinishPreRender = true;
+        connector_setRenderState("preRender", true);
     }
 
     @Override
@@ -51,17 +42,19 @@ public abstract class GuiMixin implements GuiExtensions {
     @Override
     public void connector_renderHealth(GuiGraphics guiGraphics) {
         // Let mods mixin into this method
-        this.connector_didFinishHealthBarRender = true;
+        connector_setRenderState("renderHealth", true);
     }
 
     @Override
     public void connector_renderArmor(GuiGraphics guiGraphics) {
         // Let mods mixin into this method
+        connector_setRenderState("renderArmor", true);
     }
 
     @Override
     public void connector_renderFood(GuiGraphics guiGraphics) {
         // Let mods mixin into this method
+        connector_setRenderState("renderFood", true);
     }
 
     @Override

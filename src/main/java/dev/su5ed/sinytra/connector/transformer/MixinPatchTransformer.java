@@ -483,7 +483,8 @@ public class MixinPatchTransformer implements Transformer {
             .build()
     );
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
-        new EnvironmentStripperTransformer()
+        new EnvironmentStripperTransformer(),
+        new FieldTypeUsageTransformer()
     );
     private static final Logger LOGGER = LogUtils.getLogger();
     private static boolean completedSetup = false;
@@ -501,7 +502,6 @@ public class MixinPatchTransformer implements Transformer {
             .addAll(PATCHES)
             .add(
                 Patch.builder()
-                    .transform(new FieldTypeUsageTransformer())
                     .transform(new DynamicInjectorOrdinalPatch())
                     .transform(new DynamicLVTPatch(() -> lvtOffsets))
                     .transform(new DynamicAnonymousShadowFieldTypePatch())

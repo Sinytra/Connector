@@ -17,11 +17,11 @@ import dev.su5ed.sinytra.adapter.patch.api.PatchContext;
 import dev.su5ed.sinytra.adapter.patch.api.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
-import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicAnonymousShadowFieldTypePatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicInheritedInjectionPointPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicInjectorOrdinalPatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicModifyVarAtReturnPatch;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
@@ -482,10 +482,15 @@ public class MixinPatchTransformer implements Transformer {
             })
             .build()
     );
+    // Applied to non-mixins
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
         new EnvironmentStripperTransformer(),
         new FieldTypeUsageTransformer()
     );
+    // Applied to mixins only
+    private static final Patch CLASS_PATCH = Patch.builder()
+        .transform(CLASS_TRANSFORMS)
+        .build();
     private static final Logger LOGGER = LogUtils.getLogger();
     private static boolean completedSetup = false;
 
@@ -506,6 +511,7 @@ public class MixinPatchTransformer implements Transformer {
                     .transform(new DynamicLVTPatch(() -> lvtOffsets))
                     .transform(new DynamicAnonymousShadowFieldTypePatch())
                     .transform(new DynamicModifyVarAtReturnPatch())
+                    .transform(new DynamicInheritedInjectionPointPatch())
                     .build(),
                 Patch.interfaceBuilder()
                     .transform(new FieldTypePatchTransformer())
@@ -643,13 +649,15 @@ public class MixinPatchTransformer implements Transformer {
         ClassNode node = new ClassNode();
         reader.accept(node, 0);
 
-        for (ClassTransform transform : CLASS_TRANSFORMS) {
-            patchResult = patchResult.or(transform.apply(node, null, PatchContext.create(node, this.environment)));
-        }
-
         if (isInMixinPackage(className)) {
+            patchResult = patchResult.or(CLASS_PATCH.apply(node, this.environment));
+
             for (Patch patch : this.patches) {
                 patchResult = patchResult.or(patch.apply(node, this.environment));
+            }
+        } else {
+            for (ClassTransform transform : CLASS_TRANSFORMS) {
+                patchResult = patchResult.or(transform.apply(node, null, PatchContext.create(node, List.of(), this.environment)));
             }
         }
 

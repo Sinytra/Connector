@@ -2,21 +2,23 @@ package dev.su5ed.sinytra.connector.service;
 
 import cpw.mods.modlauncher.LaunchPluginHandler;
 import cpw.mods.modlauncher.Launcher;
-import cpw.mods.modlauncher.api.IEnvironment;
-import cpw.mods.modlauncher.api.IModuleLayerManager;
-import cpw.mods.modlauncher.api.ITransformationService;
-import cpw.mods.modlauncher.api.ITransformer;
+import cpw.mods.modlauncher.api.*;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
-import net.minecraftforge.fml.loading.FMLLoader;
+import net.minecraftforge.fml.loading.ImmediateWindowHandler;
+import net.minecraftforge.fml.loading.ImmediateWindowProvider;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.unsafe.UnsafeHacks;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
+import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.*;
+
+import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
+import static dev.su5ed.sinytra.connector.service.ModuleLayerMigrator.TRUSTED_LOOKUP;
 
 public class ConnectorLoaderService implements ITransformationService {
     private static final String NAME = "connector_loader";
@@ -29,16 +31,40 @@ public class ConnectorLoaderService implements ITransformationService {
 
     @Override
     public void initialize(IEnvironment environment) {
-        Runnable original = FMLLoader.progressWindowTick;
-        FMLLoader.progressWindowTick = () -> {
-            // Hacky way to run invoke prelaunch outside launch plugin iteration,
-            // prevents crash with REIPC. I'm not going to blame them here since
-            // modlauncher provides users with very limited prelaunch hook accessibility
-            ConnectorEarlyLoader.preLaunch();
+        VarHandle provider = uncheck(() -> TRUSTED_LOOKUP.findStaticVarHandle(ImmediateWindowHandler.class, "provider", ImmediateWindowProvider.class));
+        MethodHandle addReads = uncheck(() -> TRUSTED_LOOKUP.findVirtual(Module.class, "implAddReads", MethodType.methodType(void.class, Module.class, boolean.class)));
 
-            FMLLoader.progressWindowTick = original;
-            original.run();
+        ImmediateWindowProvider original = (ImmediateWindowProvider) provider.get();
+        ImmediateWindowProvider newProvider = new ImmediateWindowProvider() {
+
+            @Override
+            public void updateModuleReads(ModuleLayer layer) {
+                var fm = layer.findModule("forge");
+                if (fm.isPresent()) {
+                    try {
+                        addReads.invoke(original.getClass().getModule(), fm.get(), true);
+                    } catch (Throwable e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                fm.map(l -> Class.forName(l, "net.minecraftforge.client.loading.NoVizFallback"));
+
+                ConnectorEarlyLoader.preLaunch();
+                original.updateModuleReads(layer);
+            }
+
+            //@formatter:off
+            @Override public String name() {return original.name();}
+            @Override public Runnable initialize(String[] arguments) {return original.initialize(arguments);}
+            @Override public void updateFramebufferSize(IntConsumer width, IntConsumer height) {original.updateFramebufferSize(width, height);}
+            @Override public long setupMinecraftWindow(IntSupplier width, IntSupplier height, Supplier<String> title, LongSupplier monitor) {return original.setupMinecraftWindow(width, height, title, monitor);}
+            @Override public boolean positionWindow(Optional<Object> monitor, IntConsumer widthSetter, IntConsumer heightSetter, IntConsumer xSetter, IntConsumer ySetter) {return original.positionWindow(monitor, widthSetter, heightSetter, xSetter, ySetter);}
+            @Override public <T> Supplier<T> loadingOverlay(Supplier<?> mc, Supplier<?> ri, Consumer<Optional<Throwable>> ex, boolean fade) {return original.loadingOverlay(mc, ri, ex, fade);}
+            @Override public void periodicTick() {original.periodicTick();}
+            @Override public String getGLVersion() {return original.getGLVersion();}
+            //@formatter:on
         };
+        provider.set(newProvider);
         System.setProperty("java.util.concurrent.ForkJoinPool.common.threadFactory", ConnectorForkJoinThreadFactory.class.getName());
     }
 

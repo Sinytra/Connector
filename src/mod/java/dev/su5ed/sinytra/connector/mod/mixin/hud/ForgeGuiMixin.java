@@ -36,15 +36,6 @@ public class ForgeGuiMixin {
         }
     }
 
-    @Inject(method = "renderFood", at = @At("HEAD"), remap = false, cancellable = true)
-    private void onRenderFood(int width, int height, GuiGraphics guiGraphics, CallbackInfo ci) {
-        GuiExtensions ext = (GuiExtensions) this;
-        if (!ext.connector_getRenderState("enableStatusBarRender") || !ext.connector_wrapCancellableCall("renderFood", () -> ext.connector_renderFood(guiGraphics))) {
-            ci.cancel();
-            ext.connector_setRenderState("enableStatusBarRender", false);
-        }
-    }
-
     @Inject(method = "renderHUDText", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Options;renderDebug:Z", opcode = Opcodes.GETFIELD))
     private void onRenderDebug(int width, int height, GuiGraphics guiGraphics, CallbackInfo ci) {
         ((GuiExtensions) this).connector_beforeDebugEnabled(guiGraphics, Minecraft.getInstance().getPartialTick());

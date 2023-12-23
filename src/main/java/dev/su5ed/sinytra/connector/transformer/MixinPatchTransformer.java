@@ -251,8 +251,10 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
             .targetInjectionPoint("Lnet/minecraft/util/profiling/ProfilerFiller;m_6182_(Ljava/lang/String;)V")
-            .modifyTarget("connector_renderFood")
-            .modifyInjectionPoint("HEAD", "")
+            .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+            .modifyTarget("renderFood(IILnet/minecraft/client/gui/GuiGraphics;)V")
+            .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+            .modifyInjectionPoint("HEAD", "", true)
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")

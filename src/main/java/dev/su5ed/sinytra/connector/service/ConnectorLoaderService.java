@@ -10,8 +10,6 @@ import net.minecraftforge.fml.loading.ImmediateWindowProvider;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.unsafe.UnsafeHacks;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
 import java.util.*;
@@ -32,23 +30,18 @@ public class ConnectorLoaderService implements ITransformationService {
     @Override
     public void initialize(IEnvironment environment) {
         VarHandle provider = uncheck(() -> TRUSTED_LOOKUP.findStaticVarHandle(ImmediateWindowHandler.class, "provider", ImmediateWindowProvider.class));
-        MethodHandle addReads = uncheck(() -> TRUSTED_LOOKUP.findVirtual(Module.class, "implAddReads", MethodType.methodType(void.class, Module.class, boolean.class)));
 
         ImmediateWindowProvider original = (ImmediateWindowProvider) provider.get();
         ImmediateWindowProvider newProvider = new ImmediateWindowProvider() {
 
             @Override
             public void updateModuleReads(ModuleLayer layer) {
-                var fm = layer.findModule("forge");
-                if (fm.isPresent()) {
-                    try {
-                        addReads.invoke(original.getClass().getModule(), fm.get(), true);
-                    } catch (Throwable e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-                fm.map(l -> Class.forName(l, "net.minecraftforge.client.loading.NoVizFallback"));
-
+                // Setup entrypoints
+                ConnectorEarlyLoader.setup();
+                // Invoke mixin on a dummy class to initialize mixin plugins
+                // Necessary to avoid duplicate class definition errors when a plugin loads the class that is being transformed
+                uncheck(() -> Class.forName("dev.su5ed.sinytra.connector.mod.DummyTarget", false, Thread.currentThread().getContextClassLoader()));
+                // Run preLaunch
                 ConnectorEarlyLoader.preLaunch();
                 original.updateModuleReads(layer);
             }

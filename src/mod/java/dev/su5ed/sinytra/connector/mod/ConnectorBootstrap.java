@@ -20,7 +20,6 @@ public class ConnectorBootstrap implements IMixinConfigPlugin {
 
     static {
         registerCrashLogInfo();
-        ConnectorEarlyLoader.setup();
     }
 
     private static void registerCrashLogInfo() {

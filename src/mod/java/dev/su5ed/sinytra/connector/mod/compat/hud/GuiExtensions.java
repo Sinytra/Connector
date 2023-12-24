@@ -3,13 +3,17 @@ package dev.su5ed.sinytra.connector.mod.compat.hud;
 import net.minecraft.client.gui.GuiGraphics;
 
 public interface GuiExtensions {
-    boolean isConnector_didFinishPreRender();
+    default boolean connector_wrapCancellableCall(String phase, Runnable runnable) {
+        connector_setRenderState(phase, false);
+        runnable.run();
+        if (!connector_getRenderState(phase)) {
+            return false;
+        }
+        return true;
+    }
 
-    void resetConnector_didFinishPreRender();
-
-    boolean isConnector_didFinishStatusBarRender();
-
-    void resetConnector_didFinishStatusBarRender();
+    boolean connector_getRenderState(String phase);
+    void connector_setRenderState(String phase, boolean value);
 
     void connector_preRender(GuiGraphics guiGraphics, float tickDelta);
 
@@ -18,8 +22,6 @@ public interface GuiExtensions {
     void connector_renderHealth(GuiGraphics guiGraphics);
 
     void connector_renderArmor(GuiGraphics guiGraphics);
-
-    void connector_renderFood(GuiGraphics guiGraphics);
 
     void connector_renderHotbar(GuiGraphics guiGraphics, float tickDelta);
 

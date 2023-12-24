@@ -17,11 +17,11 @@ import dev.su5ed.sinytra.adapter.patch.api.PatchContext;
 import dev.su5ed.sinytra.adapter.patch.api.PatchEnvironment;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
 import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
-import dev.su5ed.sinytra.adapter.patch.transformer.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicAnonymousShadowFieldTypePatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicInheritedInjectionPointPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicInjectorOrdinalPatch;
+import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicLVTPatch;
 import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicModifyVarAtReturnPatch;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
@@ -63,8 +63,16 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowConsumer;
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 
 public class MixinPatchTransformer implements Transformer {
+    private static final List<Patch> PRIORITY_PATCHES = Lists.newArrayList(
+        Patch.builder()
+            .targetClass("net/minecraft/world/item/ItemStack")
+            .targetMethod("m_41661_")
+            .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;")
+            .modifyTarget("connector_useOn")
+            .modifyInjectionPoint("RETURN", "", true)
+            .build()
+    );
     private static final List<Patch> PATCHES = Lists.newArrayList(
-        // TODO Add mirror mixin method that injects into ForgeHooks#onPlaceItemIntoWorld for server side behavior
         Patch.builder()
             .targetClass("net/minecraft/client/Minecraft")
             .targetMethod("<init>")
@@ -243,8 +251,10 @@ public class MixinPatchTransformer implements Transformer {
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
             .targetInjectionPoint("Lnet/minecraft/util/profiling/ProfilerFiller;m_6182_(Ljava/lang/String;)V")
-            .modifyTarget("connector_renderFood")
-            .modifyInjectionPoint("HEAD", "")
+            .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+            .modifyTarget("renderFood(IILnet/minecraft/client/gui/GuiGraphics;)V")
+            .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+            .modifyInjectionPoint("HEAD", "", true)
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
@@ -344,12 +354,6 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_7392_")
             .targetInjectionPoint("INVOKE", "Ljava/util/Map;get(Ljava/lang/Object;)Ljava/lang/Object;")
             .modifyTarget("getModelWithLocation")
-            .build(),
-        Patch.builder()
-            .targetClass("net/minecraft/world/item/ItemStack")
-            .targetMethod("m_41661_")
-            .modifyTarget("lambda$useOn$3")
-            .modifyParams(builder -> builder.insert(1, Type.getObjectType("net/minecraft/world/item/context/UseOnContext")))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen")
@@ -480,9 +484,15 @@ public class MixinPatchTransformer implements Transformer {
             })
             .build()
     );
+    // Applied to non-mixins
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
-        new EnvironmentStripperTransformer()
+        new EnvironmentStripperTransformer(),
+        new FieldTypeUsageTransformer()
     );
+    // Applied to mixins only
+    private static final Patch CLASS_PATCH = Patch.builder()
+        .transform(CLASS_TRANSFORMS)
+        .build();
     private static final Logger LOGGER = LogUtils.getLogger();
     private static boolean completedSetup = false;
 
@@ -494,15 +504,16 @@ public class MixinPatchTransformer implements Transformer {
         this.mixinPackages = mixinPackages;
         this.environment = environment;
         this.patches = ImmutableList.<Patch>builder()
+            .addAll(PRIORITY_PATCHES)
             .addAll(adapterPatches)
             .addAll(PATCHES)
             .add(
                 Patch.builder()
-                    .transform(new FieldTypeUsageTransformer())
                     .transform(new DynamicInjectorOrdinalPatch())
                     .transform(new DynamicLVTPatch(() -> lvtOffsets))
                     .transform(new DynamicAnonymousShadowFieldTypePatch())
                     .transform(new DynamicModifyVarAtReturnPatch())
+                    .transform(new DynamicInheritedInjectionPointPatch())
                     .build(),
                 Patch.interfaceBuilder()
                     .transform(new FieldTypePatchTransformer())
@@ -640,16 +651,20 @@ public class MixinPatchTransformer implements Transformer {
         ClassNode node = new ClassNode();
         reader.accept(node, 0);
 
-        for (ClassTransform transform : CLASS_TRANSFORMS) {
-            patchResult = patchResult.or(transform.apply(node, null, PatchContext.create(node, this.environment)));
-        }
-
         if (isInMixinPackage(className)) {
+            patchResult = patchResult.or(CLASS_PATCH.apply(node, this.environment));
+
             for (Patch patch : this.patches) {
                 patchResult = patchResult.or(patch.apply(node, this.environment));
             }
+        } else {
+            for (ClassTransform transform : CLASS_TRANSFORMS) {
+                patchResult = patchResult.or(transform.apply(node, null, PatchContext.create(node, List.of(), this.environment)));
+            }
         }
 
+        // TODO if a mixin method is extracted, roll back the status from compute frames to apply,
+        // Alternatively, change the order of patches so that extractmixin comes first
         if (patchResult != Patch.Result.PASS) {
             ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | (patchResult == Patch.Result.COMPUTE_FRAMES ? ClassWriter.COMPUTE_FRAMES : 0));
             node.accept(writer);

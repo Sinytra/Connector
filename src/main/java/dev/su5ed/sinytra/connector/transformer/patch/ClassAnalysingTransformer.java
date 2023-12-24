@@ -1,7 +1,7 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
+import dev.su5ed.sinytra.adapter.patch.analysis.MethodCallAnalyzer;
 import dev.su5ed.sinytra.adapter.patch.api.Patch;
-import dev.su5ed.sinytra.adapter.patch.util.AdapterUtil;
 import dev.su5ed.sinytra.connector.transformer.jar.IntermediateMapping;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.jetbrains.annotations.Nullable;
@@ -35,7 +35,7 @@ public class ClassAnalysingTransformer implements ClassNodeTransformer.ClassProc
     public Patch.Result process(ClassNode node) {
         boolean applied = false;
         for (MethodNode method : node.methods) {
-            ScanningSourceInterpreter i = AdapterUtil.analyzeMethod(method, new ScanningSourceInterpreter(Opcodes.ASM9));
+            ScanningSourceInterpreter i = MethodCallAnalyzer.analyzeInterpretMethod(method, new ScanningSourceInterpreter(Opcodes.ASM9));
 
             applied |= i.remapApplied();
             for (Replacement replacement : i.getReplacements()) {

@@ -13,33 +13,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ForgeGui.class)
 public class ForgeGuiMixin {
 
+    @Inject(method = "render", at = @At("HEAD"))
+    private void onRenderStart(GuiGraphics guiGraphics, float partialTick, CallbackInfo ci) {
+        ((GuiExtensions) this).connector_setRenderState("enableStatusBarRender", true);
+    }
+
     @Inject(method = "renderHealth", at = @At("HEAD"), remap = false, cancellable = true)
     private void onRenderHealth(int width, int height, GuiGraphics guiGraphics, CallbackInfo ci) {
         GuiExtensions ext = (GuiExtensions) this;
-        ext.resetConnector_didFinishStatusBarRender();
-        ext.connector_renderHealth(guiGraphics);
-        if (!ext.isConnector_didFinishStatusBarRender()) {
+        if (!ext.connector_getRenderState("enableStatusBarRender") || !ext.connector_wrapCancellableCall("renderHealth", () -> ext.connector_renderHealth(guiGraphics))) {
             ci.cancel();
+            ext.connector_setRenderState("enableStatusBarRender", false);
         }
     }
 
     @Inject(method = "renderArmor", at = @At("HEAD"), remap = false, cancellable = true)
     private void onRenderArmor(GuiGraphics guiGraphics, int width, int height, CallbackInfo ci) {
         GuiExtensions ext = (GuiExtensions) this;
-        if (!ext.isConnector_didFinishStatusBarRender()) {
+        if (!ext.connector_getRenderState("enableStatusBarRender") || !ext.connector_wrapCancellableCall("renderArmor", () -> ext.connector_renderArmor(guiGraphics))) {
             ci.cancel();
-        } else {
-            ext.connector_renderArmor(guiGraphics);
-        }
-    }
-
-    @Inject(method = "renderFood", at = @At("HEAD"), remap = false, cancellable = true)
-    private void onRenderFood(int width, int height, GuiGraphics guiGraphics, CallbackInfo ci) {
-        GuiExtensions ext = (GuiExtensions) this;
-        if (!ext.isConnector_didFinishStatusBarRender()) {
-            ci.cancel();
-        } else {
-            ext.connector_renderFood(guiGraphics);
+            ext.connector_setRenderState("enableStatusBarRender", false);
         }
     }
 

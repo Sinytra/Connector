@@ -29,6 +29,10 @@ public class BytecodeFixerUpperFrontend {
         "net/minecraft/world/level/storage/loot/LootTable",
         Map.of(
             "f_79109_", Pair.of(Type.getType("[Lnet/minecraft/world/level/storage/loot/LootPool;"), Type.getObjectType("java/util/List"))
+        ),
+        "net/minecraft/world/entity/ai/goal/RangedBowAttackGoal",
+        Map.of(
+            "f_25782_", Pair.of(Type.getObjectType("net/minecraft/world/entity/monster/Monster"), Type.getObjectType("net/minecraft/world/entity/Mob"))
         )
     );
     private static final List<FieldTypeFix> FIELD_TYPE_ADAPTERS = List.of(
@@ -45,7 +49,8 @@ public class BytecodeFixerUpperFrontend {
                 new MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/util/List", "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", true),
                 new TypeInsnNode(Opcodes.CHECKCAST, "[Lnet/minecraft/world/level/storage/loot/LootPool;")
             ));
-        })
+        }),
+        new FieldTypeFix(Type.getObjectType("net/minecraft/world/entity/Mob"), Type.getObjectType("net/minecraft/world/entity/monster/Monster"), (list, insn) -> {})
     );
 
     private final BytecodeFixerUpper bfu;

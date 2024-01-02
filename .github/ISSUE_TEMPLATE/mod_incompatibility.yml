@@ -1,5 +1,5 @@
-name: Mod Incompatibility
-description: Report an incompatible mod
+name: 🚧 Incompatible Mod / Crash
+description: Report an incompatible Fabric or Forge mod
 labels: [compat]
 body:
   - type: markdown
@@ -17,6 +17,11 @@ body:
           Knowing which mods are causing problems allows us to focus on fixing the issue as soon as possible.  
           If you're unsure which mods might be at fault, try using [binary search](https://www.reddit.com/r/feedthebeast/comments/evpy6r/tips_for_modpack_authors_how_to_find_misbehaving/) - removing half of installed mods
           repeatedly until the faulty mod is found.
+        - The issue you're experience **doesn't occur** in a Fabric environment with the same mods installed
+        
+        > [!WARNING]
+        > Note: Custom server APIs (such as Mohist, Magma, Arclight) are **not supported**.
+        > This also applies to launchers for mobile platforms (Pojav, FoldCraft).
   - type: input
     id: mod
     attributes: 
@@ -31,6 +36,16 @@ body:
       label: Mod Homepage
       description: "A link to the mod's homepage. This can be its CurseForge, Modrinth, Github repository or something else."
       placeholder: "https://example.com"
+    validations:
+      required: true
+  - type: dropdown
+    id: version
+    attributes:
+      label: Minecraft version
+      description: What version of Minecraft are you running? Please note that only the versions listed below are supported. If you're running an outdated version, update to receive support.
+      options:
+        - "1.20.1"
+      default: 0
     validations:
       required: true
   - type: input

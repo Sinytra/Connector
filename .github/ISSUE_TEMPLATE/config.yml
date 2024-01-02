@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: GitHub Discussions
+  - name: 💬 Discord
+    url: https://discord.gg/mamk7z3TKZ
+    about: Join us on discord! Please direct tech support / modpack issues here.
+  - name: 📖 GitHub Discussions
     url: https://github.com/Sinytra/Connector/discussions
     about: Please look here for frequently asked questions and questions on how to use Connector.
-  - name: Discord
-    url: https://discord.gg/mamk7z3TKZ
-    about: Join us on our discord!

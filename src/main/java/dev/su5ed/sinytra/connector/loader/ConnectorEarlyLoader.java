@@ -70,11 +70,11 @@ public class ConnectorEarlyLoader {
     }
 
     public static EarlyLoadingException createGenericLoadingException(Throwable original, String message) {
-        return createLoadingException(original, "§e[Connector]§r {3}\n§c{4}§7: {5}§r", message, original.getClass().getName(), original.getMessage());
+        return createLoadingException(original, "§e[Connector]§r {3}\n§c{4}§7: {5}§r", true, message, original.getClass().getName(), original.getMessage());
     }
 
-    public static EarlyLoadingException createLoadingException(Throwable original, String message, Object... args) {
-        return new EarlyLoadingException(ConnectorUtil.stripColor(original.getMessage()), original, List.of(new EarlyLoadingException.ExceptionData(message, args)));
+    public static EarlyLoadingException createLoadingException(Throwable original, String message, boolean keepOriginal, Object... args) {
+        return new EarlyLoadingException(ConnectorUtil.stripColor(original.getMessage()), keepOriginal ? original : null, List.of(new EarlyLoadingException.ExceptionData(message, args)));
     }
 
     /**

@@ -68,7 +68,7 @@ public final class DependencyResolver {
             LOGGER.info("Dependency resolution found {} candidates to load", candidateJars.size());
             return candidateJars;
         } catch (ModResolutionException e) {
-            throw ConnectorEarlyLoader.createLoadingException(e, e.getMessage().replaceAll("\t", "  "));
+            throw ConnectorEarlyLoader.createLoadingException(e, e.getMessage().replaceAll("\t", "  "), false);
         }
     }
 

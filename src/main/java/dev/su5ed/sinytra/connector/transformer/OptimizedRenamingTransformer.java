@@ -61,6 +61,11 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         // This is done in a "post-processing" phase rather than inside the main remapper's mapValue method
         // so that we're able to determine the "remap" mixin annotation value ahead of time, and only remap it when necessary
         PostProcessRemapper postProcessRemapper = new PostProcessRemapper(((MixinAwareEnhancedRemapper) this.remapper).flatMappings, this.remapper);
+        if (node.visibleAnnotations != null) {
+            for (AnnotationNode annotation : node.visibleAnnotations) {
+                postProcessRemapper.mapAnnotationValues(annotation.values);
+            }
+        }
         for (MethodNode method : node.methods) {
             if (method.visibleAnnotations != null) {
                 // If remap has been set to false during compilation, we must manually map the annotation values ourselves instead of relying on the provided refmap
@@ -88,7 +93,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
     }
 
     private record PostProcessRemapper(IntermediateMapping flatMappings, Remapper remapper) {
-        public void mapAnnotationValues(List<Object> values) {
+        public void mapAnnotationValues(List values) {
             if (values != null) {
                 for (int i = 1; i < values.size(); i += 2) {
                     values.set(i, mapAnnotationValue(values.get(i)));

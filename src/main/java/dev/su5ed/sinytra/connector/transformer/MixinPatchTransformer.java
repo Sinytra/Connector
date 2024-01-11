@@ -336,11 +336,11 @@ public class MixinPatchTransformer implements Transformer {
             .targetMethod("m_117184_")
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
             .targetMixinType(MixinConstants.MODIFY_ARG)
+            .modifyParams(builder -> builder
+                .replace(0, Type.getObjectType("net/minecraft/world/item/ItemStack")))
             .modifyMixinType(MixinConstants.REDIRECT, builder -> builder
                 .sameTarget()
                 .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;"))
-            .modifyParams(builder -> builder
-                .replace(0, Type.getObjectType("net/minecraft/world/item/ItemStack")))
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/renderer/GameRenderer")
@@ -657,7 +657,8 @@ public class MixinPatchTransformer implements Transformer {
             for (Patch patch : this.patches) {
                 patchResult = patchResult.or(patch.apply(node, this.environment));
             }
-        } else {
+        }
+        else {
             for (ClassTransform transform : CLASS_TRANSFORMS) {
                 patchResult = patchResult.or(transform.apply(node, null, PatchContext.create(node, List.of(), this.environment)));
             }

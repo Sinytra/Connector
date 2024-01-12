@@ -274,8 +274,8 @@ dependencies {
 
     annotationProcessor(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
     compileOnly(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
-    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.3.1")!!) {
-        jarJar.ranged(this, "[0.3.1,)")
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.3.2")!!) {
+        jarJar.ranged(this, "[0.3.2,)")
     }
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))

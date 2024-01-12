@@ -3,6 +3,7 @@ package dev.su5ed.sinytra.connector.service;
 import cpw.mods.modlauncher.api.NamedPath;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.service.hacks.ServiceProviderInheritanceWorkaround;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;

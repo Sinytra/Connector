@@ -9,13 +9,14 @@ import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.service.hacks.ConnectorForkJoinThreadFactory;
+import dev.su5ed.sinytra.connector.service.hacks.ModuleLayerMigrator;
 import net.minecraftforge.fml.loading.ImmediateWindowHandler;
 import net.minecraftforge.fml.loading.ImmediateWindowProvider;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.unsafe.UnsafeHacks;
 import org.slf4j.Logger;
 
-import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
@@ -23,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
@@ -31,7 +31,7 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
-import static dev.su5ed.sinytra.connector.service.ModuleLayerMigrator.TRUSTED_LOOKUP;
+import static dev.su5ed.sinytra.connector.service.hacks.ModuleLayerMigrator.TRUSTED_LOOKUP;
 
 public class ConnectorLoaderService implements ITransformationService {
     private static final String NAME = "connector_loader";
@@ -74,22 +74,7 @@ public class ConnectorLoaderService implements ITransformationService {
             //@formatter:on
         };
         provider.set(newProvider);
-        replaceForkJoinPoolThreadFactory();
-    }
-
-    private static void replaceForkJoinPoolThreadFactory() {
-        // Replace the default FJP thread factory to pass the context classloader from modlauncher
-        // Must use reflection over the system property, as it only supports loading from the system CL
-        try {
-            ForkJoinPool.ForkJoinWorkerThreadFactory factory = new ConnectorForkJoinThreadFactory(ForkJoinPool.defaultForkJoinWorkerThreadFactory);
-            MethodHandle handle = TRUSTED_LOOKUP.findStaticSetter(ForkJoinPool.class, "defaultForkJoinWorkerThreadFactory", ForkJoinPool.ForkJoinWorkerThreadFactory.class);
-            handle.invoke(factory);
-
-            VarHandle commonHandle = TRUSTED_LOOKUP.findVarHandle(ForkJoinPool.class, "factory", ForkJoinPool.ForkJoinWorkerThreadFactory.class);
-            commonHandle.set(ForkJoinPool.commonPool(), factory);
-        } catch (Throwable t) {
-            LOGGER.error("Error injecting default thread pool factory", t);
-        }
+        ConnectorForkJoinThreadFactory.install();
     }
 
     @SuppressWarnings("unchecked")

@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.service;
+package dev.su5ed.sinytra.connector.service.hacks;
 
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;

@@ -86,6 +86,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/world/item/enchantment/EnchantmentHelper")
+            .targetMethod("m_44817_")
+            .targetInjectionPoint("Lnet/minecraft/world/item/enchantment/EnchantmentCategory;m_7454_(Lnet/minecraft/world/item/Item;)Z")
+            .modifyInjectionPoint("Lnet/minecraft/world/item/enchantment/Enchantment;canApplyAtEnchantingTable(Lnet/minecraft/world/item/ItemStack;)Z")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/item/ShovelItem")
             .targetMethod("m_6225_")
             .targetInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;m_60795_()Z")

@@ -9,6 +9,7 @@ import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.forgespi.locating.IModFile;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.TypeInsnNode;
@@ -51,7 +52,9 @@ public class BytecodeFixerUpperFrontend {
                 new TypeInsnNode(Opcodes.CHECKCAST, "[Lnet/minecraft/world/level/storage/loot/LootPool;")
             ));
         }),
-        new SimpleTypeAdapter(Type.getObjectType("net/minecraft/world/entity/Mob"), Type.getObjectType("net/minecraft/world/entity/monster/Monster"), (list, insn) -> {})
+        new SimpleTypeAdapter(Type.getObjectType("net/minecraft/world/entity/Mob"), Type.getObjectType("net/minecraft/world/entity/monster/Monster"), (list, insn) -> {}),
+        new SimpleTypeAdapter(Type.getObjectType("net/minecraft/world/item/enchantment/Enchantment"), Type.getObjectType("net/minecraft/world/item/enchantment/EnchantmentCategory"), (list, insn) ->
+            list.insert(insn, new FieldInsnNode(Opcodes.GETFIELD, "net/minecraft/world/item/enchantment/Enchantment", ASMAPI.mapField("f_44672_"), "Lnet/minecraft/world/item/enchantment/EnchantmentCategory;")))
     );
 
     private final BytecodeFixerUpper bfu;

@@ -108,7 +108,11 @@ public class ConnectorLoaderService implements ITransformationService {
 
     @Override
     public List<Resource> completeScan(IModuleLayerManager layerManager) {
-        LoadingModList.get().getErrors().addAll(ConnectorEarlyLoader.getLoadingExceptions());
+        if (LoadingModList.get().getBrokenFiles().isEmpty()) {
+            LoadingModList.get().getErrors().addAll(ConnectorEarlyLoader.getLoadingExceptions());
+        } else {
+            LOGGER.warn("Broken FML mod files found, not adding Connector locator errors");
+        }
         return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(
             new FabricASMFixer.FabricASMGeneratedClassesSecureJar(),
             ModuleLayerMigrator.moveModule(AUTHLIB_MODULE)

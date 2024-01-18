@@ -74,15 +74,16 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             return locateFabricMods(loadedMods);
         } catch (EarlyLoadingException e) {
             // Let these pass through
-            throw e;
+            ConnectorEarlyLoader.addGenericLoadingException(e);
         } catch (Throwable t) {
             // Rethrow other exceptions
             StartupNotificationManager.addModMessage("CONNECTOR LOCATOR ERROR");
-            throw ConnectorEarlyLoader.createGenericLoadingException(t, "Fabric mod discovery failed");
+            ConnectorEarlyLoader.addGenericLoadingException(ConnectorEarlyLoader.createGenericLoadingException(t, "Fabric mod discovery failed"));
         } finally {
             // Handle forge mod split packages
             ForgeModPackageFilter.filterPackages(loadedMods);
         }
+        return List.of();
     }
 
     private List<IModFile> locateFabricMods(Iterable<IModFile> loadedMods) {

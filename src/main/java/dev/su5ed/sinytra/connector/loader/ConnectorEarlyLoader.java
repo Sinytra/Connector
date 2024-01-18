@@ -61,10 +61,14 @@ public class ConnectorEarlyLoader {
      * @param message simple error message to show
      */
     public static void addGenericLoadingException(Throwable t, String message) {
-        EarlyLoadingException exception = createGenericLoadingException(t, message);
+        addGenericLoadingException(createGenericLoadingException(t, message));
+    }
+
+    public static void addGenericLoadingException(EarlyLoadingException exception) {
         if (LoadingModList.get() != null) {
             LoadingModList.get().getErrors().add(exception);
-        } else {
+        }
+        else {
             LOADING_EXCEPTIONS.add(exception);
         }
     }

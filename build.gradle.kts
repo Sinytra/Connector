@@ -43,6 +43,7 @@ val forgifiedFabricApiCurseForge: String by project
 val forgifiedFabricApiModrinth: String by project
 val connectorExtrasCurseForge: String by project
 val connectorExtrasModrinth: String by project
+val mixinextrasVersion: String by project
 
 val PUBLISH_RELEASE_TYPE: Provider<String> = providers.environmentVariable("PUBLISH_RELEASE_TYPE")
 
@@ -273,13 +274,14 @@ dependencies {
 
     annotationProcessor(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
     compileOnly(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
-    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.3.2")!!) {
-        jarJar.ranged(this, "[0.3.2,)")
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:${mixinextrasVersion}")!!) {
+        jarJar.ranged(this, "[${mixinextrasVersion},)")
     }
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))
 
     "modCompileOnly"(sourceSets.main.get().output)
+    "modCompileOnly"("io.github.llamalad7:mixinextras-common:${mixinextrasVersion}")
 }
 
 tasks {

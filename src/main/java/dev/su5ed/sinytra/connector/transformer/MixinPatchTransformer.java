@@ -382,6 +382,37 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
+            .targetMethod("m_9280_")
+            .targetInjectionPoint("Lnet/minecraft/server/level/ServerLevel;m_7471_(Lnet/minecraft/core/BlockPos;Z)Z")
+            .modifyInjectionPoint("Lnet/minecraft/server/level/ServerPlayerGameMode;removeBlock(Lnet/minecraft/core/BlockPos;Z)Z")
+            .modifyParams(builder -> builder
+                    .inline(0, adapter -> {
+                        adapter.load(0, Type.getType("Lnet/minecraft/server/level/ServerPlayerGameMode;"));
+                        adapter.getfield("net/minecraft/server/level/ServerPlayerGameMode","f_9244_", "Lnet/minecraft/server/level/ServerLevel;");
+                    })
+                    .ignoreOffset())
+            // Since transformers (fortunately) obey order, we first inline and then add the parameter with a different type
+            .modifyParams(builder -> builder.insert(0, Type.getType("Lnet/minecraft/server/level/ServerPlayerGameMode;")).ignoreOffset())
+            .targetMixinType(MixinConstants.REDIRECT)
+            .build(),
+        Patch.builder()
+            .targetClass("net/minecraft/client/multiplayer/MultiPlayerGameMode")
+            .targetMethod("m_105267_")
+            .targetInjectionPoint("Lnet/minecraft/world/level/Level;m_7731_(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;I)Z")
+            .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
+            .modifyParams(builder -> builder
+                .inline(3, adapter -> adapter.visitIntInsn(Opcodes.BIPUSH, 11))
+                // Starts as Level | BlockPos | BlockState
+                .swap(2, 1) // Level | BlockState | BlockPos
+                .swap(1, 0) // BlockState | Level | BlockPos
+                .insert(4, Type.getType("Lnet/minecraft/world/entity/player/Player;"))
+                .insert(5, Type.BOOLEAN_TYPE)
+                .insert(6, Type.getType("Lnet/minecraft/world/level/material/FluidState;"))
+                .ignoreOffset())
+            .targetMixinType(MixinConstants.REDIRECT)
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/client/renderer/entity/layers/ElytraLayer")
             .targetMethod("m_6494_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V")
             .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")

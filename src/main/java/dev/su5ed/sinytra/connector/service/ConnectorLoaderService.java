@@ -10,6 +10,7 @@ import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.service.hacks.ConnectorForkJoinThreadFactory;
+import dev.su5ed.sinytra.connector.service.hacks.LenientRuntimeEnumExtender;
 import dev.su5ed.sinytra.connector.service.hacks.ModuleLayerMigrator;
 import net.minecraftforge.fml.loading.ImmediateWindowHandler;
 import net.minecraftforge.fml.loading.ImmediateWindowProvider;

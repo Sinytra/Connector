@@ -86,6 +86,12 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/KeyMapping")
+            .targetMethod("set")
+            .targetInjectionPoint("TAIL", "")
+            .modifyTarget("connector_onSetKeyMapping")
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/world/item/enchantment/EnchantmentHelper")
             .targetMethod("m_44817_")
             .targetInjectionPoint("Lnet/minecraft/world/item/enchantment/EnchantmentCategory;m_7454_(Lnet/minecraft/world/item/Item;)Z")

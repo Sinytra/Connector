@@ -1,5 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.mixin.client;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.client.settings.KeyMappingLookup;
@@ -10,6 +11,9 @@ import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,6 +32,19 @@ public class KeyMappingMixin {
     @Shadow(remap = false, aliases = "f_90810_")
     private static final Map<InputConstants.Key, KeyMapping> vanillaKeyMapping;
     
+    private static final ThreadLocal<KeyMapping> KEY_MAPPING_LOCAL = new ThreadLocal<>();
+    
+    @Inject(method = "set", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/KeyMapping;setDown(Z)V"))
+    private static void onSetKeyMapping(InputConstants.Key pKey, boolean pHeld, CallbackInfo ci, @Local KeyMapping keyMapping) {
+        KEY_MAPPING_LOCAL.set(keyMapping);
+        connector_onSetKeyMapping(pKey, pHeld);
+        KEY_MAPPING_LOCAL.remove();
+    }
+
+    private static void connector_onSetKeyMapping(InputConstants.Key pKey, boolean pHeld) {
+        KeyMapping keyMapping = KEY_MAPPING_LOCAL.get();
+    }
+
     static {
         // Forge changes the signature of f_90810_ (MAP) so, as such, some mods may encounter issues
         // if they use the field in their code or otherwise reflect (see voxelmap)

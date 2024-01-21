@@ -87,7 +87,7 @@ public class MixinPatchTransformer implements Transformer {
             .build(),
         Patch.builder()
             .targetClass("net/minecraft/client/KeyMapping")
-            .targetMethod("set")
+            .targetMethod("m_90837_")
             .targetInjectionPoint("TAIL", "")
             .modifyTarget("connector_onSetKeyMapping")
             .build(),

@@ -103,7 +103,15 @@ public final class DependencyResolver {
 
     private static ModCandidate createFabricLoaderMod() {
         String version = EmbeddedDependencies.getFabricLoaderVersion();
-        ModMetadata metadata = new BuiltinModMetadata.Builder("fabricloader", Objects.requireNonNullElse(version, "0.0NONE"))
+        if (version == null) {
+            version = "0.0NONE";
+        } else {
+            // The patch version can be a wildcard, as some mods like to depend on the newest FLoader version
+            // even if it's just a bugfix that they didn't need
+            final String[] components = version.split("\\.");
+            version = components[0] + "." + components[1] + ".*";
+        }
+        ModMetadata metadata = new BuiltinModMetadata.Builder("fabricloader", version)
             .setName("Fabric Loader")
             .build();
         GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(Collections.singletonList(Path.of(uncheck(() -> FabricLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI()))), metadata);

@@ -1,4 +1,4 @@
-package dev.su5ed.sinytra.connector.service;
+package dev.su5ed.sinytra.connector.service.hacks;
 
 import net.minecraftforge.fml.common.asm.RuntimeEnumExtender;
 import org.objectweb.asm.Opcodes;

@@ -19,11 +19,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package dev.su5ed.sinytra.connector.service;
+package dev.su5ed.sinytra.connector.service.hacks;
 
 import cpw.mods.cl.ModuleClassLoader;
 import cpw.mods.modlauncher.Launcher;
 import cpw.mods.modlauncher.api.IModuleLayerManager;
+import cpw.mods.modlauncher.api.LamdbaExceptionUtils;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
@@ -39,6 +40,7 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
  * Applies <a href="https://github.com/McModLauncher/securejarhandler/pull/52">McModLauncher/securejarhandler#52</a>
  * to mitigate <a href="https://github.com/McModLauncher/modlauncher/issues/100">McModLauncher/modlauncher#100</a>
  */
+// TODO Remove in 1.20.4
 public class ServiceProviderInheritanceWorkaround {
     // Reflect into JVM internals to associate each ModuleClassLoader with all of its parent layers.
     // This is necessary to let ServiceProvider find service implementations in parent module layers.
@@ -48,7 +50,7 @@ public class ServiceProviderInheritanceWorkaround {
     // The only mechanism the JVM has for this is to also look for layers defined by the parent class loader.
     // We don't want to set a parent because we explicitly do not want to delegate to a parent class loader,
     // and that wouldn't even handle the case of multiple parent layers anyway.
-    private static final MethodHandle LAYER_BIND_TO_LOADER = uncheck(() -> ModuleLayerMigrator.TRUSTED_LOOKUP.findSpecial(ModuleLayer.class, "bindToLoader", MethodType.methodType(void.class, ClassLoader.class), ModuleLayer.class));
+    private static final MethodHandle LAYER_BIND_TO_LOADER = LamdbaExceptionUtils.uncheck(() -> ModuleLayerMigrator.TRUSTED_LOOKUP.findSpecial(ModuleLayer.class, "bindToLoader", MethodType.methodType(void.class, ClassLoader.class), ModuleLayer.class));
 
     public static void apply() {
         Launcher.INSTANCE.findLayerManager()

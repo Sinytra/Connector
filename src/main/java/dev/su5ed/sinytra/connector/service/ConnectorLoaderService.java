@@ -1,26 +1,43 @@
 package dev.su5ed.sinytra.connector.service;
 
+import com.mojang.logging.LogUtils;
 import cpw.mods.modlauncher.LaunchPluginHandler;
 import cpw.mods.modlauncher.Launcher;
-import cpw.mods.modlauncher.api.*;
+import cpw.mods.modlauncher.api.IEnvironment;
+import cpw.mods.modlauncher.api.IModuleLayerManager;
+import cpw.mods.modlauncher.api.ITransformationService;
+import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.service.hacks.ConnectorForkJoinThreadFactory;
+import dev.su5ed.sinytra.connector.service.hacks.LenientRuntimeEnumExtender;
+import dev.su5ed.sinytra.connector.service.hacks.ModuleLayerMigrator;
 import net.minecraftforge.fml.loading.ImmediateWindowHandler;
 import net.minecraftforge.fml.loading.ImmediateWindowProvider;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.unsafe.UnsafeHacks;
+import org.slf4j.Logger;
 
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
-import java.util.*;
-import java.util.function.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
-import static dev.su5ed.sinytra.connector.service.ModuleLayerMigrator.TRUSTED_LOOKUP;
+import static dev.su5ed.sinytra.connector.service.hacks.ModuleLayerMigrator.TRUSTED_LOOKUP;
 
 public class ConnectorLoaderService implements ITransformationService {
     private static final String NAME = "connector_loader";
     private static final String AUTHLIB_MODULE = "authlib";
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     @Override
     public String name() {
@@ -58,7 +75,7 @@ public class ConnectorLoaderService implements ITransformationService {
             //@formatter:on
         };
         provider.set(newProvider);
-        System.setProperty("java.util.concurrent.ForkJoinPool.common.threadFactory", ConnectorForkJoinThreadFactory.class.getName());
+        ConnectorForkJoinThreadFactory.install();
     }
 
     @SuppressWarnings("unchecked")
@@ -92,7 +109,11 @@ public class ConnectorLoaderService implements ITransformationService {
 
     @Override
     public List<Resource> completeScan(IModuleLayerManager layerManager) {
-        LoadingModList.get().getErrors().addAll(ConnectorEarlyLoader.getLoadingExceptions());
+        if (LoadingModList.get().getBrokenFiles().isEmpty()) {
+            LoadingModList.get().getErrors().addAll(ConnectorEarlyLoader.getLoadingExceptions());
+        } else {
+            LOGGER.warn("Broken FML mod files found, not adding Connector locator errors");
+        }
         return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(
             new FabricASMFixer.FabricASMGeneratedClassesSecureJar(),
             ModuleLayerMigrator.moveModule(AUTHLIB_MODULE)

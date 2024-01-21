@@ -31,7 +31,6 @@ val versionMc: String by project
 val versionForge: String by project
 val versionForgeAutoRenamingTool: String by project
 val versionFabricLoader: String by project
-val versionFabricLoaderUpstream: String by project
 val versionAccessWidener: String by project
 val versionFabricApi: String by project
 val versionMixin: String by project
@@ -44,6 +43,7 @@ val forgifiedFabricApiCurseForge: String by project
 val forgifiedFabricApiModrinth: String by project
 val connectorExtrasCurseForge: String by project
 val connectorExtrasModrinth: String by project
+val mixinextrasVersion: String by project
 
 val PUBLISH_RELEASE_TYPE: Provider<String> = providers.environmentVariable("PUBLISH_RELEASE_TYPE")
 
@@ -150,7 +150,7 @@ val fullJar: Jar by tasks.creating(Jar::class) {
     manifest {
         from(tasks.jar.get().manifest)
         attributes("Embedded-Dependencies-Mod" to "META-INF/jarjar/" + modJar.archiveFile.get().asFile.name)
-        attributes("Fabric-Loader-Version" to versionFabricLoaderUpstream)
+        attributes("Fabric-Loader-Version" to versionFabricLoader.split("+")[1])
     }
 }
 
@@ -274,13 +274,14 @@ dependencies {
 
     annotationProcessor(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
     compileOnly(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
-    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.3.1")!!) {
-        jarJar.ranged(this, "[0.3.1,)")
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:${mixinextrasVersion}")!!) {
+        jarJar.ranged(this, "[${mixinextrasVersion},)")
     }
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))
 
     "modCompileOnly"(sourceSets.main.get().output)
+    "modCompileOnly"("io.github.llamalad7:mixinextras-common:${mixinextrasVersion}")
 }
 
 tasks {

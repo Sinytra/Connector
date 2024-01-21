@@ -30,6 +30,7 @@
     "ItemOverridesMixin",
     "OptionsMixin",
     "boot.MinecraftMixin",
+    "client.KeyMappingMixin",
     "fieldtypes.BlockColorsMixin",
     "fieldtypes.ItemColorsMixin",
     "fieldtypes.ParticleEngineMixin",

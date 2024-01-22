@@ -374,6 +374,24 @@ public class MixinPatchTransformer implements Transformer {
             .modifyInjectionPoint("Ljava/util/stream/Stream;collect(Ljava/util/stream/Collector;)Ljava/lang/Object;")
             .build(),
         Patch.builder()
+            .targetClass("net/minecraft/client/Minecraft")
+            .targetMethod("m_91280_")
+            .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_7397_(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)Lnet/minecraft/world/item/ItemStack;")
+            .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;getCloneItemStack(Lnet/minecraft/world/phys/HitResult;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;)Lnet/minecraft/world/item/ItemStack;")
+            .modifyParams(builder -> builder.swap(0, 3).ignoreOffset())
+            .modifyParams(builder -> builder
+                    .inline(3, adapter -> {
+                        adapter.load(1, Type.getType("Lnet/minecraft/world/level/block/state/BlockState;"));
+                        adapter.invokevirtual("net/minecraft/world/level/block/state/BlockBehaviour$BlockStateBase", "m_60734_", "()Lnet/minecraft/world/level/block/Block;", false);
+                    })
+                    .ignoreOffset())
+            .modifyParams(builder -> builder
+                    .insert(1, Type.getType("Lnet/minecraft/world/phys/HitResult;"))
+                    .insert(4, Type.getType("Lnet/minecraft/world/entity/player/Player;"))
+                    .ignoreOffset())
+            .targetMixinType(MixinConstants.REDIRECT)
+            .build(),
+        Patch.builder()
             .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
             .targetMethod("m_9280_")
             .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V")

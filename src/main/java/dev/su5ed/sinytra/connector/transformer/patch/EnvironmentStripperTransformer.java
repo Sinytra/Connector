@@ -8,29 +8,36 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 public class EnvironmentStripperTransformer implements ClassTransform {
     private static final String ENVIRONMENT_ANNOTATION = Type.getDescriptor(Environment.class);
     private static final EnvType CURRENT_ENV = FabricLoader.getInstance().getEnvironmentType();
+    private static final String LAMBDA_PREFIX = "lambda$";
 
     @Override
     public Patch.Result apply(ClassNode classNode, @Nullable AnnotationValueHandle<?> annotation, PatchContext context) {
         boolean applied = false;
-        for (Iterator<MethodNode> it = classNode.methods.iterator(); it.hasNext(); ) {
-            MethodNode method = it.next();
+        List<MethodNode> removeMethods = new ArrayList<>();
+        for (MethodNode method : classNode.methods) {
             if (remove(method.invisibleAnnotations)) {
-                it.remove();
+                removeMethods.add(method);
+                removeMethods.addAll(getMethodLambdas(classNode, method));
                 applied = true;
             }
         }
+        classNode.methods.removeAll(removeMethods);
         for (Iterator<FieldNode> it = classNode.fields.iterator(); it.hasNext(); ) {
             FieldNode field = it.next();
             if (remove(field.invisibleAnnotations)) {
@@ -39,6 +46,29 @@ public class EnvironmentStripperTransformer implements ClassTransform {
             }
         }
         return applied ? Patch.Result.APPLY : Patch.Result.PASS;
+    }
+
+    private static List<MethodNode> getMethodLambdas(ClassNode cls, MethodNode method) {
+        List<MethodNode> list = new ArrayList<>();
+        for (AbstractInsnNode insn : method.instructions) {
+            if (insn instanceof InvokeDynamicInsnNode indy && indy.bsmArgs.length >= 3) {
+                for (Object bsmArg : indy.bsmArgs) {
+                    if (bsmArg instanceof Handle handle && handle.getOwner().equals(cls.name)) {
+                        String name = handle.getName();
+                        if (name.startsWith(LAMBDA_PREFIX)) {
+                            cls.methods.stream()
+                                .filter(m -> m.name.equals(name) && m.desc.equals(handle.getDesc()))
+                                .findFirst()
+                                .ifPresent(m -> {
+                                    list.add(m);
+                                    list.addAll(getMethodLambdas(cls, m));
+                                });
+                        }
+                    }
+                }
+            }
+        }
+        return list;
     }
 
     // We strip annotations ahead of time to avoid class resolution issues leading to CNFEs

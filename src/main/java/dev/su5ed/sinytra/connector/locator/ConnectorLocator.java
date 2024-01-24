@@ -103,7 +103,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .toList();
         Collection<String> loadedModIds = loadedModInfos.stream().filter(mod -> !mod.library()).map(SimpleModInfo::modid).collect(Collectors.toUnmodifiableSet());
         // Discover fabric mod jars
-        List<JarTransformer.TransformableJar> discoveredJars = Stream.concat(scanModsDir(), scanClasspath())
+        List<JarTransformer.TransformableJar> discoveredJars = Stream.of(scanModsDir(), scanClasspath(), scanArguments()).flatMap(s -> s)
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
             .filter(jar -> {
                 String modid = jar.modPath().metadata().modMetadata().getId();
@@ -174,6 +174,10 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             LOGGER.error(LogMarkers.SCAN, "Error trying to find resources", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private Stream<Path> scanArguments() {
+        return Arrays.stream(System.getProperty("connector.addMods", "").split(File.pathSeparator)).map(Path::of);
     }
 
     private IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath) {

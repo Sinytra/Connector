@@ -177,7 +177,20 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     }
 
     private Stream<Path> scanArguments() {
-        return Arrays.stream(System.getProperty("connector.addMods", "").split(File.pathSeparator)).map(Path::of);
+        Stream<Path> pathStream = Arrays.stream(System.getProperty("connector.addMods", "").split(File.pathSeparator)).map(Path::of);
+        Stream.Builder<Path> ret = Stream.builder();
+        pathStream.forEach(path -> {
+            if (Files.isDirectory(path)) {
+                uncheck(() -> Files.list(path)).forEach(ret::add);
+            } else {
+                ret.add(path);
+            }
+        });
+        List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
+        return ret.build()
+                .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
+                .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
+                .filter(ConnectorLocator::isFabricModJar);
     }
 
     private IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath) {

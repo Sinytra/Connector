@@ -177,7 +177,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     }
 
     private Stream<Path> scanArguments() {
-        Stream<Path> pathStream = Arrays.stream(System.getProperty("connector.addMods", "").split(File.pathSeparator)).map(Path::of);
+        Stream<Path> pathStream = Arrays.stream(System.getProperty("connector.additionalModLocations", "").split(",")).filter(s -> !s.isBlank()).map(Path::of);
         Stream.Builder<Path> ret = Stream.builder();
         pathStream.forEach(path -> {
             if (Files.isDirectory(path)) {

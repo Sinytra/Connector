@@ -17,6 +17,7 @@ import org.objectweb.asm.tree.VarInsnNode;
 
 import java.util.List;
 import java.util.ListIterator;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class MixinPatches {
@@ -38,6 +39,11 @@ public class MixinPatches {
                 .targetMethod("m_90837_")
                 .targetInjectionPoint("TAIL", "")
                 .modifyTarget("connector_onSetKeyMapping")
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/LivingEntity")
+                .targetMethod("m_6075_")
+                .updateRedirectTarget("Lnet/minecraft/world/entity/LivingEntity;m_204029_(Lnet/minecraft/tags/TagKey;)Z", "Lnet/minecraftforge/fluids/FluidType;isAir()Z")
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/world/item/enchantment/EnchantmentHelper")
@@ -207,6 +213,9 @@ public class MixinPatches {
                 .targetInjectionPoint("TAIL", "")
                 .modifyTarget("connector_postRender")
                 .build(),
+            buildGuiPatch(2, 2, "renderFood", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;"),
+            buildGuiPatch(3, 3, "renderAir", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;"),
+            buildGuiPatch(3, 5, "renderFood", "Lnet/minecraft/client/gui/GuiGraphics;m_280218_(Lnet/minecraft/resources/ResourceLocation;IIIIII)V"),
             Patch.builder()
                 .targetClass("net/minecraft/client/gui/Gui")
                 .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
@@ -496,6 +505,24 @@ public class MixinPatches {
         return patches.stream()
             .flatMap(p -> p instanceof List<?> lst ? lst.stream() : Stream.of(p))
             .map(o -> (Patch) o)
-            .toList();
+            .collect(Collectors.toList()); // Mutable list
+    }
+
+    private static Patch buildGuiPatch(int minOrdinal, int maxOrdinal, String targetMethodName, String injectionPoint) {
+        return Patch.builder()
+            .targetClass("net/minecraft/client/gui/Gui")
+            .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+            .targetInjectionPoint(injectionPoint)
+            .targetAnnotationValues(h -> h.getNested("at").flatMap(v -> v.<Integer>getValue("ordinal")).map(v -> v.get() >= minOrdinal && v.get() <= maxOrdinal).orElse(false))
+            .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+            .modifyTarget(targetMethodName + "(IILnet/minecraft/client/gui/GuiGraphics;)V")
+            .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+            .transform((classNode, methodNode, methodContext, context) -> {
+                methodContext.injectionPointAnnotation()
+                    .<Integer>getValue("ordinal")
+                    .ifPresent(o -> o.set(0));
+                return Patch.Result.APPLY;
+            })
+            .build();
     }
 }

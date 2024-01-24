@@ -26,10 +26,10 @@ public class ConnectorPreLaunchPlugin implements ILaunchPluginService {
     public void initializeLaunch(ITransformerLoader transformerLoader, NamedPath[] specialPaths) {
         // Apply provider inheritance fix from newer SJH versions
         ServiceProviderInheritanceWorkaround.apply();
-        // Decorate mixin config's with mod IDs, enabling method prefix functionality
-        FabricMixinBootstrap.init();
         // Setup Fabric Loader
         ConnectorEarlyLoader.init();
+        // Decorate mixin config's with mod IDs, enabling method prefix functionality
+        FabricMixinBootstrap.init();
         // Apply Fabric ASM fix
         FabricASMFixer.injectMinecraftModuleReader();
     }

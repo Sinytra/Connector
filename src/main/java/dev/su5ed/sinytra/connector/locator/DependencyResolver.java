@@ -9,6 +9,7 @@ import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.transformer.jar.JarTransformer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.VersionParsingException;
 import net.fabricmc.loader.api.metadata.ModMetadata;
 import net.fabricmc.loader.impl.FMLModMetadata;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
@@ -20,6 +21,7 @@ import net.fabricmc.loader.impl.game.GameProvider;
 import net.fabricmc.loader.impl.metadata.BuiltinModMetadata;
 import net.fabricmc.loader.impl.metadata.DependencyOverrides;
 import net.fabricmc.loader.impl.metadata.VersionOverrides;
+import net.fabricmc.loader.impl.util.version.VersionParser;
 import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.forgespi.locating.IModFile;
 import org.slf4j.Logger;
@@ -103,9 +105,24 @@ public final class DependencyResolver {
 
     private static ModCandidate createFabricLoaderMod() {
         String version = EmbeddedDependencies.getFabricLoaderVersion();
-        ModMetadata metadata = new BuiltinModMetadata.Builder("fabricloader", Objects.requireNonNullElse(version, "0.0NONE"))
-            .setName("Fabric Loader")
-            .build();
+        if (version == null) {
+            version = "0.0NONE";
+        } else {
+            // The patch version can be a wildcard, as some mods like to depend on the newest FLoader version
+            // even if it's just a bugfix that they didn't need
+            final String[] components = version.split("\\.");
+            version = components[0] + "." + components[1] + ".*";
+        }
+        ModMetadata metadata;
+
+        try {
+            metadata = new BuiltinModMetadata.Builder("fabricloader", VersionParser.parse(version, true))
+                .setName("Fabric Loader")
+                .build();
+        } catch (VersionParsingException e) {
+            throw new RuntimeException(e);
+        }
+
         GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(Collections.singletonList(Path.of(uncheck(() -> FabricLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI()))), metadata);
 
         return ModCandidate.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES);

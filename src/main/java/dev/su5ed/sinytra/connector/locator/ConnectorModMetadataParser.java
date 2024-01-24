@@ -35,7 +35,9 @@ public final class ConnectorModMetadataParser {
         Config config = Config.inMemory();
         config.add("modLoader", lowCode ? "lowcodefml" : "javafml");
         config.add("loaderVersion", "[0, )");
-        Collection<String> licenses = metadata.getLicense();
+        Collection<String> licenses = metadata.getLicense()
+                .stream().map(String::trim).filter(l -> !l.isBlank())
+                .toList();
         config.add("license", licenses.isEmpty() ? DEFAULT_LICENSE : String.join(", ", metadata.getLicense()));
 
         config.add("properties", Map.of(

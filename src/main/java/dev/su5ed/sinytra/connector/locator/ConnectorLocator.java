@@ -104,7 +104,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .toList();
         Collection<String> loadedModIds = loadedModInfos.stream().filter(mod -> !mod.library()).map(SimpleModInfo::modid).collect(Collectors.toUnmodifiableSet());
         // Discover fabric mod jars
-        List<JarTransformer.TransformableJar> discoveredJars = Stream.concat(scanModsDir(), scanClasspath())
+        List<JarTransformer.TransformableJar> discoveredJars = Stream.of(scanModsDir(), scanClasspath(), scanArguments()).flatMap(s -> s)
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
             .filter(jar -> {
                 String modid = jar.modPath().metadata().modMetadata().getId();
@@ -175,6 +175,23 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             LOGGER.error(LogMarkers.SCAN, "Error trying to find resources", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private Stream<Path> scanArguments() {
+        Stream<Path> pathStream = Arrays.stream(System.getProperty("connector.additionalModLocations", "").split(",")).filter(s -> !s.isBlank()).map(Path::of);
+        Stream.Builder<Path> ret = Stream.builder();
+        pathStream.forEach(path -> {
+            if (Files.isDirectory(path)) {
+                uncheck(() -> Files.list(path)).forEach(ret::add);
+            } else {
+                ret.add(path);
+            }
+        });
+        List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
+        return ret.build()
+                .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
+                .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
+                .filter(ConnectorLocator::isFabricModJar);
     }
 
     private IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath) {

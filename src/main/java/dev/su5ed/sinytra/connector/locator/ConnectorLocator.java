@@ -12,6 +12,7 @@ import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.minecraftforge.fml.loading.ClasspathLocatorUtils;
 import net.minecraftforge.fml.loading.EarlyLoadingException;
 import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.fml.loading.LogMarkers;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
 import net.minecraftforge.fml.loading.StringUtils;
@@ -85,10 +86,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     }
 
     private List<IModFile> locateFabricMods(Iterable<IModFile> loadedMods) {
-        StringBuilder sb = new StringBuilder();
-        ConnectorUtil.FABRIC_MODS_FOLDERS.forEach(path -> sb.append("'").append(path).append("' "));
-        String modsFolders = sb.toString().trim();
-        LOGGER.debug(SCAN, "Scanning mods dirs {} for mods", modsFolders);
+        LOGGER.debug(SCAN, "Scanning mods dir {} for mods", FMLPaths.MODSDIR.get());
         Path tempDir = ConnectorUtil.CONNECTOR_FOLDER.resolve("temp");
         // Get all existing mod ids
         Collection<SimpleModInfo> loadedModInfos = StreamSupport.stream(loadedMods.spliterator(), false)
@@ -149,10 +147,8 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     }
 
     private Stream<Path> scanModsDir() {
-        List<Path> mods = new ArrayList<>();
-        ConnectorUtil.FABRIC_MODS_FOLDERS.forEach(path -> mods.addAll((uncheck(() -> Files.list(path))).toList()));
         List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
-        return mods.stream()
+        return uncheck(() -> Files.list(FMLPaths.MODSDIR.get()))
             .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
             .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
             .filter(ConnectorLocator::isFabricModJar);

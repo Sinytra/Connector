@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -30,8 +29,6 @@ public final class ConnectorUtil {
     public static final String CONNECTOR_MARKER = "connector_transformed";
     public static final String FORGE_MODID = "forge";
     public static final long ZIP_TIME = 318211200000L;
-    // Not final arraylist which allows other mods to add more fabric mods from different directories than default mods folder
-    public static List<Path> FABRIC_MODS_FOLDERS = new ArrayList<>(List.of(FMLPaths.MODSDIR.get()));
     public static final Path CONNECTOR_FOLDER = FMLPaths.MODSDIR.get().resolve(".connector");
     public static final String CONNECTOR_MODID = "connectormod";
     public static final String CONNECTOR_ISSUE_TRACKER_URL = "https://github.com/Sinytra/Connector/issues";

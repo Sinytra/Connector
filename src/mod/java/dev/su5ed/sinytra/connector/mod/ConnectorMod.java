@@ -14,6 +14,8 @@ import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLLoader;
 
+import java.io.InputStream;
+
 @Mod(ConnectorUtil.CONNECTOR_MODID)
 public class ConnectorMod {
     private static boolean clientLoadComplete;
@@ -43,5 +45,12 @@ public class ConnectorMod {
 
     private static void onLoadComplete(FMLLoadCompleteEvent event) {
         LateSheetsInit.completeSheetsInit();
+    }
+
+    // Injected into mod code by ClassAnalysingTransformer
+    @SuppressWarnings("unused")
+    public static InputStream getModResourceAsStream(Class<?> clazz, String name) {
+        InputStream classRes = clazz.getResourceAsStream(name);
+        return classRes != null ? classRes : clazz.getClassLoader().getResourceAsStream(name);
     }
 }

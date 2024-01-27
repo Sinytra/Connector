@@ -2,6 +2,7 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import dev.su5ed.sinytra.adapter.patch.api.MixinConstants;
 import dev.su5ed.sinytra.adapter.patch.api.Patch;
+import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -577,9 +578,27 @@ public class MixinPatches {
             Patch.builder()
                 .targetClass("net/minecraft/client/KeyboardHandler")
                 .targetMethod("method_1454")
-                // lambda$keyPress$5
-                .modifyTarget("m_260734_(ILnet/minecraft/client/gui/screens/Screen;[ZIII)V")
+                .modifyTarget("lambda$keyPress$5(ILnet/minecraft/client/gui/screens/Screen;[ZIII)V")
                 .transformParams(builder -> builder.swap(1, 2))
+                .build(),
+
+            // Their refmaps are so broken...
+            Patch.builder()
+                .targetClass("net/minecraft/client/MouseHandler")
+                .targetMethod("method_1611")
+                .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC))
+                .modifyTarget("m_168084_") // lambda$onPress$0
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/MouseHandler")
+                .targetMethod("method_1605")
+                .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC))
+                .modifyTarget("m_168078_") // lambda$onPress$1
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/MouseHandler")
+                .targetMethod("method_1602")
+                .modifyTarget("m_168072_") // lambda$onMove$11
                 .build()
         );
     }

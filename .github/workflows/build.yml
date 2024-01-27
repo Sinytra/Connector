@@ -19,7 +19,10 @@ jobs:
           gradle-home-cache-excludes: |
             gradle.properties
       - run: ./gradlew clean build --stacktrace
-      - run: ./gradlew runTestModClient
+      - name: Run Auto test Client
+        uses: modmuss50/xvfb-action@v1
+        with: 
+          run: ./gradlew runTestModClient
       - run: ./gradlew publishToMavenLocal --stacktrace
       - uses: actions/upload-artifact@v3
         with:

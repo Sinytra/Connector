@@ -500,7 +500,9 @@ public class MixinPatches {
                     methodNode.desc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getArgumentTypes(methodNode.desc));
                     return Patch.Result.APPLY;
                 })
-                .build());
+                .build(),
+
+                buildReplayModPatches());
 
         return patches.stream()
             .flatMap(p -> p instanceof List<?> lst ? lst.stream() : Stream.of(p))
@@ -524,5 +526,29 @@ public class MixinPatches {
                 return Patch.Result.APPLY;
             })
             .build();
+    }
+
+    private static List<Patch> buildReplayModPatches() {
+        return List.of(
+            Patch.builder()
+                .targetClass("net/minecraft/client/KeyboardHandler")
+                .targetMethod("method_1473")
+                .modifyTarget("lambda$charTyped$7(Lnet/minecraft/client/gui/screens/Screen;CI)V")
+                .modifyParams(builder -> builder.replace(0, Type.getType("Lnet/minecraft/client/gui/screens/Screen;")))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/KeyboardHandler")
+                .targetMethod("method_1458")
+                .modifyTarget("lambda$charTyped$6(Lnet/minecraft/client/gui/screens/Screen;II)V")
+                .modifyParams(builder -> builder.replace(0, Type.getType("Lnet/minecraft/client/gui/screens/Screen;")))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/KeyboardHandler")
+                .targetMethod("method_1454")
+                // lambda$keyPress$5
+                .modifyTarget("m_260734_(ILnet/minecraft/client/gui/screens/Screen;[ZIII)V")
+                .transformParams(builder -> builder.swap(1, 2))
+                .build()
+        );
     }
 }

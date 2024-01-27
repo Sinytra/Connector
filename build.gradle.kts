@@ -1,5 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
+import net.minecraftforge.gradle.common.tasks.DownloadAssets
 import net.minecraftforge.gradle.common.util.MavenArtifactDownloader
 import net.minecraftforge.gradle.common.util.RunConfig
 import net.minecraftforge.gradle.userdev.tasks.JarJar
@@ -347,6 +348,7 @@ tasks {
         }
         if (name == "downloadAssets" && providers.environmentVariable("CI").isPresent) {
             enabled = false
+            (this as DownloadAssets).output.mkdirs()
         }
     }
 }

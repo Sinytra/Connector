@@ -345,10 +345,6 @@ tasks {
         if (name == "runTestModClient") {
             dependsOn(modDownload)
         }
-
-        if (name == "downloadAssets" && providers.environmentVariable("CI").isPresent) {
-            enabled = false
-        }
     }
 }
 

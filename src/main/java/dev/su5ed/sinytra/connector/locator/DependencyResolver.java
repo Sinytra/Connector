@@ -1,5 +1,6 @@
 package dev.su5ed.sinytra.connector.locator;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Multimap;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -43,7 +45,7 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 public final class DependencyResolver {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
-    public static final DependencyOverrides DEPENDENCY_OVERRIDES = new DependencyOverrides(FMLPaths.CONFIGDIR.get());
+    public static final Supplier<DependencyOverrides> DEPENDENCY_OVERRIDES = Suppliers.memoize(DependencyResolver::loadDependencyOverrides);
     private static final GlobalModAliases GLOBAL_MOD_ALIASES = new GlobalModAliases(FMLPaths.CONFIGDIR.get(), ConnectorUtil.DEFAULT_GLOBAL_MOD_ALIASES);
 
     public static List<JarTransformer.TransformableJar> resolveDependencies(Collection<JarTransformer.TransformableJar> keys, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
@@ -100,7 +102,7 @@ public final class DependencyResolver {
             .build();
         GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(Collections.singletonList(Paths.get(System.getProperty("java.home"))), metadata);
 
-        return ModCandidate.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES);
+        return ModCandidate.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES.get());
     }
 
     private static ModCandidate createFabricLoaderMod() {
@@ -125,6 +127,14 @@ public final class DependencyResolver {
 
         GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(Collections.singletonList(Path.of(uncheck(() -> FabricLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI()))), metadata);
 
-        return ModCandidate.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES);
+        return ModCandidate.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES.get());
+    }
+
+    private static DependencyOverrides loadDependencyOverrides() {
+        try {
+            return new DependencyOverrides(FMLPaths.CONFIGDIR.get());
+        } catch (Exception e) {
+            throw ConnectorEarlyLoader.createGenericLoadingException(e, "Invalid config file fabric_loader_dependencies.json");
+        }
     }
 }

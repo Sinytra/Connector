@@ -1,0 +1,11 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+issueTrackerURL="https://github.com/Sinytra/Connector/issues"
+
+[[mods]]
+modId="testconnector"
+version="${file.jarVersion}"
+displayName="Connector Test"
+description='''
+'''

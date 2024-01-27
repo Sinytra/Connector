@@ -22,6 +22,7 @@ plugins {
     id("me.modmuss50.mod-publish-plugin") version "0.3.+"
     id("net.neoforged.gradleutils") version "2.0.+"
     id("org.parchmentmc.librarian.forgegradle") version "1.+"
+    id ("de.undercouch.download") version "5.5.0"
 }
 
 val versionConnector: String by project
@@ -56,6 +57,7 @@ if (!PUBLISH_RELEASE_TYPE.isPresent) {
 println("Project version: $version")
 
 val mod: SourceSet by sourceSets.creating
+val test: SourceSet by sourceSets
 
 val shade: Configuration by configurations.creating { isTransitive = false }
 val adapterData: Configuration by configurations.creating
@@ -231,8 +233,20 @@ minecraft {
             }
         }
 
-        create("client", config)
+        val clientConfig = create("client", config)
         create("server", config)
+
+        create("testModClient") {
+            mods {
+                create("testconnector") {
+                    sources(test)
+                }
+            }
+            args("--mixin.config", "connectortest.mixins.json")
+            args("--quickPlaySingleplayer", "ctest")
+            parent(clientConfig)
+            workingDirectory = project.file("run/test").canonicalPath
+        }
     }
 }
 
@@ -312,6 +326,12 @@ tasks {
         dependsOn("reobfModJar", fullJar)
     }
 
+    val modDownload = register("downloadMods") {
+        doLast {
+            downloadMods()
+        }
+    }
+
     configureEach {
         if (name == "prepareRuns") {
             dependsOn(fullJar)
@@ -321,6 +341,29 @@ tasks {
         }
         if (name == "reobfModJar") {
             mustRunAfter(modJar)
+        }
+        if (name == "runTestModClient") {
+            dependsOn(modDownload)
+        }
+    }
+}
+
+fun downloadMods() {
+    val dir = project.file("run/test/mods")
+    if (dir.exists()) {
+        dir.deleteRecursively()
+    }
+    dir.mkdirs()
+
+    file("testmods.txt").forEachLine {
+        if (it.isBlank() || it.startsWith("#")) return@forEachLine
+
+        val split = it.split(" ")
+        if (split.isEmpty()) return@forEachLine
+
+        download.run {
+            dest(dir)
+            src(split[0])
         }
     }
 }

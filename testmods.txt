@@ -1,1 +1,4 @@
 https://cdn.modrinth.com/data/ZHKrK8Rp/versions/Q8JSGhdj/fastback-0.15.6%2B1.20.1-fabric.jar https://modrinth.com/mod/fastback
+
+# Requiring connector extras:
+https://edge.forgecdn.net/files/4715/716/BeaconOverhaul-1.8.4+1.20.jar https://www.curseforge.com/minecraft/mc-mods/beaconoverhaul

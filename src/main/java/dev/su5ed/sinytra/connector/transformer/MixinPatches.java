@@ -349,6 +349,38 @@ public class MixinPatches {
                 .targetMixinType(MixinConstants.REDIRECT)
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/world/entity/LivingEntity")
+                .targetMethod("m_7023_") // travel
+                .targetMixinType(MixinConstants.MODIFY_VAR)
+                .targetAnnotationValues(handle -> handle.getNested("at")
+                        .filter(at -> at.getValue("value")
+                                .filter(h -> h.get().equals("CONSTANT"))
+                                .isPresent())
+                        .flatMap(at -> at.getValue("args"))
+                        .map(v -> (List<String>) v.get())
+                        .map(v -> v.size() == 1 && v.get(0).equals("doubleValue=0.01"))
+                        .orElse(false))
+                .modifyMixinType(MixinConstants.WRAP_OPERATION, builder -> builder
+                        .sameTarget()
+                        .injectionPoint("INVOKE", "Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;m_22135_()D") // getValue
+                        .putValue("ordinal", 0))
+                .transformParams(builder ->
+                        builder.inject(0, Type.getType("Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;"))
+                                .inject(1, Type.getObjectType(MixinConstants.OPERATION_INTERNAL_NAME))
+                                .inline(2, adapter -> {
+                                    adapter.visitVarInsn(Opcodes.ALOAD, 2);
+                                    adapter.visitInsn(Opcodes.ICONST_1);
+                                    adapter.visitTypeInsn(Opcodes.ANEWARRAY, "java/lang/Object");
+                                    adapter.visitInsn(Opcodes.DUP);
+                                    adapter.visitInsn(Opcodes.ICONST_0);
+                                    adapter.visitVarInsn(Opcodes.ALOAD, 1);
+                                    adapter.visitInsn(Opcodes.AASTORE);
+                                    adapter.visitMethodInsn(Opcodes.INVOKEINTERFACE, "com/llamalad7/mixinextras/injector/wrapoperation/Operation", "call", "([Ljava/lang/Object;)Ljava/lang/Object;", true);
+                                    adapter.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/Double");
+                                    adapter.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
+                                }))
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
                 .targetMethod("m_9280_")
                 .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V")

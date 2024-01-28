@@ -5,14 +5,27 @@ import net.minecraftforge.gradle.common.util.MavenArtifactDownloader
 import net.minecraftforge.gradle.common.util.RunConfig
 import net.minecraftforge.gradle.userdev.tasks.JarJar
 import net.minecraftforge.gradle.userdev.util.MavenPomUtils
-import net.minecraftforge.jarjar.metadata.*
+import net.minecraftforge.jarjar.metadata.ContainedJarIdentifier
+import net.minecraftforge.jarjar.metadata.ContainedJarMetadata
+import net.minecraftforge.jarjar.metadata.ContainedVersion
+import net.minecraftforge.jarjar.metadata.MetadataIOHandler
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion
 import org.apache.maven.artifact.versioning.VersionRange
+import org.yaml.snakeyaml.Yaml
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import java.time.LocalDateTime
 import kotlin.io.path.inputStream
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath(group = "org.yaml", name = "snakeyaml", version = "2.2")
+    }
+}
 
 plugins {
     java
@@ -23,7 +36,6 @@ plugins {
     id("me.modmuss50.mod-publish-plugin") version "0.3.+"
     id("net.neoforged.gradleutils") version "2.0.+"
     id("org.parchmentmc.librarian.forgegradle") version "1.+"
-    id ("de.undercouch.download") version "5.5.0"
 }
 
 val versionConnector: String by project
@@ -116,7 +128,7 @@ val modJar: JarJar by tasks.creating(JarJar::class) {
                 false
             )
             Files.deleteIfExists(metadataPath)
-            Files.write(metadataPath, MetadataIOHandler.toLines(metadata), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)   
+            Files.write(metadataPath, MetadataIOHandler.toLines(metadata), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
         }
     }
     manifest.attributes(
@@ -284,6 +296,13 @@ repositories {
         name = "Su5eD"
         url = uri("https://maven.su5ed.dev/releases")
     }
+    exclusiveRepo("https://api.modrinth.com/maven/", "maven.modrinth")
+    maven {
+        url = uri("https://www.cursemaven.com")
+        content {
+            includeGroup("curse.maven")
+        }
+    }
     mavenLocal()
 }
 
@@ -343,9 +362,20 @@ tasks {
         dependsOn("reobfModJar", fullJar)
     }
 
-    val modDownload = register("downloadMods") {
-        doLast {
-            downloadMods()
+    val modDownload = register("resolveTestMods") {
+        doFirst {
+            val configFile = rootProject.file("testmods.yaml")
+            val data: List<Map<String, String>> = configFile.reader().use(Yaml()::load)
+            val deps = data.map { project.dependencies.create(it["maven"] as String) }
+
+            val config = configurations.detachedConfiguration(*deps.toTypedArray())
+            val files = config.resolve()
+
+            val dir = project.file("run/test/mods").apply {
+                if (exists()) deleteRecursively()
+                mkdirs()
+            }
+            files.forEach { it.copyTo(dir.resolve(it.name)) }
         }
     }
 
@@ -365,26 +395,6 @@ tasks {
         if (name == "downloadAssets" && providers.environmentVariable("CI").isPresent) {
             enabled = false
             (this as DownloadAssets).output.mkdirs()
-        }
-    }
-}
-
-fun downloadMods() {
-    val dir = project.file("run/test/mods")
-    if (dir.exists()) {
-        dir.deleteRecursively()
-    }
-    dir.mkdirs()
-
-    file("testmods.txt").forEachLine {
-        if (it.isBlank() || it.startsWith("#")) return@forEachLine
-
-        val split = it.split(" ")
-        if (split.isEmpty()) return@forEachLine
-
-        download.run {
-            dest(dir)
-            src(split[0])
         }
     }
 }
@@ -450,5 +460,21 @@ publishing {
                 }
             }
         }
+    }
+}
+
+// Adapted from https://gist.github.com/pupnewfster/6c21401789ca6d74f9892be8c1c505c9
+fun RepositoryHandler.exclusiveRepo(location: String, vararg groups: String) {
+    exclusiveRepo(location) {
+        for (group in groups) {
+            includeGroup(group)
+        }
+    }
+}
+
+fun RepositoryHandler.exclusiveRepo(location: String, config: Action<InclusiveRepositoryContentDescriptor>) {
+    exclusiveContent {
+        forRepositories(maven(location), fg.repository)
+        filter(config)
     }
 }

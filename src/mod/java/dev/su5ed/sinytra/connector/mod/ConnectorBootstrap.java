@@ -52,11 +52,15 @@ public class ConnectorBootstrap implements IMixinConfigPlugin {
         });
     }
 
+    @Override
+    public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        return !ConnectorEarlyLoader.hasEncounteredException();
+    }
+
     // We don't need any of the mixin stuff
     //@formatter:off
     @Override public void onLoad(String mixinPackage) {}
     @Override public String getRefMapperConfig() {return null;}
-    @Override public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {return true;}
     @Override public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {}
     @Override public List<String> getMixins() {return null;}
     @Override public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {}

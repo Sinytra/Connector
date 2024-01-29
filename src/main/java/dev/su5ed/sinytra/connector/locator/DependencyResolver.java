@@ -45,12 +45,12 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.uncheck;
 public final class DependencyResolver {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
-    public static final Supplier<DependencyOverrides> DEPENDENCY_OVERRIDES = Suppliers.memoize(DependencyResolver::loadDependencyOverrides);
-    private static final GlobalModAliases GLOBAL_MOD_ALIASES = new GlobalModAliases(FMLPaths.CONFIGDIR.get(), ConnectorUtil.DEFAULT_GLOBAL_MOD_ALIASES);
+    public static final Supplier<DependencyOverrides> DEPENDENCY_OVERRIDES = Suppliers.memoize(() -> loadConfigFile("fabric_loader_dependencies.json", () -> new DependencyOverrides(FMLPaths.CONFIGDIR.get())));
+    private static final Supplier<GlobalModAliases> GLOBAL_MOD_ALIASES = Suppliers.memoize(() -> loadConfigFile("connector_global_mod_aliases.json", () -> new GlobalModAliases(FMLPaths.CONFIGDIR.get(), ConnectorUtil.DEFAULT_GLOBAL_MOD_ALIASES)));
 
     public static List<JarTransformer.TransformableJar> resolveDependencies(Collection<JarTransformer.TransformableJar> keys, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
         // Add global mod aliases
-        FabricLoaderImpl.INSTANCE.aliasMods(GLOBAL_MOD_ALIASES.getAliases());
+        FabricLoaderImpl.INSTANCE.aliasMods(GLOBAL_MOD_ALIASES.get().getAliases());
         BiMap<JarTransformer.TransformableJar, ModCandidate> jarToCandidate = HashBiMap.create();
         // Fabric candidates
         List<ModCandidate> candidates = createCandidatesRecursive(keys, keys, jars, jarToCandidate);
@@ -130,11 +130,11 @@ public final class DependencyResolver {
         return ModCandidate.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES.get());
     }
 
-    private static DependencyOverrides loadDependencyOverrides() {
+    private static <T> T loadConfigFile(String name, Supplier<T> supplier) {
         try {
-            return new DependencyOverrides(FMLPaths.CONFIGDIR.get());
-        } catch (Exception e) {
-            throw ConnectorEarlyLoader.createGenericLoadingException(e, "Invalid config file fabric_loader_dependencies.json");
+            return supplier.get();
+        } catch (Throwable t) {
+            throw ConnectorEarlyLoader.createGenericLoadingException(t, "Invalid config file " + name);
         }
     }
 }

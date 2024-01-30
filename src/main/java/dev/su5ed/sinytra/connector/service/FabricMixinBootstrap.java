@@ -18,10 +18,10 @@ package dev.su5ed.sinytra.connector.service;
 
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
-import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.SemanticVersion;
 import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.api.metadata.ModDependency;
+import net.fabricmc.loader.api.metadata.ModMetadata;
 import net.fabricmc.loader.api.metadata.version.VersionInterval;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.minecraftforge.fml.loading.LoadingModList;
@@ -72,7 +72,7 @@ public final class FabricMixinBootstrap {
         }
     }
 
-    private static final class MixinConfigDecorator {
+    public static final class MixinConfigDecorator {
         private static final List<LoaderMixinVersionEntry> VERSIONS = List.of(
             LoaderMixinVersionEntry.create("0.12.0-", FabricUtil.COMPATIBILITY_0_10_0)
         );
@@ -87,7 +87,7 @@ public final class FabricMixinBootstrap {
                 if (!mod.getMods().isEmpty()) {
                     String modid = mod.getMods().get(0).getModId();
                     int compat = ConnectorEarlyLoader.isConnectorMod(modid) ? FabricLoaderImpl.INSTANCE.getModContainer(modid)
-                        .map(MixinConfigDecorator::getMixinCompat)
+                        .map(m -> getMixinCompat(m.getMetadata()))
                         .orElse(FabricUtil.COMPATIBILITY_0_10_0)
                         : FabricUtil.COMPATIBILITY_0_10_0;
                     config.decorate(FabricUtil.KEY_COMPATIBILITY, compat);
@@ -95,13 +95,13 @@ public final class FabricMixinBootstrap {
             }
         }
 
-        private static int getMixinCompat(ModContainer mod) {
+        public static int getMixinCompat(ModMetadata metadata) {
             // infer from loader dependency by determining the least relevant loader version the mod accepts
             // AND any loader deps
 
             List<VersionInterval> reqIntervals = List.of(VersionInterval.INFINITE);
 
-            for (ModDependency dep : mod.getMetadata().getDependencies()) {
+            for (ModDependency dep : metadata.getDependencies()) {
                 if (dep.getModId().equals("fabricloader") || dep.getModId().equals("fabric-loader")) {
                     if (dep.getKind() == ModDependency.Kind.DEPENDS) {
                         reqIntervals = VersionInterval.and(reqIntervals, dep.getVersionIntervals());
@@ -112,7 +112,7 @@ public final class FabricMixinBootstrap {
                 }
             }
 
-            if (reqIntervals.isEmpty()) throw new IllegalStateException("mod " + mod + " is incompatible with every loader version?"); // shouldn't get there
+            if (reqIntervals.isEmpty()) throw new IllegalStateException("mod " + metadata.getId() + " is incompatible with every loader version?"); // shouldn't get there
 
             Version minLoaderVersion = reqIntervals.get(0).getMin(); // it is sorted, to 0 has the absolute lower bound
 

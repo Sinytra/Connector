@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8.4",
+  "package": "org.sinytra.connector.test.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+  ],
+  "client": [
+    "client.MinecraftMixin",
+    "client.QuickPlayMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

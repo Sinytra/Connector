@@ -13,6 +13,7 @@ import dev.su5ed.sinytra.adapter.patch.serialization.PatchSerialization;
 import dev.su5ed.sinytra.adapter.patch.util.provider.ClassLookup;
 import dev.su5ed.sinytra.adapter.patch.util.provider.ZipClassLookup;
 import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
+import dev.su5ed.sinytra.connector.service.FabricMixinBootstrap;
 import dev.su5ed.sinytra.connector.transformer.AccessWidenerTransformer;
 import dev.su5ed.sinytra.connector.transformer.AccessorRedirectTransformer;
 import dev.su5ed.sinytra.connector.transformer.FieldToMethodTransformer;
@@ -124,7 +125,8 @@ public class JarTransformInstance {
 
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
         ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
-        PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap());
+        int fabricLVTCompatibility = FabricMixinBootstrap.MixinConfigDecorator.getMixinCompat(metadata.modMetadata()); 
+        PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility);
         MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches);
         RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.visibleMixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()

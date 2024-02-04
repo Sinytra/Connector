@@ -18,7 +18,12 @@ jobs:
           gradle-home-cache-cleanup: true
           gradle-home-cache-excludes: |
             gradle.properties
-      - run: ./gradlew clean build publishToMavenLocal --stacktrace
+      - name: Run Auto test Client
+        uses: modmuss50/xvfb-action@v1
+        with:
+          run: ./gradlew runTestModClient
+      - run: ./gradlew clean build --stacktrace
+      - run: ./gradlew publishToMavenLocal --stacktrace
       - uses: actions/upload-artifact@v3
         with:
           name: Maven Local

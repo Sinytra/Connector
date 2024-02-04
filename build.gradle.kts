@@ -1,17 +1,31 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
+import net.minecraftforge.gradle.common.tasks.DownloadAssets
 import net.minecraftforge.gradle.common.util.MavenArtifactDownloader
 import net.minecraftforge.gradle.common.util.RunConfig
 import net.minecraftforge.gradle.userdev.tasks.JarJar
 import net.minecraftforge.gradle.userdev.util.MavenPomUtils
-import net.minecraftforge.jarjar.metadata.*
+import net.minecraftforge.jarjar.metadata.ContainedJarIdentifier
+import net.minecraftforge.jarjar.metadata.ContainedJarMetadata
+import net.minecraftforge.jarjar.metadata.ContainedVersion
+import net.minecraftforge.jarjar.metadata.MetadataIOHandler
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion
 import org.apache.maven.artifact.versioning.VersionRange
+import org.yaml.snakeyaml.Yaml
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 import java.time.LocalDateTime
 import kotlin.io.path.inputStream
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath(group = "org.yaml", name = "snakeyaml", version = "2.2")
+    }
+}
 
 plugins {
     java
@@ -56,6 +70,7 @@ if (!PUBLISH_RELEASE_TYPE.isPresent) {
 println("Project version: $version")
 
 val mod: SourceSet by sourceSets.creating
+val test: SourceSet by sourceSets
 
 val shade: Configuration by configurations.creating { isTransitive = false }
 val adapterData: Configuration by configurations.creating
@@ -113,7 +128,7 @@ val modJar: JarJar by tasks.creating(JarJar::class) {
                 false
             )
             Files.deleteIfExists(metadataPath)
-            Files.write(metadataPath, MetadataIOHandler.toLines(metadata), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)   
+            Files.write(metadataPath, MetadataIOHandler.toLines(metadata), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
         }
     }
     manifest.attributes(
@@ -198,6 +213,20 @@ configurations {
     }
 }
 
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                url = uri("https://cursemaven.com")
+            }
+        }
+        forRepositories(fg.repository)
+        filter {
+            includeGroup("curse.maven")
+        }
+    }
+}
+
 sourceSets {
     main {
         runtimeClasspath = runtimeClasspath.minus(output).plus(files(fullJar))
@@ -231,8 +260,20 @@ minecraft {
             }
         }
 
-        create("client", config)
+        val clientConfig = create("client", config)
         create("server", config)
+
+        create("testModClient") {
+            mods {
+                create("testconnector") {
+                    sources(test)
+                }
+            }
+            args("--mixin.config", "connectortest.mixins.json")
+            args("--quickPlaySingleplayer", "ctest")
+            parent(clientConfig)
+            workingDirectory = project.file("run/test").canonicalPath
+        }
     }
 }
 
@@ -254,6 +295,13 @@ repositories {
     maven {
         name = "Su5eD"
         url = uri("https://maven.su5ed.dev/releases")
+    }
+    exclusiveRepo("https://api.modrinth.com/maven/", "maven.modrinth")
+    maven {
+        url = uri("https://www.cursemaven.com")
+        content {
+            includeGroup("curse.maven")
+        }
     }
     mavenLocal()
 }
@@ -282,6 +330,8 @@ dependencies {
 
     "modCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"("io.github.llamalad7:mixinextras-common:${mixinextrasVersion}")
+
+    runtimeOnly(fg.deobf("curse.maven:connector-extras-913445:5027683"))
 }
 
 tasks {
@@ -312,6 +362,23 @@ tasks {
         dependsOn("reobfModJar", fullJar)
     }
 
+    val modDownload = register("resolveTestMods") {
+        doFirst {
+            val configFile = rootProject.file("testmods.yaml")
+            val data: List<Map<String, String>> = configFile.reader().use(Yaml()::load)
+            val deps = data.map { project.dependencies.create(it["maven"] as String) }
+
+            val config = configurations.detachedConfiguration(*deps.toTypedArray())
+            val files = config.resolve()
+
+            val dir = project.file("run/test/mods").apply {
+                if (exists()) deleteRecursively()
+                mkdirs()
+            }
+            files.forEach { it.copyTo(dir.resolve(it.name)) }
+        }
+    }
+
     configureEach {
         if (name == "prepareRuns") {
             dependsOn(fullJar)
@@ -321,6 +388,13 @@ tasks {
         }
         if (name == "reobfModJar") {
             mustRunAfter(modJar)
+        }
+        if (name == "runTestModClient") {
+            dependsOn(modDownload)
+        }
+        if (name == "downloadAssets" && providers.environmentVariable("CI").isPresent) {
+            enabled = false
+            (this as DownloadAssets).output.mkdirs()
         }
     }
 }
@@ -386,5 +460,21 @@ publishing {
                 }
             }
         }
+    }
+}
+
+// Adapted from https://gist.github.com/pupnewfster/6c21401789ca6d74f9892be8c1c505c9
+fun RepositoryHandler.exclusiveRepo(location: String, vararg groups: String) {
+    exclusiveRepo(location) {
+        for (group in groups) {
+            includeGroup(group)
+        }
+    }
+}
+
+fun RepositoryHandler.exclusiveRepo(location: String, config: Action<InclusiveRepositoryContentDescriptor>) {
+    exclusiveContent {
+        forRepositories(maven(location), fg.repository)
+        filter(config)
     }
 }

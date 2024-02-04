@@ -2,6 +2,7 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import dev.su5ed.sinytra.adapter.patch.api.MixinConstants;
 import dev.su5ed.sinytra.adapter.patch.api.Patch;
+import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -349,6 +350,38 @@ public class MixinPatches {
                 .targetMixinType(MixinConstants.REDIRECT)
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/world/entity/LivingEntity")
+                .targetMethod("m_7023_") // travel
+                .targetMixinType(MixinConstants.MODIFY_VAR)
+                .targetAnnotationValues(handle -> handle.getNested("at")
+                        .filter(at -> at.getValue("value")
+                                .filter(h -> h.get().equals("CONSTANT"))
+                                .isPresent())
+                        .flatMap(at -> at.getValue("args"))
+                        .map(v -> (List<String>) v.get())
+                        .map(v -> v.size() == 1 && v.get(0).equals("doubleValue=0.01"))
+                        .orElse(false))
+                .modifyMixinType(MixinConstants.WRAP_OPERATION, builder -> builder
+                        .sameTarget()
+                        .injectionPoint("INVOKE", "Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;m_22135_()D") // getValue
+                        .putValue("ordinal", 0))
+                .transformParams(builder ->
+                        builder.inject(0, Type.getType("Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;"))
+                                .inject(1, Type.getObjectType(MixinConstants.OPERATION_INTERNAL_NAME))
+                                .inline(2, adapter -> {
+                                    adapter.visitVarInsn(Opcodes.ALOAD, 2);
+                                    adapter.visitInsn(Opcodes.ICONST_1);
+                                    adapter.visitTypeInsn(Opcodes.ANEWARRAY, "java/lang/Object");
+                                    adapter.visitInsn(Opcodes.DUP);
+                                    adapter.visitInsn(Opcodes.ICONST_0);
+                                    adapter.visitVarInsn(Opcodes.ALOAD, 1);
+                                    adapter.visitInsn(Opcodes.AASTORE);
+                                    adapter.visitMethodInsn(Opcodes.INVOKEINTERFACE, "com/llamalad7/mixinextras/injector/wrapoperation/Operation", "call", "([Ljava/lang/Object;)Ljava/lang/Object;", true);
+                                    adapter.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/Double");
+                                    adapter.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
+                                }))
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
                 .targetMethod("m_9280_")
                 .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V")
@@ -500,7 +533,9 @@ public class MixinPatches {
                     methodNode.desc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getArgumentTypes(methodNode.desc));
                     return Patch.Result.APPLY;
                 })
-                .build());
+                .build(),
+
+                buildReplayModPatches());
 
         return patches.stream()
             .flatMap(p -> p instanceof List<?> lst ? lst.stream() : Stream.of(p))
@@ -524,5 +559,47 @@ public class MixinPatches {
                 return Patch.Result.APPLY;
             })
             .build();
+    }
+
+    private static List<Patch> buildReplayModPatches() {
+        return List.of(
+            Patch.builder()
+                .targetClass("net/minecraft/client/KeyboardHandler")
+                .targetMethod("method_1473")
+                .modifyTarget("lambda$charTyped$7(Lnet/minecraft/client/gui/screens/Screen;CI)V")
+                .modifyParams(builder -> builder.replace(0, Type.getType("Lnet/minecraft/client/gui/screens/Screen;")))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/KeyboardHandler")
+                .targetMethod("method_1458")
+                .modifyTarget("lambda$charTyped$6(Lnet/minecraft/client/gui/screens/Screen;II)V")
+                .modifyParams(builder -> builder.replace(0, Type.getType("Lnet/minecraft/client/gui/screens/Screen;")))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/KeyboardHandler")
+                .targetMethod("method_1454")
+                .modifyTarget("lambda$keyPress$5(ILnet/minecraft/client/gui/screens/Screen;[ZIII)V")
+                .transformParams(builder -> builder.swap(1, 2))
+                .build(),
+
+            // Their refmaps are so broken...
+            Patch.builder()
+                .targetClass("net/minecraft/client/MouseHandler")
+                .targetMethod("method_1611")
+                .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC))
+                .modifyTarget("m_168084_") // lambda$onPress$0
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/MouseHandler")
+                .targetMethod("method_1605")
+                .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC))
+                .modifyTarget("m_168078_") // lambda$onPress$1
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/MouseHandler")
+                .targetMethod("method_1602")
+                .modifyTarget("m_168072_") // lambda$onMove$11
+                .build()
+        );
     }
 }

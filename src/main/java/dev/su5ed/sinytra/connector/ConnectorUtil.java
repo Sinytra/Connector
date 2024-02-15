@@ -116,7 +116,8 @@ public final class ConnectorUtil {
     // They're too annoying to override individually in each mod, so we provide this small QoL feature for the user's comfort
     public static final Multimap<String, String> DEFAULT_GLOBAL_MOD_ALIASES = ImmutableMultimap.of(
         "cloth_config", "cloth-config2",
-        "playeranimator", "player-animator"
+        "playeranimator", "player-animator",
+        "embeddium", "sodium"
     );
 
     private static final boolean CACHE_ENABLED;

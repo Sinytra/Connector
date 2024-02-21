@@ -8,6 +8,7 @@
   <a href="https://modrinth.com/mod/connector"><img src="https://img.shields.io/modrinth/dt/u58R1TMW?color=00AF5C&label=modrinth&style=flat&logo=modrinth"></a>
   <a href="https://github.com/Sinytra/ForgifiedFabricAPI"><img src="https://raw.githubusercontent.com/Sinytra/.github/main/badges/forgified-fabric-api/compacter.svg"></a>
   <a href="https://discord.gg/mamk7z3TKZ"><img src="https://discordapp.com/api/guilds/1141048834177388746/widget.png?style=shield"></a>
+  <a href="https://nightly.link/Sinytra/Connector/workflows/build/master/Maven%20Local.zip"><img src="https://img.shields.io/badge/Nightly-Download-9a32f0?logo=github"></a>
 </p>
 
 > [!WARNING]  

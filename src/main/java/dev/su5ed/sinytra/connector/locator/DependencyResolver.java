@@ -3,9 +3,9 @@ package dev.su5ed.sinytra.connector.locator;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
-import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.transformer.jar.JarTransformer;
 import net.fabricmc.api.EnvType;
@@ -46,11 +46,12 @@ public final class DependencyResolver {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
     public static final Supplier<DependencyOverrides> DEPENDENCY_OVERRIDES = Suppliers.memoize(() -> loadConfigFile("fabric_loader_dependencies.json", () -> new DependencyOverrides(FMLPaths.CONFIGDIR.get())));
-    private static final Supplier<GlobalModAliases> GLOBAL_MOD_ALIASES = Suppliers.memoize(() -> loadConfigFile("connector_global_mod_aliases.json", () -> new GlobalModAliases(FMLPaths.CONFIGDIR.get(), ConnectorUtil.DEFAULT_GLOBAL_MOD_ALIASES)));
 
     public static List<JarTransformer.TransformableJar> resolveDependencies(Collection<JarTransformer.TransformableJar> keys, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
         // Add global mod aliases
-        FabricLoaderImpl.INSTANCE.aliasMods(GLOBAL_MOD_ALIASES.get().getAliases());
+        Multimap<String, String> aliases = HashMultimap.create();
+        ConnectorConfig.INSTANCE.get().globalModAliases().forEach(aliases::putAll);
+        FabricLoaderImpl.INSTANCE.aliasMods(aliases);
         BiMap<JarTransformer.TransformableJar, ModCandidate> jarToCandidate = HashBiMap.create();
         // Fabric candidates
         List<ModCandidate> candidates = createCandidatesRecursive(keys, keys, jars, jarToCandidate);

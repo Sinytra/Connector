@@ -25,6 +25,8 @@ on [MinecraftForge](https://minecraftforge.net). Its goal is to bring the two pl
 developers time and effort maintaining their mods for multiple platforms at once, as well as allowing players to play
 all their favourite mods in one modpack.
 
+**📘 The official documentation is available at [sinytra.org](https://sinytra.org/docs).**
+
 ### 🔗 Related Projects
 
 - Visit the [Mod Compatibility Thread](https://github.com/Sinytra/Connector/discussions/12) to can find information about known working / incompatible mods
@@ -132,54 +134,4 @@ afterEvaluate {
 
 ## ⚙️ Configuration
 
-### Global Mod Aliases
-
-To improve mod compatibility, Connector provides a Global Mod Alias feature that can be used to provide alternative IDs
-for mods in the fabric loader. Similar to fabric's [Dependency Overrides](https://fabricmc.net/wiki/tutorial:dependency_overrides),
-it uses a json config file to define aliases.
-
-Global Mod Aliases are defined in a file named `connector_global_mod_aliases.json`, located inside your config folder.
-If it doesn't exist yet, Connector will create a new one with its default mod aliases.
-
-Here's a minimal configuration example:
-```json
-{
-   "version": 1,
-   "aliases": {
-      "cloth_config": "cloth-config2",
-      "embeddium": [
-         "sodium",
-         "magnesium"
-      ]
-   }
-}
-```
-
-Let's go over it line-by-line.
-- First, we have `version`, which specifies the config file spec version we would like to use.
-  At the time of writing, the latest version is version 1.
-- Secondly, we have `aliases`. This JSON object contains all of our alises for various mods.  
-  Keys inside the object represent mod IDs to be aliased. The value can be either a single **string**, or an **array** in case
-  we want to provide multiple aliases for one mod.
-
-### Hiding Forge mods' presence
-
-Fabric mods tend to integrate with others based on their modid. If you happen to install a Forge version of a mod that
-a Fabric mod wants to integrate with, it might result in a crash, as the two versions' code is different.
-Most of the time, mods provide toggles for integrations in their config. If that's not the case, your other option is
-hiding the Forge mod's presence from Fabric mods entirely, which might help in disabling the problematic integration.
-
-This can be configured in the `connector.json` file, located in your config folder.
-If it doesn't exist yet, Connector will create a new one with empty values.
-
-Inside, the `hiddenMods` field is defined as a list of mod IDs (strings). Forge mod IDs found in this list will be
-excluded from being added to `FabricLoader`, hiding their presence from Fabric mods.
-
-Here's a minimal configuration example:
-```json
-{
-  "hiddenMods": [
-    "examplemod"
-  ]
-}
-```
+All information regarding Connector's configuration options can be found [here](https://sinytra.org/docs).

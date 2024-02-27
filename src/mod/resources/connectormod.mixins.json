@@ -12,6 +12,7 @@
     "PoiTypesMixin",
     "TagLoaderMixin",
     "item.ItemStackMixin",
+    "item.LateItemStackMixin",
     "item.ForgeHooksMixin",
     "lang.PathPackResourcesAnonMixin",
     "lang.PathPackResourcesMixin",

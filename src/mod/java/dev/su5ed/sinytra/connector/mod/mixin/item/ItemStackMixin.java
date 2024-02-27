@@ -1,13 +1,8 @@
 package dev.su5ed.sinytra.connector.mod.mixin.item;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import dev.su5ed.sinytra.connector.mod.compat.ItemStackExtensions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -37,10 +32,5 @@ public class ItemStackMixin implements ItemStackExtensions {
         BlockInWorld bow = new BlockInWorld(context.getLevel(), pos, false);
         Item item = ((ItemStack) (Object) this).getItem();
         return null;
-    }
-
-    @Inject(method = "getAttributeModifiers", at = @At("RETURN"), cancellable = true)
-    private void ensureMutableAttributeModifiers(EquipmentSlot slot, CallbackInfoReturnable<Multimap<Attribute, AttributeModifier>> cir) {
-        cir.setReturnValue(HashMultimap.create(cir.getReturnValue()));
     }
 }

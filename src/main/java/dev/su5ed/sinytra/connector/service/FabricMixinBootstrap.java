@@ -99,17 +99,24 @@ public final class FabricMixinBootstrap {
             // infer from loader dependency by determining the least relevant loader version the mod accepts
             // AND any loader deps
 
+            boolean found = false;
             List<VersionInterval> reqIntervals = List.of(VersionInterval.INFINITE);
 
             for (ModDependency dep : metadata.getDependencies()) {
                 if (dep.getModId().equals("fabricloader") || dep.getModId().equals("fabric-loader")) {
                     if (dep.getKind() == ModDependency.Kind.DEPENDS) {
+                        found = true;
                         reqIntervals = VersionInterval.and(reqIntervals, dep.getVersionIntervals());
                     }
                     else if (dep.getKind() == ModDependency.Kind.BREAKS) {
+                        found = true;
                         reqIntervals = VersionInterval.and(reqIntervals, VersionInterval.not(dep.getVersionIntervals()));
                     }
                 }
+            }
+
+            if (!found) {
+                return FabricUtil.COMPATIBILITY_0_10_0;
             }
 
             if (reqIntervals.isEmpty()) throw new IllegalStateException("mod " + metadata.getId() + " is incompatible with every loader version?"); // shouldn't get there

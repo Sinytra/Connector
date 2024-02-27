@@ -1,6 +1,7 @@
 package dev.su5ed.sinytra.connector.mod;
 
 import dev.su5ed.sinytra.connector.ConnectorUtil;
+import dev.su5ed.sinytra.connector.locator.ConnectorConfig;
 import dev.su5ed.sinytra.connector.mod.compat.FluidHandlerCompat;
 import dev.su5ed.sinytra.connector.mod.compat.LateRenderTypesInit;
 import dev.su5ed.sinytra.connector.mod.compat.LateSheetsInit;
@@ -8,6 +9,10 @@ import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.ModLoader;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.ModLoadingStage;
+import net.minecraftforge.fml.ModLoadingWarning;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
@@ -35,6 +40,14 @@ public class ConnectorMod {
         ModList modList = ModList.get();
         if (modList.isLoaded("fabric_object_builder_api_v1")) {
             bus.addListener(EventPriority.HIGHEST, LazyEntityAttributes::initializeLazyAttributes);
+        }
+
+        if (ConnectorConfig.usesUnsupportedConfiguration()) {
+            ModLoader.get().addWarning(new ModLoadingWarning(
+                ModLoadingContext.get().getActiveContainer().getModInfo(),
+                ModLoadingStage.CONSTRUCT,
+                "Outdated connector_global_mod_aliases.json configuration file detected. Please migrate to the new connector.json configuration."
+            ));
         }
     }
 

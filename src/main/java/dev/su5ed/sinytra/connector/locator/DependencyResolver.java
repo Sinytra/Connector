@@ -3,7 +3,6 @@ package dev.su5ed.sinytra.connector.locator;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
@@ -11,6 +10,7 @@ import dev.su5ed.sinytra.connector.transformer.jar.JarTransformer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.VersionParsingException;
+import net.fabricmc.loader.api.metadata.ModDependency;
 import net.fabricmc.loader.api.metadata.ModMetadata;
 import net.fabricmc.loader.impl.FMLModMetadata;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
@@ -21,6 +21,8 @@ import net.fabricmc.loader.impl.discovery.ModResolver;
 import net.fabricmc.loader.impl.game.GameProvider;
 import net.fabricmc.loader.impl.metadata.BuiltinModMetadata;
 import net.fabricmc.loader.impl.metadata.DependencyOverrides;
+import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
+import net.fabricmc.loader.impl.metadata.ModDependencyImpl;
 import net.fabricmc.loader.impl.metadata.VersionOverrides;
 import net.fabricmc.loader.impl.util.version.VersionParser;
 import net.minecraftforge.fml.loading.FMLPaths;
@@ -49,9 +51,7 @@ public final class DependencyResolver {
 
     public static List<JarTransformer.TransformableJar> resolveDependencies(Collection<JarTransformer.TransformableJar> keys, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> jars, Iterable<IModFile> loadedMods) {
         // Add global mod aliases
-        Multimap<String, String> aliases = HashMultimap.create();
-        ConnectorConfig.INSTANCE.get().globalModAliases().forEach(aliases::putAll);
-        FabricLoaderImpl.INSTANCE.aliasMods(aliases);
+        FabricLoaderImpl.INSTANCE.aliasMods(ConnectorConfig.INSTANCE.get().globalModAliases());
         BiMap<JarTransformer.TransformableJar, ModCandidate> jarToCandidate = HashBiMap.create();
         // Fabric candidates
         List<ModCandidate> candidates = createCandidatesRecursive(keys, keys, jars, jarToCandidate);
@@ -75,6 +75,21 @@ public final class DependencyResolver {
         } catch (ModResolutionException e) {
             throw ConnectorEarlyLoader.createLoadingException(e, e.getMessage().replaceAll("\t", "  "), false);
         }
+    }
+
+    public static void removeAliasedModDependencyConstraints(LoaderModMetadata metadata) {
+        Multimap<String, String> aliases = ConnectorConfig.INSTANCE.get().globalModAliases();
+        Collection<ModDependency> mapped = metadata.getDependencies().stream()
+            .map(dep -> {
+                // Aliased mods typically don't follow the same version convention as the original,
+                // therefore we must widen all dependency constraints to wildcards 
+                if (aliases.values().contains(dep.getModId())) {
+                    return uncheck(() -> new ModDependencyImpl(dep.getKind(), dep.getModId(), List.of("*")));
+                }
+                return dep;
+            })
+            .toList();
+        metadata.setDependencies(mapped);
     }
 
     private static List<ModCandidate> createCandidatesRecursive(Collection<JarTransformer.TransformableJar> candidateJars, Collection<JarTransformer.TransformableJar> jarsToLoad, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentsToChildren, Map<JarTransformer.TransformableJar, ModCandidate> jarToCandidate) {

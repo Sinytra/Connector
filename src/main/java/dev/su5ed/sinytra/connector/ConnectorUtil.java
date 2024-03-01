@@ -1,5 +1,7 @@
 package dev.su5ed.sinytra.connector;
 
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -18,7 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -113,9 +114,9 @@ public final class ConnectorUtil {
     );
     // Common aliased mod dependencies that don't work with forge ports, which use a different modid.
     // They're too annoying to override individually in each mod, so we provide this small QoL feature for the user's comfort
-    public static final Map<String, List<String>> DEFAULT_GLOBAL_MOD_ALIASES = Map.of(
-        "cloth_config", List.of("cloth-config2"),
-        "playeranimator", List.of("player-animator")
+    public static final Multimap<String, String> DEFAULT_GLOBAL_MOD_ALIASES = ImmutableMultimap.of(
+        "cloth_config", "cloth-config2",
+        "playeranimator", "player-animator"
     );
 
     private static final boolean CACHE_ENABLED;

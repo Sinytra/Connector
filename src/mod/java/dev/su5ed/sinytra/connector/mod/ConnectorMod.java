@@ -6,6 +6,9 @@ import dev.su5ed.sinytra.connector.mod.compat.FluidHandlerCompat;
 import dev.su5ed.sinytra.connector.mod.compat.LateRenderTypesInit;
 import dev.su5ed.sinytra.connector.mod.compat.LateSheetsInit;
 import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
+import net.minecraft.core.MappedRegistry;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
@@ -24,6 +27,7 @@ import java.io.InputStream;
 @Mod(ConnectorUtil.CONNECTOR_MODID)
 public class ConnectorMod {
     private static boolean clientLoadComplete;
+    private static boolean preventFreeze;
 
     public static boolean clientLoadComplete() {
         return clientLoadComplete;
@@ -65,5 +69,18 @@ public class ConnectorMod {
     public static InputStream getModResourceAsStream(Class<?> clazz, String name) {
         InputStream classRes = clazz.getResourceAsStream(name);
         return classRes != null ? classRes : clazz.getClassLoader().getResourceAsStream(name);
+    }
+
+    @SuppressWarnings("deprecation")
+    public static void unfreezeRegistries() {
+        ((MappedRegistry<?>) BuiltInRegistries.REGISTRY).unfreeze();
+        for (Registry<?> registry : BuiltInRegistries.REGISTRY) {
+            ((MappedRegistry<?>) registry).unfreeze();
+        }
+        preventFreeze = true;
+    }
+
+    public static boolean preventFreeze() {
+        return preventFreeze;
     }
 }

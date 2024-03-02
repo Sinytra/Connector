@@ -84,10 +84,11 @@ public final class DependencyResolver {
                 // Aliased mods typically don't follow the same version convention as the original,
                 // therefore we must widen all dependency constraints to wildcards 
                 if (aliases.values().contains(dep.getModId())) {
-                    return uncheck(() -> new ModDependencyImpl(dep.getKind(), dep.getModId(), List.of("*")));
+                    return dep.getKind() == ModDependency.Kind.BREAKS ? null : uncheck(() -> new ModDependencyImpl(dep.getKind(), dep.getModId(), List.of("*")));
                 }
                 return dep;
             })
+            .filter(Objects::nonNull)
             .toList();
         metadata.setDependencies(mapped);
     }

@@ -1,5 +1,6 @@
 package dev.su5ed.sinytra.connector.mod.mixin.registries;
 
+import dev.su5ed.sinytra.connector.mod.ConnectorMod;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.registries.GameData;
 import org.slf4j.Logger;
@@ -21,5 +22,6 @@ public abstract class MinecraftServerMixin {
         // Lock registries on the server
         CONNECTOR_LOGGER.debug("Locking registries");
         GameData.vanillaSnapshot();
+        ConnectorMod.unfreezeRegistries();
     }
 }

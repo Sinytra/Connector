@@ -21,6 +21,7 @@
     "network.NetworkFiltersMixin",
     "registries.BootstrapMixin",
     "registries.BuiltInRegistriesMixin",
+    "registries.MappedRegistryMixin",
     "registries.ForgeRegistryMixin",
     "registries.RegistryDataLoaderMixin"
   ],

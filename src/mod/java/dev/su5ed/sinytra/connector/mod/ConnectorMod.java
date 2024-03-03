@@ -1,7 +1,9 @@
 package dev.su5ed.sinytra.connector.mod;
 
+import com.google.gson.JsonElement;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.locator.ConnectorConfig;
+import dev.su5ed.sinytra.connector.mod.compat.DummyResourceManager;
 import dev.su5ed.sinytra.connector.mod.compat.FluidHandlerCompat;
 import dev.su5ed.sinytra.connector.mod.compat.LateRenderTypesInit;
 import dev.su5ed.sinytra.connector.mod.compat.LateSheetsInit;
@@ -9,6 +11,8 @@ import dev.su5ed.sinytra.connector.mod.compat.LazyEntityAttributes;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
@@ -23,6 +27,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLLoader;
 
 import java.io.InputStream;
+import java.util.Optional;
 
 @Mod(ConnectorUtil.CONNECTOR_MODID)
 public class ConnectorMod {
@@ -69,6 +74,12 @@ public class ConnectorMod {
     public static InputStream getModResourceAsStream(Class<?> clazz, String name) {
         InputStream classRes = clazz.getResourceAsStream(name);
         return classRes != null ? classRes : clazz.getClassLoader().getResourceAsStream(name);
+    }
+
+    // Injected into mod code by ClassAnalysingTransformer
+    @SuppressWarnings("unused")
+    public static <T> Optional<T> deserializeLootTable(LootDataType<T> type, ResourceLocation location, JsonElement json) {
+        return type.deserialize(location, json, DummyResourceManager.INSTANCE);
     }
 
     @SuppressWarnings("deprecation")

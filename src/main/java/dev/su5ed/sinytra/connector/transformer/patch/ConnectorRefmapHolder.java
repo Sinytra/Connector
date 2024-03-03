@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
-import dev.su5ed.sinytra.adapter.patch.api.RefmapHolder;
+import org.sinytra.adapter.patch.api.RefmapHolder;
 import dev.su5ed.sinytra.connector.transformer.SrgRemappingReferenceMapper;
 
 import java.util.HashSet;

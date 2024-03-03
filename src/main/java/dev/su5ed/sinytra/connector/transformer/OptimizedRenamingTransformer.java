@@ -1,7 +1,7 @@
 package dev.su5ed.sinytra.connector.transformer;
 
-import dev.su5ed.sinytra.adapter.patch.selector.AnnotationHandle;
-import dev.su5ed.sinytra.adapter.patch.util.MethodQualifier;
+import org.sinytra.adapter.patch.selector.AnnotationHandle;
+import org.sinytra.adapter.patch.util.MethodQualifier;
 import dev.su5ed.sinytra.connector.transformer.jar.IntermediateMapping;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Transformer;

@@ -1,9 +1,9 @@
 package dev.su5ed.sinytra.connector.transformer.jar;
 
 import com.mojang.datafixers.util.Pair;
-import dev.su5ed.sinytra.adapter.patch.fixes.BytecodeFixerUpper;
-import dev.su5ed.sinytra.adapter.patch.fixes.SimpleTypeAdapter;
-import dev.su5ed.sinytra.adapter.patch.fixes.TypeAdapter;
+import org.sinytra.adapter.patch.fixes.BytecodeFixerUpper;
+import org.sinytra.adapter.patch.fixes.SimpleTypeAdapter;
+import org.sinytra.adapter.patch.fixes.TypeAdapter;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.forgespi.locating.IModFile;

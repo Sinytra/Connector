@@ -316,9 +316,9 @@ dependencies {
     shade(group = "net.minecraftforge", name = "srgutils", version = "0.5.4")
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
     shade(group = "dev.su5ed.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool)
-    shade(group = "dev.su5ed.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
+    shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
     shade(group = "io.github.steelwoolmc", name = "mixin-transmogrifier", version = versionMixinTransmog)
-    adapterData(group = "dev.su5ed.sinytra.adapter", name = "adapter", version = versionAdapter)
+    adapterData(group = "org.sinytra.adapter", name = "adapter", version = versionAdapter)
 
     annotationProcessor(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
     compileOnly(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)

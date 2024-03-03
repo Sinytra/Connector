@@ -1,9 +1,5 @@
 package dev.su5ed.sinytra.connector.transformer;
 
-import dev.su5ed.sinytra.adapter.patch.api.MixinConstants;
-import dev.su5ed.sinytra.adapter.patch.api.Patch;
-import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
-import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -15,6 +11,10 @@ import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import org.sinytra.adapter.patch.api.MixinConstants;
+import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.transformer.ModifyMethodAccess;
+import org.sinytra.adapter.patch.transformer.ModifyMethodParams;
 
 import java.util.List;
 import java.util.ListIterator;
@@ -214,9 +214,9 @@ public class MixinPatches {
                 .targetInjectionPoint("TAIL", "")
                 .modifyTarget("connector_postRender")
                 .build(),
-            buildGuiPatch(2, 2, "renderFood", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;"),
-            buildGuiPatch(3, 3, "renderAir", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;"),
-            buildGuiPatch(3, 5, "renderFood", "Lnet/minecraft/client/gui/GuiGraphics;m_280218_(Lnet/minecraft/resources/ResourceLocation;IIIIII)V"),
+            buildGuiPatch(2, 2, "renderFood", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;", false),
+            buildGuiPatch(3, 3, "renderAir", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;", false),
+            buildGuiPatch(3, 5, "renderFood", "Lnet/minecraft/client/gui/GuiGraphics;m_280218_(Lnet/minecraft/resources/ResourceLocation;IIIIII)V", true),
             Patch.builder()
                 .targetClass("net/minecraft/client/gui/Gui")
                 .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
@@ -543,7 +543,7 @@ public class MixinPatches {
             .collect(Collectors.toList()); // Mutable list
     }
 
-    private static Patch buildGuiPatch(int minOrdinal, int maxOrdinal, String targetMethodName, String injectionPoint) {
+    private static Patch buildGuiPatch(int minOrdinal, int maxOrdinal, String targetMethodName, String injectionPoint, boolean offsetOrdinal) {
         return Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
@@ -555,7 +555,7 @@ public class MixinPatches {
             .transform((classNode, methodNode, methodContext, context) -> {
                 methodContext.injectionPointAnnotation()
                     .<Integer>getValue("ordinal")
-                    .ifPresent(o -> o.set(0));
+                    .ifPresent(o -> o.set(offsetOrdinal ? o.get() - minOrdinal : 0));
                 return Patch.Result.APPLY;
             })
             .build();

@@ -120,7 +120,6 @@ public class JarTransformInstance {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input.toPath(), metadata.refmaps(), this.remapper, this.libs);
         IMappingFile srgToIntermediary = resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
-        IMappingFile intermediaryToSrg = resolver.getCurrentMap(SOURCE_NAMESPACE);
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
@@ -133,10 +132,10 @@ public class JarTransformInstance {
             .add(new JarSignatureStripper())
             .add(new ClassNodeTransformer(
                 new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary),
-                accessorRedirectTransformer,
-                new ClassAnalysingTransformer(intermediaryToSrg, IntermediateMapping.get(SOURCE_NAMESPACE))
+                accessorRedirectTransformer
             ))
             .add(this.remappingTransformer)
+            .add(new ClassNodeTransformer(new ClassAnalysingTransformer()))
             .add(patchTransformer)
             .add(refmapRemapper)
             .add(new ModMetadataGenerator(metadata.modMetadata().getId()))

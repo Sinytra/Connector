@@ -42,6 +42,13 @@ public class MixinPatches {
                 .modifyTarget("connector_onSetKeyMapping")
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/world/level/block/piston/PistonStructureResolver")
+                .targetMethod("m_155937_")
+                .modifyTarget("canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z")
+                .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC))
+                .extractMixin("net/minecraftforge/common/extensions/IForgeBlockState")
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/world/entity/LivingEntity")
                 .targetMethod("m_6075_")
                 .updateRedirectTarget("Lnet/minecraft/world/entity/LivingEntity;m_204029_(Lnet/minecraft/tags/TagKey;)Z", "Lnet/minecraftforge/fluids/FluidType;isAir()Z")
@@ -428,7 +435,8 @@ public class MixinPatches {
                 .modifyParams(builder -> builder
                     .insert(0, Type.getObjectType("net/minecraft/client/renderer/entity/layers/ElytraLayer"))
                     .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
-                    .targetType(ModifyMethodParams.TargetType.INJECTION_POINT))
+                    .targetType(ModifyMethodParams.TargetType.INJECTION_POINT)
+                    .ignoreOffset())
                 .divertRedirector(adapter -> {
                     adapter.visitVarInsn(Opcodes.ALOAD, 1);
                     adapter.visitVarInsn(Opcodes.ALOAD, 2);

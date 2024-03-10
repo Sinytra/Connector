@@ -42,6 +42,12 @@ public class MixinPatches {
                 .modifyTarget("connector_onSetKeyMapping")
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/world/entity/vehicle/AbstractMinecart")
+                .targetMethod("m_6401_")
+                .targetInjectionPoint("Lnet/minecraft/world/entity/vehicle/AbstractMinecart;m_6478_(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V")
+                .modifyTarget("moveMinecartOnRail(Lnet/minecraft/core/BlockPos;)V")
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/world/level/block/piston/PistonStructureResolver")
                 .targetMethod("m_155937_")
                 .modifyTarget("canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z")

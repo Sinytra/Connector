@@ -6,14 +6,15 @@
   "compatibilityLevel": "JAVA_17",
   "plugin": "dev.su5ed.sinytra.connector.mod.ConnectorBootstrap",
   "mixins": [
+    "CrashReportExtenderMixin",
     "ForgeHooksMixin",
     "IForgeItemMixin",
     "PlayerListMixin",
     "PoiTypesMixin",
     "TagLoaderMixin",
+    "item.ForgeHooksMixin",
     "item.ItemStackMixin",
     "item.LateItemStackMixin",
-    "item.ForgeHooksMixin",
     "lang.PathPackResourcesAnonMixin",
     "lang.PathPackResourcesMixin",
     "network.ConnectionTypeMixin",
@@ -21,8 +22,8 @@
     "network.NetworkFiltersMixin",
     "registries.BootstrapMixin",
     "registries.BuiltInRegistriesMixin",
-    "registries.MappedRegistryMixin",
     "registries.ForgeRegistryMixin",
+    "registries.MappedRegistryMixin",
     "registries.RegistryDataLoaderMixin"
   ],
   "client": [

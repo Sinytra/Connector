@@ -242,6 +242,16 @@ public class MixinPatches {
             Patch.builder()
                 .targetClass("net/minecraft/client/gui/Gui")
                 .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+                .targetInjectionPoint("com.nhoryzon.mc.farmersdelight.mixin.util.BeforeInc", "")
+                .targetAnnotationValues(h -> h.getNested("at").flatMap(v -> v.<List<String>>getValue("args").map(a -> a.get().get(0).equals("intValue=-10"))).orElse(false))
+                .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+                .modifyTarget("renderFood(IILnet/minecraft/client/gui/GuiGraphics;)V")
+                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+                .modifyInjectionPoint("INVOKE", "Lcom/mojang/blaze3d/systems/RenderSystem;disableBlend()V")
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/gui/Gui")
+                .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
                 .targetInjectionPoint("HEAD", "")
                 .modifyTarget("connector_renderHealth")
                 .build(),

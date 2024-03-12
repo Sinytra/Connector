@@ -126,7 +126,7 @@ public class JarTransformInstance {
         ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
         int fabricLVTCompatibility = FabricMixinBootstrap.MixinConfigDecorator.getMixinCompat(metadata.modMetadata()); 
         PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility);
-        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches);
+        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, environment, extraPatches);
         RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.visibleMixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())

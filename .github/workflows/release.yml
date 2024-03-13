@@ -82,7 +82,7 @@ jobs:
           gradle-home-cache-excludes: |
             gradle.properties
       - name: Publish with Gradle
-        run: ./gradlew ${{ matrix.task }} --stacktrace
+        run: ./gradlew clean build ${{ matrix.task }} --stacktrace
         env:
           PUBLISH_RELEASE_TYPE: ${{ inputs.release_type }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

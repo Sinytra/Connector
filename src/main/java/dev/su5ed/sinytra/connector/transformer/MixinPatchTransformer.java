@@ -8,26 +8,27 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
-import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
-import dev.su5ed.sinytra.adapter.patch.api.ClassTransform;
-import dev.su5ed.sinytra.adapter.patch.api.MixinClassGenerator;
-import dev.su5ed.sinytra.adapter.patch.api.Patch;
-import dev.su5ed.sinytra.adapter.patch.api.PatchContext;
-import dev.su5ed.sinytra.adapter.patch.api.PatchEnvironment;
-import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
-import dev.su5ed.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
-import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicAnonymousShadowFieldTypePatch;
-import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicInheritedInjectionPointPatch;
-import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicInjectorOrdinalPatch;
-import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicLVTPatch;
-import dev.su5ed.sinytra.adapter.patch.transformer.dynamic.DynamicModifyVarAtReturnPatch;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.forgespi.locating.IModFile;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.sinytra.adapter.patch.LVTOffsets;
+import org.sinytra.adapter.patch.api.ClassTransform;
+import org.sinytra.adapter.patch.api.MixinClassGenerator;
+import org.sinytra.adapter.patch.api.MixinConstants;
+import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.api.PatchEnvironment;
+import org.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
+import org.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
+import org.sinytra.adapter.patch.transformer.dynamic.DynamicAnonymousShadowFieldTypePatch;
+import org.sinytra.adapter.patch.transformer.dynamic.DynamicInheritedInjectionPointPatch;
+import org.sinytra.adapter.patch.transformer.dynamic.DynamicInjectorOrdinalPatch;
+import org.sinytra.adapter.patch.transformer.dynamic.DynamicLVTPatch;
+import org.sinytra.adapter.patch.transformer.dynamic.DynamicModifyVarAtReturnPatch;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -71,12 +72,10 @@ public class MixinPatchTransformer implements Transformer {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static boolean completedSetup = false;
 
-    private final Set<String> mixinPackages;
     private final PatchEnvironment environment;
     private final List<? extends Patch> patches;
 
-    public MixinPatchTransformer(LVTOffsets lvtOffsets, Set<String> mixinPackages, PatchEnvironment environment, List<? extends Patch> adapterPatches) {
-        this.mixinPackages = mixinPackages;
+    public MixinPatchTransformer(LVTOffsets lvtOffsets, PatchEnvironment environment, List<? extends Patch> adapterPatches) {
         this.environment = environment;
         this.patches = ImmutableList.<Patch>builder()
             .addAll(PRIORITY_PATCHES)
@@ -180,15 +179,6 @@ public class MixinPatchTransformer implements Transformer {
         return classes;
     }
 
-    private boolean isInMixinPackage(String className) {
-        for (String pkg : this.mixinPackages) {
-            if (className.startsWith(pkg)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public static void completeSetup(Iterable<IModFile> mods) {
         if (completedSetup) {
             return;
@@ -219,23 +209,19 @@ public class MixinPatchTransformer implements Transformer {
 
     @Override
     public ClassEntry process(ClassEntry entry) {
-        String className = entry.getClassName();
         Patch.Result patchResult = Patch.Result.PASS;
 
         ClassReader reader = new ClassReader(entry.getData());
         ClassNode node = new ClassNode();
         reader.accept(node, 0);
 
-        if (isInMixinPackage(className)) {
+        // Some mods generate their mixin configs at runtime, therefore we must scan all classes
+        // regardless of whether they're listed in present config files (see Andromeda)
+        if (isMixinClass(node)) {
             patchResult = patchResult.or(CLASS_PATCH.apply(node, this.environment));
 
             for (Patch patch : this.patches) {
                 patchResult = patchResult.or(patch.apply(node, this.environment));
-            }
-        }
-        else {
-            for (ClassTransform transform : CLASS_TRANSFORMS) {
-                patchResult = patchResult.or(transform.apply(node, null, PatchContext.create(node, List.of(), this.environment)));
             }
         }
 
@@ -264,5 +250,16 @@ public class MixinPatchTransformer implements Transformer {
             entries.add(ClassEntry.create(name + ".class", ConnectorUtil.ZIP_TIME, bytes));
         });
         return entries;
+    }
+
+    private static boolean isMixinClass(ClassNode classNode) {
+        if (classNode.invisibleAnnotations != null) {
+            for (AnnotationNode annotation : classNode.invisibleAnnotations) {
+                if (annotation.desc.equals(MixinConstants.MIXIN)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

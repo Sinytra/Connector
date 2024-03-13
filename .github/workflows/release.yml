@@ -19,9 +19,12 @@ permissions:
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-22.04
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: FabricMC/fabric-action-scripts@v2
@@ -35,13 +38,51 @@ jobs:
           java-version: '17'
       - uses: gradle/wrapper-validation-action@v1
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/actions/setup-gradle@v3
         with:
           gradle-home-cache-cleanup: true
           gradle-home-cache-excludes: |
             gradle.properties
       - name: Build with Gradle
-        run: ./gradlew clean build publish publishMods --stacktrace
+        run: ./gradlew clean build --stacktrace
+  publish:
+    strategy:
+      matrix:
+        include:
+          - name: Maven
+            environment: maven
+            task: publish
+          - name: GitHub
+            environment: github
+            task: publishGithub
+          - name: CurseForge
+            environment: curseforge
+            task: publishCurseforge
+          - name: Modrinth
+            environment: modrinth
+            task: publishModrinth
+    name: Publish ${{ matrix.name }}
+    needs: build
+    runs-on: ubuntu-22.04
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'microsoft'
+          java-version: '17'
+      - uses: gradle/wrapper-validation-action@v1
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: true
+          gradle-home-cache-cleanup: true
+          gradle-home-cache-excludes: |
+            gradle.properties
+      - name: Publish with Gradle
+        run: ./gradlew ${{ matrix.task }} --stacktrace
         env:
           PUBLISH_RELEASE_TYPE: ${{ inputs.release_type }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -49,5 +90,5 @@ jobs:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           MAVEN_URL: ${{ secrets.MAVEN_URL }}
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }
+          CHANGELOG: ${{ needs.build.outputs.changelog }}

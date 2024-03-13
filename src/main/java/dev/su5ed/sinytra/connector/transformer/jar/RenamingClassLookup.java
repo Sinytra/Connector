@@ -1,6 +1,6 @@
 package dev.su5ed.sinytra.connector.transformer.jar;
 
-import dev.su5ed.sinytra.adapter.patch.util.provider.ClassLookup;
+import org.sinytra.adapter.patch.util.provider.ClassLookup;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.internal.EnhancedClassRemapper;
 import net.minecraftforge.fart.internal.EnhancedRemapper;

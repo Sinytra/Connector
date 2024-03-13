@@ -58,7 +58,7 @@ public final class FabricMixinBootstrap {
                     if (Files.exists(modFile.getFile().findResource(config))) {
                         ModFileInfo prev = configToModMap.putIfAbsent(config, modFile);
                         if (prev != null)
-                            LOGGER.error("Non-unique Mixin config name {} used by the mods {} and {}", config, prev.moduleName(), modFile.moduleName());
+                            LOGGER.debug("Non-unique Mixin config name {} used by the mods {} and {}", config, prev.moduleName(), modFile.moduleName());
                     }
                 }
             }

@@ -2,7 +2,7 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableMap;
 import com.mojang.logging.LogUtils;
-import dev.su5ed.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.api.Patch;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import net.fabricmc.accesswidener.AccessWidenerReader;
 import net.fabricmc.accesswidener.AccessWidenerVisitor;

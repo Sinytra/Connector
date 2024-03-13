@@ -5,13 +5,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
-import dev.su5ed.sinytra.adapter.patch.LVTOffsets;
-import dev.su5ed.sinytra.adapter.patch.api.GlobalReferenceMapper;
-import dev.su5ed.sinytra.adapter.patch.api.Patch;
-import dev.su5ed.sinytra.adapter.patch.api.PatchEnvironment;
-import dev.su5ed.sinytra.adapter.patch.serialization.PatchSerialization;
-import dev.su5ed.sinytra.adapter.patch.util.provider.ClassLookup;
-import dev.su5ed.sinytra.adapter.patch.util.provider.ZipClassLookup;
+import org.sinytra.adapter.patch.LVTOffsets;
+import org.sinytra.adapter.patch.api.GlobalReferenceMapper;
+import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.api.PatchEnvironment;
+import org.sinytra.adapter.patch.serialization.PatchSerialization;
+import org.sinytra.adapter.patch.util.provider.ClassLookup;
+import org.sinytra.adapter.patch.util.provider.ZipClassLookup;
 import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
 import dev.su5ed.sinytra.connector.service.FabricMixinBootstrap;
 import dev.su5ed.sinytra.connector.transformer.AccessWidenerTransformer;
@@ -120,23 +120,22 @@ public class JarTransformInstance {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input.toPath(), metadata.refmaps(), this.remapper, this.libs);
         IMappingFile srgToIntermediary = resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
-        IMappingFile intermediaryToSrg = resolver.getCurrentMap(SOURCE_NAMESPACE);
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
         ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
         int fabricLVTCompatibility = FabricMixinBootstrap.MixinConfigDecorator.getMixinCompat(metadata.modMetadata()); 
         PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility);
-        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, metadata.mixinPackages(), environment, extraPatches);
+        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, environment, extraPatches);
         RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.visibleMixinConfigs(), refmap.files());
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())
             .add(new ClassNodeTransformer(
                 new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary),
-                accessorRedirectTransformer,
-                new ClassAnalysingTransformer(intermediaryToSrg, IntermediateMapping.get(SOURCE_NAMESPACE))
+                accessorRedirectTransformer
             ))
             .add(this.remappingTransformer)
+            .add(new ClassNodeTransformer(new ClassAnalysingTransformer()))
             .add(patchTransformer)
             .add(refmapRemapper)
             .add(new ModMetadataGenerator(metadata.modMetadata().getId()))

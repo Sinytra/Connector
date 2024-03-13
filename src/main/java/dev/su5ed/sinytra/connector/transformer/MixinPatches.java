@@ -1,9 +1,5 @@
 package dev.su5ed.sinytra.connector.transformer;
 
-import dev.su5ed.sinytra.adapter.patch.api.MixinConstants;
-import dev.su5ed.sinytra.adapter.patch.api.Patch;
-import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodAccess;
-import dev.su5ed.sinytra.adapter.patch.transformer.ModifyMethodParams;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -15,6 +11,10 @@ import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import org.sinytra.adapter.patch.api.MixinConstants;
+import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.transformer.ModifyMethodAccess;
+import org.sinytra.adapter.patch.transformer.ModifyMethodParams;
 
 import java.util.List;
 import java.util.ListIterator;
@@ -40,6 +40,19 @@ public class MixinPatches {
                 .targetMethod("m_90837_")
                 .targetInjectionPoint("TAIL", "")
                 .modifyTarget("connector_onSetKeyMapping")
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/vehicle/AbstractMinecart")
+                .targetMethod("m_6401_")
+                .targetInjectionPoint("Lnet/minecraft/world/entity/vehicle/AbstractMinecart;m_6478_(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V")
+                .modifyTarget("moveMinecartOnRail(Lnet/minecraft/core/BlockPos;)V")
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/level/block/piston/PistonStructureResolver")
+                .targetMethod("m_155937_")
+                .modifyTarget("canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z")
+                .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC))
+                .extractMixin("net/minecraftforge/common/extensions/IForgeBlockState")
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/world/entity/LivingEntity")
@@ -214,9 +227,9 @@ public class MixinPatches {
                 .targetInjectionPoint("TAIL", "")
                 .modifyTarget("connector_postRender")
                 .build(),
-            buildGuiPatch(2, 2, "renderFood", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;"),
-            buildGuiPatch(3, 3, "renderAir", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;"),
-            buildGuiPatch(3, 5, "renderFood", "Lnet/minecraft/client/gui/GuiGraphics;m_280218_(Lnet/minecraft/resources/ResourceLocation;IIIIII)V"),
+            buildGuiPatch(2, 2, "renderFood", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;", false),
+            buildGuiPatch(3, 3, "renderAir", "Lnet/minecraft/client/Minecraft;m_91307_()Lnet/minecraft/util/profiling/ProfilerFiller;", false),
+            buildGuiPatch(3, 5, "renderFood", "Lnet/minecraft/client/gui/GuiGraphics;m_280218_(Lnet/minecraft/resources/ResourceLocation;IIIIII)V", true),
             Patch.builder()
                 .targetClass("net/minecraft/client/gui/Gui")
                 .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
@@ -225,6 +238,16 @@ public class MixinPatches {
                 .modifyTarget("renderFood(IILnet/minecraft/client/gui/GuiGraphics;)V")
                 .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
                 .modifyInjectionPoint("HEAD", "", true)
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/gui/Gui")
+                .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+                .targetInjectionPoint("com.nhoryzon.mc.farmersdelight.mixin.util.BeforeInc", "")
+                .targetAnnotationValues(h -> h.getNested("at").flatMap(v -> v.<List<String>>getValue("args").map(a -> a.get().get(0).equals("intValue=-10"))).orElse(false))
+                .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+                .modifyTarget("renderFood(IILnet/minecraft/client/gui/GuiGraphics;)V")
+                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+                .modifyInjectionPoint("INVOKE", "Lcom/mojang/blaze3d/systems/RenderSystem;disableBlend()V")
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/client/gui/Gui")
@@ -428,7 +451,8 @@ public class MixinPatches {
                 .modifyParams(builder -> builder
                     .insert(0, Type.getObjectType("net/minecraft/client/renderer/entity/layers/ElytraLayer"))
                     .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
-                    .targetType(ModifyMethodParams.TargetType.INJECTION_POINT))
+                    .targetType(ModifyMethodParams.TargetType.INJECTION_POINT)
+                    .ignoreOffset())
                 .divertRedirector(adapter -> {
                     adapter.visitVarInsn(Opcodes.ALOAD, 1);
                     adapter.visitVarInsn(Opcodes.ALOAD, 2);
@@ -543,7 +567,7 @@ public class MixinPatches {
             .collect(Collectors.toList()); // Mutable list
     }
 
-    private static Patch buildGuiPatch(int minOrdinal, int maxOrdinal, String targetMethodName, String injectionPoint) {
+    private static Patch buildGuiPatch(int minOrdinal, int maxOrdinal, String targetMethodName, String injectionPoint, boolean offsetOrdinal) {
         return Patch.builder()
             .targetClass("net/minecraft/client/gui/Gui")
             .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
@@ -555,7 +579,7 @@ public class MixinPatches {
             .transform((classNode, methodNode, methodContext, context) -> {
                 methodContext.injectionPointAnnotation()
                     .<Integer>getValue("ordinal")
-                    .ifPresent(o -> o.set(0));
+                    .ifPresent(o -> o.set(offsetOrdinal ? o.get() - minOrdinal : 0));
                 return Patch.Result.APPLY;
             })
             .build();

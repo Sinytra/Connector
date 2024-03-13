@@ -1,7 +1,5 @@
 package dev.su5ed.sinytra.connector.transformer;
 
-import dev.su5ed.sinytra.adapter.patch.selector.AnnotationHandle;
-import dev.su5ed.sinytra.adapter.patch.util.MethodQualifier;
 import dev.su5ed.sinytra.connector.transformer.jar.IntermediateMapping;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Transformer;
@@ -26,7 +24,13 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.LdcInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.analysis.SourceInterpreter;
+import org.objectweb.asm.tree.analysis.SourceValue;
+import org.sinytra.adapter.patch.analysis.MethodCallAnalyzer;
+import org.sinytra.adapter.patch.selector.AnnotationHandle;
+import org.sinytra.adapter.patch.util.MethodQualifier;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -43,14 +47,19 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
     private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$_]+;$";
     private static final String FQN_CLASS_NAME_PATTERN = "^([a-zA-Z0-9$_]+\\.)*[a-zA-Z0-9$_]+$";
 
+    private final SourceInterpreter reflectionRemapper;
+
     public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, IntermediateMapping flatMappings) {
         IntermediaryClassProvider reverseProvider = new IntermediaryClassProvider(classProvider, mappingFile, mappingFile.reverse(), log);
         EnhancedRemapper enhancedRemapper = new MixinAwareEnhancedRemapper(reverseProvider, mappingFile, flatMappings, log);
-        return new OptimizedRenamingTransformer(enhancedRemapper, false);
+        SourceInterpreter reflectionRemapper = new ReflectionRemapperInterpreter(Opcodes.ASM9, mappingFile, flatMappings);
+        return new OptimizedRenamingTransformer(enhancedRemapper, false, reflectionRemapper);
     }
 
-    public OptimizedRenamingTransformer(EnhancedRemapper remapper, boolean collectAbstractParams) {
+    public OptimizedRenamingTransformer(EnhancedRemapper remapper, boolean collectAbstractParams, SourceInterpreter reflectionRemapper) {
         super(remapper, collectAbstractParams);
+
+        this.reflectionRemapper = reflectionRemapper;
     }
 
     @Override
@@ -86,6 +95,8 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                     }
                 }
             }
+
+            MethodCallAnalyzer.analyzeInterpretMethod(method, this.reflectionRemapper);
         }
         for (FieldNode field : node.fields) {
             field.value = postProcessRemapper.mapValue(field.value);
@@ -256,6 +267,62 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         public String mapPackageName(String name) {
             // We don't need to map these
             return name;
+        }
+    }
+
+    private static class ReflectionRemapperInterpreter extends SourceInterpreter {
+        private static final Type STR_TYPE = Type.getType(String.class);
+
+        private final Collection<MethodInsnNode> seen = new HashSet<>();
+        private final IMappingFile mappings;
+        private final IntermediateMapping fastMappings;
+
+        public ReflectionRemapperInterpreter(int api, IMappingFile mappings, IntermediateMapping fastMappings) {
+            super(api);
+            this.mappings = mappings;
+            this.fastMappings = fastMappings;
+        }
+
+        @Override
+        public SourceValue naryOperation(AbstractInsnNode insn, List<? extends SourceValue> values) {
+            if (insn instanceof MethodInsnNode methodInsn && !this.seen.contains(methodInsn)) {
+                this.seen.add(methodInsn);
+                // Try to remap reflection method call args
+                Type[] args = Type.getArgumentTypes(methodInsn.desc);
+                if (args.length >= 3 && STR_TYPE.equals(args[0]) && STR_TYPE.equals(args[1]) && STR_TYPE.equals(args[2]) && values.size() >= 3) {
+                    LdcInsnNode ownerInsn = getSingleLDCString(values.get(0));
+                    LdcInsnNode nameInsn = getSingleLDCString(values.get(1));
+                    LdcInsnNode descInsn = getSingleLDCString(values.get(2));
+                    if (ownerInsn != null && nameInsn != null && descInsn != null) {
+                        String owner = (String) ownerInsn.cst;
+                        IMappingFile.IClass cls = this.mappings.getClass(owner.replace('.', '/'));
+                        if (cls != null) {
+                            String name = (String) nameInsn.cst;
+                            String desc = (String) descInsn.cst;
+                            IMappingFile.IMethod mtd = cls.getMethod(name, desc);
+                            if (mtd != null) {
+                                ownerInsn.cst = owner.contains(".") ? cls.getMapped().replace('/', '.') : cls.getMapped();
+                                nameInsn.cst = mtd.getMapped();
+                                descInsn.cst = mtd.getMappedDescriptor();
+                            }
+                            else {
+                                String mappedName = this.fastMappings.mapMethod(name, desc);
+                                if (mappedName != null) {
+                                    ownerInsn.cst = owner.contains(".") ? cls.getMapped().replace('/', '.') : cls.getMapped();
+                                    nameInsn.cst = mappedName;
+                                    descInsn.cst = this.mappings.remapDescriptor(desc);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return super.naryOperation(insn, values);
+        }
+
+        @Nullable
+        private static LdcInsnNode getSingleLDCString(SourceValue value) {
+            return value.insns.size() == 1 && value.insns.iterator().next() instanceof LdcInsnNode ldc && ldc.cst instanceof String ? ldc : null;
         }
     }
 

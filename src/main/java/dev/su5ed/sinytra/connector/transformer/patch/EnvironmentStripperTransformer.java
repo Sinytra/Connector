@@ -1,9 +1,9 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
-import dev.su5ed.sinytra.adapter.patch.api.ClassTransform;
-import dev.su5ed.sinytra.adapter.patch.api.Patch;
-import dev.su5ed.sinytra.adapter.patch.api.PatchContext;
-import dev.su5ed.sinytra.adapter.patch.selector.AnnotationValueHandle;
+import org.sinytra.adapter.patch.api.ClassTransform;
+import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.api.PatchContext;
+import org.sinytra.adapter.patch.selector.AnnotationValueHandle;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;

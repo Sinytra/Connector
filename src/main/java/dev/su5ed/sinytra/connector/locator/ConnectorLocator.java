@@ -104,7 +104,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .toList();
         Collection<String> loadedModIds = loadedModInfos.stream().filter(mod -> !mod.library()).map(SimpleModInfo::modid).collect(Collectors.toUnmodifiableSet());
         // Discover fabric mod jars
-        final var excluded = ModDirTransformerDiscoverer.allExcluded();
+        List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
         List<JarTransformer.TransformableJar> discoveredJars = Stream.of(scanModsDir(excluded), scanClasspath(), scanFromArguments(excluded)).flatMap(s -> s)
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
             .filter(jar -> {

@@ -1,6 +1,9 @@
 package dev.su5ed.sinytra.connector.locator;
 
 import com.google.common.base.Suppliers;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -18,13 +21,14 @@ import org.slf4j.Logger;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public record ConnectorConfig(int version, List<String> hiddenMods, Map<String, List<String>> globalModAliases) {
+public record ConnectorConfig(int version, List<String> hiddenMods, Multimap<String, String> globalModAliases) {
     public static final Codec<ConnectorConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group(
         Codec.INT
             .comapFlatMap(i -> i == 1 ? DataResult.success(i) : DataResult.error(() -> "Unsupported \"version\", must be 1"), Function.identity())
@@ -38,11 +42,20 @@ public record ConnectorConfig(int version, List<String> hiddenMods, Map<String, 
             Codec.STRING,
             Codec.either(Codec.STRING.listOf(), Codec.STRING).xmap(either -> either.map(list -> list, List::of), list -> list.size() == 1 ? Either.right(list.get(0)) : Either.left(list))
         )
-            .optionalFieldOf("globalModAliases", Map.of())
+            .xmap(map -> {
+                Multimap<String, String> aliases = HashMultimap.create();
+                map.forEach(aliases::putAll);
+                return aliases;
+            }, multimap -> {
+                Map<String, List<String>> map = new HashMap<>();
+                multimap.asMap().forEach((key, val) -> map.put(key, List.copyOf(val)));
+                return map;
+            })
+            .optionalFieldOf("globalModAliases", ImmutableMultimap.of())
             .forGetter(ConnectorConfig::globalModAliases)
     ).apply(instance, ConnectorConfig::new));
 
-    ConnectorConfig(Optional<Integer> version, Optional<List<String>> hiddenMods, Map<String, List<String>> globalModAliases) {
+    ConnectorConfig(Optional<Integer> version, Optional<List<String>> hiddenMods, Multimap<String, String> globalModAliases) {
         this(version.orElse(1), hiddenMods.orElseGet(List::of), globalModAliases);
     }
 

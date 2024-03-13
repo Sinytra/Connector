@@ -1,9 +1,9 @@
 package dev.su5ed.sinytra.connector.transformer;
 
-import dev.su5ed.sinytra.adapter.patch.api.MethodContext;
-import dev.su5ed.sinytra.adapter.patch.api.Patch;
-import dev.su5ed.sinytra.adapter.patch.api.PatchContext;
-import dev.su5ed.sinytra.adapter.patch.api.PatchEnvironment;
+import org.sinytra.adapter.patch.api.MethodContext;
+import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.api.PatchContext;
+import org.sinytra.adapter.patch.api.PatchEnvironment;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.RedirectAccessorToMethod;
 import net.minecraftforge.coremod.api.ASMAPI;

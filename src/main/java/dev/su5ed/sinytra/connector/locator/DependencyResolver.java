@@ -83,7 +83,7 @@ public final class DependencyResolver {
             .map(dep -> {
                 // Aliased mods typically don't follow the same version convention as the original,
                 // therefore we must widen all dependency constraints to wildcards 
-                if (aliases.values().contains(dep.getModId())) {
+                if (aliases.keys().contains(dep.getModId()) || aliases.values().contains(dep.getModId())) {
                     return dep.getKind() == ModDependency.Kind.BREAKS ? null : uncheck(() -> new ModDependencyImpl(dep.getKind(), dep.getModId(), List.of("*")));
                 }
                 return dep;

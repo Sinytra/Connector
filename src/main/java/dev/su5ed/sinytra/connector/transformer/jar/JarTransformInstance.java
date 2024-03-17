@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
+import dev.su5ed.sinytra.connector.transformer.patch.ReflectionRenamingTransformer;
 import org.sinytra.adapter.patch.LVTOffsets;
 import org.sinytra.adapter.patch.api.GlobalReferenceMapper;
 import org.sinytra.adapter.patch.api.Patch;
@@ -120,6 +121,7 @@ public class JarTransformInstance {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
         RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input.toPath(), metadata.refmaps(), this.remapper, this.libs);
         IMappingFile srgToIntermediary = resolver.getMap(OBF_NAMESPACE, SOURCE_NAMESPACE);
+        IMappingFile intermediaryToSrg = resolver.getCurrentMap(SOURCE_NAMESPACE);
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
@@ -132,7 +134,8 @@ public class JarTransformInstance {
             .add(new JarSignatureStripper())
             .add(new ClassNodeTransformer(
                 new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary),
-                accessorRedirectTransformer
+                accessorRedirectTransformer,
+                new ReflectionRenamingTransformer(intermediaryToSrg, IntermediateMapping.get(SOURCE_NAMESPACE))
             ))
             .add(this.remappingTransformer)
             .add(new ClassNodeTransformer(new ClassAnalysingTransformer()))

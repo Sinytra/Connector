@@ -55,6 +55,12 @@ public class MixinPatches {
                 .extractMixin("net/minecraftforge/common/extensions/IForgeBlockState")
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/client/multiplayer/MultiPlayerGameMode")
+                .targetMethod("m_105267_")
+                .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V")
+                .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/world/entity/LivingEntity")
                 .targetMethod("m_6075_")
                 .updateRedirectTarget("Lnet/minecraft/world/entity/LivingEntity;m_204029_(Lnet/minecraft/tags/TagKey;)Z", "Lnet/minecraftforge/fluids/FluidType;isAir()Z")

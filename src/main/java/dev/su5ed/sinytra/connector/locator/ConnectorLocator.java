@@ -8,6 +8,7 @@ import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.sinytra.connector.transformer.jar.JarTransformer;
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.minecraftforge.fml.loading.ClasspathLocatorUtils;
 import net.minecraftforge.fml.loading.EarlyLoadingException;
@@ -108,8 +109,8 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         List<JarTransformer.TransformableJar> discoveredJars = Stream.of(scanModsDir(excluded), scanClasspath(), scanFromArguments(excluded)).flatMap(s -> s)
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
             .filter(jar -> {
-                String modid = jar.modPath().metadata().modMetadata().getId();
-                return !shouldIgnoreMod(modid, loadedModIds);
+                ConnectorLoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
+                return !shouldIgnoreMod(metadata, loadedModIds);
             })
             .toList();
         Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren = HashMultimap.create();
@@ -117,7 +118,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         List<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()
             .flatMap(jar -> {
                 ConnectorLoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return shouldIgnoreMod(metadata.getId(), loadedModIds) ? Stream.empty() : discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds);
+                return shouldIgnoreMod(metadata, loadedModIds) ? Stream.empty() : discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds);
             })
             .toList();
         // Collect mods that are (likely) going to be excluded by FML's UniqueModListBuilder. Exclude them from global split package filtering
@@ -289,7 +290,9 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .toList();
     }
 
-    private static boolean shouldIgnoreMod(String id, Collection<String> loadedModIds) {
+    private static boolean shouldIgnoreMod(ConnectorLoaderModMetadata metadata, Collection<String> loadedModIds) {
+        if (!metadata.loadsInEnvironment(FabricLoader.getInstance().getEnvironmentType())) return false;
+        String id = metadata.getId();
         return ConnectorUtil.DISABLED_MODS.contains(id) || loadedModIds.contains(id);
     }
 

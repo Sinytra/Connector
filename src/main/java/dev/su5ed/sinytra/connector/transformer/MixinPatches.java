@@ -61,6 +61,12 @@ public class MixinPatches {
                 .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/world/level/block/FarmBlock")
+                .targetMethod("m_53258_(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z")
+                .targetInjectionPoint("Lnet/minecraft/world/level/material/FluidState;m_205070_(Lnet/minecraft/tags/TagKey;)Z")
+                .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;canBeHydrated(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/core/BlockPos;)Z")
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/world/entity/LivingEntity")
                 .targetMethod("m_6075_")
                 .updateRedirectTarget("Lnet/minecraft/world/entity/LivingEntity;m_204029_(Lnet/minecraft/tags/TagKey;)Z", "Lnet/minecraftforge/fluids/FluidType;isAir()Z")

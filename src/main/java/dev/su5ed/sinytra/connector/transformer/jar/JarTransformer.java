@@ -128,9 +128,10 @@ public final class JarTransformer {
             JarTransformInstance transformInstance;
             try {
                 ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
-                ILaunchPluginService.ITransformerLoader loader = name -> classProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
+                EarlyJSCoremodTransformer transformingClassProvider = EarlyJSCoremodTransformer.create(classProvider, loadedMods);
+                ILaunchPluginService.ITransformerLoader loader = name -> transformingClassProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
                 setMixinClassProvider(loader);
-                transformInstance = new JarTransformInstance(classProvider, loadedMods, libs);
+                transformInstance = new JarTransformInstance(transformingClassProvider, loadedMods, libs);
             } finally {
                 initProgress.complete();
             }

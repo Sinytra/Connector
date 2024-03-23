@@ -21,6 +21,7 @@ import org.sinytra.adapter.patch.api.ClassTransform;
 import org.sinytra.adapter.patch.api.MixinClassGenerator;
 import org.sinytra.adapter.patch.api.MixinConstants;
 import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.api.PatchContext;
 import org.sinytra.adapter.patch.api.PatchEnvironment;
 import org.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
 import org.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
@@ -222,6 +223,11 @@ public class MixinPatchTransformer implements Transformer {
 
             for (Patch patch : this.patches) {
                 patchResult = patchResult.or(patch.apply(node, this.environment));
+            }
+        }
+        else {
+            for (ClassTransform transform : CLASS_TRANSFORMS) {
+                patchResult = patchResult.or(transform.apply(node, null, PatchContext.create(node, List.of(), this.environment)));
             }
         }
 

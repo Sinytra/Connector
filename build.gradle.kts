@@ -315,7 +315,7 @@ dependencies {
     shade(group = "org.ow2.sat4j", name = "org.ow2.sat4j.pb", version = "2.3.6")
     shade(group = "net.minecraftforge", name = "srgutils", version = "0.5.4")
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
-    shade(group = "dev.su5ed.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool)
+    shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool)
     shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
     shade(group = "io.github.steelwoolmc", name = "mixin-transmogrifier", version = versionMixinTransmog)
     adapterData(group = "org.sinytra.adapter", name = "adapter", version = versionAdapter)

@@ -50,21 +50,23 @@ jobs:
       matrix:
         include:
           - name: Maven
-            environment: maven
             task: publish
+            url: https://maven.su5ed.dev/releases/dev/su5ed/sinytra/Connector
           - name: GitHub
-            environment: github
             task: publishGithub
+            url: https://github.com/Sinytra/Connector/releases
           - name: CurseForge
-            environment: curseforge
             task: publishCurseforge
+            url: https://www.curseforge.com/minecraft/mc-mods/sinytra-connector
           - name: Modrinth
-            environment: modrinth
             task: publishModrinth
+            url: https://modrinth.com/mod/connector
     name: Publish ${{ matrix.name }}
     needs: build
     runs-on: ubuntu-22.04
-    environment: ${{ matrix.environment }}
+    environment:
+      name: ${{ matrix.name }}
+      url: ${{ matrix.url }}
     steps:
       - uses: actions/checkout@v4
         with:

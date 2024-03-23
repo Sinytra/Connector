@@ -143,7 +143,8 @@ public class JarTransformInstance {
             .add(refmapRemapper)
             .add(new ModMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(TRANSFORM_MARKER, s))
-            .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s));
+            .debug(s -> LOGGER.trace(TRANSFORM_MARKER, s))
+            .ignoreJarPathPrefix("assets/", "data/");
         if (!metadata.containsAT()) {
             builder.add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver, IntermediateMapping.get(SOURCE_NAMESPACE)));
         }

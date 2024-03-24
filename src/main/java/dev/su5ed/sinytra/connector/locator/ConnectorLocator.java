@@ -291,7 +291,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     }
 
     private static boolean shouldIgnoreMod(ConnectorLoaderModMetadata metadata, Collection<String> loadedModIds) {
-        if (!metadata.loadsInEnvironment(FabricLoader.getInstance().getEnvironmentType())) return false;
+        if (!metadata.loadsInEnvironment(FabricLoader.getInstance().getEnvironmentType())) return true;
         String id = metadata.getId();
         return ConnectorUtil.DISABLED_MODS.contains(id) || loadedModIds.contains(id);
     }

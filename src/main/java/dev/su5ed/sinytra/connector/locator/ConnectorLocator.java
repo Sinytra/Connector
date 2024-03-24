@@ -237,7 +237,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             .flatMap(path -> {
                 JarTransformer.TransformableJar jar = uncheck(() -> prepareNestedJar(tempDir, secureJar.getPrimaryPath().getFileName().toString(), path));
                 ConnectorLoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
-                if (shouldIgnoreMod(metadata.getId(), loadedModIds)) {
+                if (shouldIgnoreMod(metadata, loadedModIds)) {
                     return Stream.empty();
                 }
                 parentToChildren.put(parent, jar);

@@ -3,6 +3,7 @@ package dev.su5ed.sinytra.connector.locator;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.logging.LogUtils;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -55,7 +56,7 @@ public final class EmbeddedDependencies {
             // Return a random string to still write an input file, so that once we have a proper version available we refresh the cache
             return RandomStringUtils.randomAlphabetic(5);
         }
-        return ver;
+        return ver + "," + FMLEnvironment.dist.name().toLowerCase();
     });
 
     /**

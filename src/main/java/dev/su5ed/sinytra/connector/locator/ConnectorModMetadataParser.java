@@ -23,6 +23,9 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * Parses Fabric mod JSON metadata into TOML format at runtime.
+ */
 public final class ConnectorModMetadataParser {
     private static final String DEFAULT_LICENSE = "All Rights Reserved";
     // From ModInfo

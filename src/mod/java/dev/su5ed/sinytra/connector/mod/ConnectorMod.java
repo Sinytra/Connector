@@ -25,12 +25,16 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.util.Optional;
 
 @Mod(ConnectorUtil.CONNECTOR_MODID)
 public class ConnectorMod {
+    public static final Logger LOG = LoggerFactory.getLogger(ConnectorMod.class);
+
     private static boolean clientLoadComplete;
     private static boolean preventFreeze;
 

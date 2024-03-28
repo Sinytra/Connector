@@ -1,5 +1,6 @@
 package dev.su5ed.sinytra.connector.locator;
 
+import com.electronwill.nightconfig.core.file.FileConfig;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
@@ -20,6 +21,7 @@ import net.minecraftforge.fml.loading.StringUtils;
 import net.minecraftforge.fml.loading.moddiscovery.AbstractJarFileModProvider;
 import net.minecraftforge.fml.loading.moddiscovery.ModFile;
 import net.minecraftforge.fml.loading.moddiscovery.ModJarMetadata;
+import net.minecraftforge.fml.loading.moddiscovery.NightConfigWrapper;
 import net.minecraftforge.fml.loading.progress.StartupNotificationManager;
 import net.minecraftforge.forgespi.language.IModInfo;
 import net.minecraftforge.forgespi.locating.IDependencyLocator;
@@ -61,6 +63,7 @@ import static net.minecraftforge.fml.loading.LogMarkers.SCAN;
 public class ConnectorLocator extends AbstractJarFileModProvider implements IDependencyLocator {
     private static final String NAME = "connector_locator";
     private static final String SUFFIX = ".jar";
+    private static final String PLACEHOLDER_PROPERTY = "connector:placeholder";
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final MethodHandle MJM_INIT = uncheck(() -> MethodHandles.privateLookupIn(ModJarMetadata.class, MethodHandles.lookup()).findConstructor(ModJarMetadata.class, MethodType.methodType(void.class)));
@@ -87,15 +90,21 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         return List.of();
     }
 
-    private List<IModFile> locateFabricMods(Iterable<IModFile> loadedMods) {
+    private List<IModFile> locateFabricMods(Iterable<IModFile> discoveredMods) {
         LOGGER.debug(SCAN, "Scanning mods dir {} for mods", FMLPaths.MODSDIR.get());
         Path tempDir = ConnectorUtil.CONNECTOR_FOLDER.resolve("temp");
         // Get all existing mod ids
-        Collection<SimpleModInfo> loadedModInfos = StreamSupport.stream(loadedMods.spliterator(), false)
+        Collection<SimpleModInfo> loadedModInfos = StreamSupport.stream(discoveredMods.spliterator(), false)
             .flatMap(modFile -> Optional.ofNullable(modFile.getModFileInfo()).stream())
             .flatMap(modFileInfo -> {
                 IModFile modFile = modFileInfo.getFile();
                 List<IModInfo> modInfos = modFileInfo.getMods();
+                // Ignore placeholder mods
+                if (modFileInfo.getFileProperties().containsKey(PLACEHOLDER_PROPERTY)) {
+                    // Set mod version to 0.0 to prioritize the Fabric mod when FML resolves duplicates
+                    modInfos.forEach(mod -> mod.getVersion().parseVersion("0.0"));
+                    return Stream.empty();
+                }
                 if (!modInfos.isEmpty()) {
                     return modInfos.stream().map(modInfo -> new SimpleModInfo(modInfo.getModId(), modInfo.getVersion(), false, modFile));
                 }
@@ -103,6 +112,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
                 return Stream.of(new SimpleModInfo(modFileInfo.moduleName(), new DefaultArtifactVersion(version), true, modFile));
             })
             .toList();
+        Collection<IModFile> loadedModFiles = loadedModInfos.stream().map(SimpleModInfo::origin).toList();
         Collection<String> loadedModIds = loadedModInfos.stream().filter(mod -> !mod.library()).map(SimpleModInfo::modid).collect(Collectors.toUnmodifiableSet());
         // Discover fabric mod jars
         List<Path> excluded = ModDirTransformerDiscoverer.allExcluded();
@@ -126,11 +136,11 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         // Remove mods loaded by FML
         List<JarTransformer.TransformableJar> uniqueJars = handleDuplicateMods(discoveredJars, discoveredNestedJars, loadedModInfos, ignoredModFiles);
         // Ensure we have all required dependencies before transforming
-        List<JarTransformer.TransformableJar> candidates = DependencyResolver.resolveDependencies(uniqueJars, parentToChildren, loadedMods);
+        List<JarTransformer.TransformableJar> candidates = DependencyResolver.resolveDependencies(uniqueJars, parentToChildren, loadedModFiles);
         // Get renamer library classpath
-        List<Path> renameLibs = StreamSupport.stream(loadedMods.spliterator(), false).map(modFile -> modFile.getSecureJar().getRootPath()).toList();
+        List<Path> renameLibs = loadedModFiles.stream().map(modFile -> modFile.getSecureJar().getRootPath()).toList();
         // Run jar transformations (or get existing outputs from cache)
-        List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(candidates, renameLibs, loadedMods);
+        List<JarTransformer.FabricModPath> transformed = JarTransformer.transform(candidates, renameLibs, loadedModFiles);
         // Skip last step to save time if an error occured during transformation
         if (ConnectorEarlyLoader.hasEncounteredException()) {
             StartupNotificationManager.addModMessage("JAR TRANSFORMATION ERROR");
@@ -138,7 +148,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
             return List.of();
         }
         // Deal with split packages (thanks modules)
-        List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed, loadedMods, ignoredModFiles);
+        List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed, loadedModFiles, ignoredModFiles);
 
         List<IModFile> modFiles = new ArrayList<>(moduleSafeJars.stream().map(this::createConnectorModFile).toList());
         // Create mod file for generated adapter mixins jar
@@ -155,9 +165,9 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
 
     private Stream<Path> filterPaths(Stream<Path> stream, List<Path> excluded) {
         return stream
-                .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
-                .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
-                .filter(ConnectorLocator::isFabricModJar);
+            .filter(p -> !excluded.contains(p) && StringUtils.toLowerCase(p.getFileName().toString()).endsWith(SUFFIX))
+            .sorted(Comparator.comparing(path -> StringUtils.toLowerCase(path.getFileName().toString())))
+            .filter(ConnectorLocator::isFabricModJar);
     }
 
     private Stream<Path> scanClasspath() {
@@ -191,7 +201,8 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         Arrays.stream(paths).filter(s -> !s.isBlank()).map(Path::of).forEach(path -> {
             if (Files.isDirectory(path)) {
                 uncheck(() -> Files.list(path)).forEach(files::add);
-            } else {
+            }
+            else {
                 files.add(path);
             }
         });
@@ -217,7 +228,8 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     private static boolean isFabricModJar(Path path) {
         SecureJar secureJar = SecureJar.from(path);
         String name = secureJar.name();
-        if (secureJar.moduleDataProvider().findFile(ConnectorUtil.MODS_TOML).isPresent()) {
+        Path modsToml = secureJar.getPath(ConnectorUtil.MODS_TOML);
+        if (Files.exists(modsToml) && !containsPlaceholder(modsToml)) {
             LOGGER.debug(SCAN, "Skipping jar {} as it contains a mods.toml file", path);
             return false;
         }
@@ -227,6 +239,21 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         }
         LOGGER.info(SCAN, "Fabric mod metadata not found in jar {}, ignoring", name);
         return false;
+    }
+
+    private static boolean containsPlaceholder(Path modsTomlPath) {
+        try {
+            FileConfig fileConfig = FileConfig.of(modsTomlPath);
+            fileConfig.load();
+            fileConfig.close();
+            NightConfigWrapper config = new NightConfigWrapper(fileConfig);
+            return config.<Map<String, Object>>getConfigElement("properties")
+                .map(map -> map.containsKey(PLACEHOLDER_PROPERTY))
+                .orElse(false);
+        } catch (Throwable t) {
+            LOGGER.error("Error reading placeholder information from {}", modsTomlPath, t);
+            return false;
+        }
     }
 
     private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, JarTransformer.TransformableJar parent, Collection<NestedJarEntry> jars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren, Collection<String> loadedModIds) {

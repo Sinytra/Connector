@@ -14,13 +14,14 @@ import org.objectweb.asm.tree.VarInsnNode;
 import org.sinytra.adapter.patch.api.MixinConstants;
 import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.transformer.ModifyMethodAccess;
-import org.sinytra.adapter.patch.transformer.ModifyMethodParams;
+import org.sinytra.adapter.patch.transformer.param.ParamTransformTarget;
 
 import java.util.List;
 import java.util.ListIterator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("deprecation")
 public class MixinPatches {
     public static List<Patch> getPatches() {
         final List<Object> patches = List.of(Patch.builder()
@@ -116,7 +117,7 @@ public class MixinPatches {
                     .insert(0, Type.getObjectType("net/minecraft/world/item/ItemStack"))
                     .insert(1, Type.getObjectType("net/minecraft/world/item/ItemStack"))
                     .insert(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
-                    .targetType(ModifyMethodParams.TargetType.INJECTION_POINT))
+                    .targetType(ParamTransformTarget.INJECTION_POINT))
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/world/item/MilkBucketItem")
@@ -168,7 +169,7 @@ public class MixinPatches {
                 .targetMixinType(MixinConstants.REDIRECT)
                 .modifyInjectionPoint("Lnet/minecraft/world/entity/vehicle/Boat;canBoatInFluid(Lnet/minecraft/world/level/material/FluidState;)Z")
                 .modifyParams(b -> b
-                    .targetType(ModifyMethodParams.TargetType.INJECTION_POINT)
+                    .targetType(ParamTransformTarget.INJECTION_POINT)
                     .ignoreOffset()
                     .insert(0, Type.getObjectType("net/minecraft/world/entity/vehicle/Boat"))
                     .inline(2, i -> i.getstatic("net/minecraft/tags/FluidTags", "f_13131_", "Lnet/minecraft/tags/TagKey;")))
@@ -211,7 +212,7 @@ public class MixinPatches {
                 .modifyTarget("tryCatchFire")
                 .modifyParams(b -> b
                     .insert(5, Type.getObjectType("net/minecraft/core/Direction"))
-                    .targetType(ModifyMethodParams.TargetType.METHOD))
+                    .targetType(ParamTransformTarget.METHOD))
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/world/level/block/FireBlock")
@@ -224,7 +225,7 @@ public class MixinPatches {
                 .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;m_168688_(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/entity/player/Player;IIIIFIIIZ)V")
                 .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
                 .modifyTarget("renderHealth(IILnet/minecraft/client/gui/GuiGraphics;)V")
-                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ParamTransformTarget.METHOD))
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/client/gui/Gui")
@@ -248,7 +249,7 @@ public class MixinPatches {
                 .targetInjectionPoint("Lnet/minecraft/util/profiling/ProfilerFiller;m_6182_(Ljava/lang/String;)V")
                 .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
                 .modifyTarget("renderFood(IILnet/minecraft/client/gui/GuiGraphics;)V")
-                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ParamTransformTarget.METHOD))
                 .modifyInjectionPoint("HEAD", "", true)
                 .build(),
             Patch.builder()
@@ -258,7 +259,7 @@ public class MixinPatches {
                 .targetAnnotationValues(h -> h.getNested("at").flatMap(v -> v.<List<String>>getValue("args").map(a -> a.get().get(0).equals("intValue=-10"))).orElse(false))
                 .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
                 .modifyTarget("renderFood(IILnet/minecraft/client/gui/GuiGraphics;)V")
-                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ParamTransformTarget.METHOD))
                 .modifyInjectionPoint("INVOKE", "Lcom/mojang/blaze3d/systems/RenderSystem;disableBlend()V")
                 .build(),
             Patch.builder()
@@ -272,7 +273,7 @@ public class MixinPatches {
                 .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
                 .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
                 .modifyTarget("renderArmor(Lnet/minecraft/client/gui/GuiGraphics;II)V")
-                .modifyParams(b -> b.insert(1, Type.INT_TYPE).insert(2, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+                .modifyParams(b -> b.insert(1, Type.INT_TYPE).insert(2, Type.INT_TYPE).targetType(ParamTransformTarget.METHOD))
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/client/gui/Gui")
@@ -301,7 +302,7 @@ public class MixinPatches {
                 .targetInjectionPoint("HEAD", "")
                 .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
                 .modifyTarget("renderHealthMount(IILnet/minecraft/client/gui/GuiGraphics;)V")
-                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ParamTransformTarget.METHOD))
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/world/entity/player/Player")
@@ -461,7 +462,7 @@ public class MixinPatches {
                 .modifyParams(builder -> builder
                     .insert(0, Type.getObjectType("net/minecraft/client/renderer/entity/layers/ElytraLayer"))
                     .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
-                    .targetType(ModifyMethodParams.TargetType.INJECTION_POINT)
+                    .targetType(ParamTransformTarget.INJECTION_POINT)
                     .ignoreOffset())
                 .divertRedirector(adapter -> {
                     adapter.visitVarInsn(Opcodes.ALOAD, 1);
@@ -517,7 +518,7 @@ public class MixinPatches {
                 .targetInjectionPoint("INVOKE", "Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;m_289609_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/HumanoidModel;ZFFFLjava/lang/String;)V")
                 .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
                 .modifyParams(builder -> builder
-                    .targetType(ModifyMethodParams.TargetType.ALL)
+                    .targetType(ParamTransformTarget.ALL)
                     .replace(0, Type.getObjectType("net/minecraft/client/model/Model"))
                     .lvtFixer((index, insn, list) -> {
                         if (index == 1) {
@@ -585,7 +586,7 @@ public class MixinPatches {
             .targetAnnotationValues(h -> h.getNested("at").flatMap(v -> v.<Integer>getValue("ordinal")).map(v -> v.get() >= minOrdinal && v.get() <= maxOrdinal).orElse(false))
             .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
             .modifyTarget(targetMethodName + "(IILnet/minecraft/client/gui/GuiGraphics;)V")
-            .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ModifyMethodParams.TargetType.METHOD))
+            .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ParamTransformTarget.METHOD))
             .transform((classNode, methodNode, methodContext, context) -> {
                 methodContext.injectionPointAnnotation()
                     .<Integer>getValue("ordinal")

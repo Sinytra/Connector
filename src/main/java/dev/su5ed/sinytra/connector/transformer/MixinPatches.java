@@ -420,9 +420,7 @@ public class MixinPatches {
                 .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
                 .targetMethod("m_9280_")
                 .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V")
-                .modifyTarget("removeBlock")
-                .modifyParams(builder -> builder.insert(1, Type.BOOLEAN_TYPE))
-                .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
+                .modifyInjectionPoint("Lnet/minecraft/server/level/ServerPlayerGameMode;removeBlock(Lnet/minecraft/core/BlockPos;Z)Z")
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/server/level/ServerPlayerGameMode")

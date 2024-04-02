@@ -86,10 +86,15 @@ public final class FabricMixinBootstrap {
                 config.decorate(FabricUtil.KEY_MOD_ID, mod.moduleName());
                 if (!mod.getMods().isEmpty()) {
                     String modid = mod.getMods().get(0).getModId();
-                    int compat = ConnectorEarlyLoader.isConnectorMod(modid) ? FabricLoaderImpl.INSTANCE.getModContainer(modid)
-                        .map(m -> getMixinCompat(m.getMetadata()))
-                        .orElse(FabricUtil.COMPATIBILITY_0_10_0)
-                        : FabricUtil.COMPATIBILITY_0_10_0;
+                    int compat;
+                    if (ConnectorEarlyLoader.isConnectorMod(modid)) {
+                        compat = FabricLoaderImpl.INSTANCE.getModContainer(modid)
+                            .map(m -> getMixinCompat(m.getMetadata()))
+                            .orElse(FabricUtil.COMPATIBILITY_0_10_0);
+                        config.decorate(FabricUtil.KEY_FIX_FRAME_EXPANSION, true);
+                    } else {
+                        compat = FabricUtil.COMPATIBILITY_0_10_0;
+                    }
                     config.decorate(FabricUtil.KEY_COMPATIBILITY, compat);
                 }
             }

@@ -320,8 +320,8 @@ dependencies {
     shade(group = "io.github.steelwoolmc", name = "mixin-transmogrifier", version = versionMixinTransmog)
     adapterData(group = "org.sinytra.adapter", name = "adapter", version = versionAdapter)
 
-    annotationProcessor(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
-    compileOnly(group = "net.fabricmc", name = "sponge-mixin", version = versionMixin)
+    annotationProcessor(group = "org.sinytra", name = "sponge-mixin", version = versionMixin)
+    compileOnly(group = "org.sinytra", name = "sponge-mixin", version = versionMixin)
     implementation(jarJar("io.github.llamalad7:mixinextras-forge:${mixinextrasVersion}")!!) {
         jarJar.ranged(this, "[${mixinextrasVersion},)")
     }
@@ -330,8 +330,6 @@ dependencies {
 
     "modCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"("io.github.llamalad7:mixinextras-common:${mixinextrasVersion}")
-
-    runtimeOnly(fg.deobf("curse.maven:connector-extras-913445:5027683"))
 }
 
 tasks {

@@ -330,6 +330,8 @@ dependencies {
 
     "modCompileOnly"(sourceSets.main.get().output)
     "modCompileOnly"("io.github.llamalad7:mixinextras-common:${mixinextrasVersion}")
+
+    runtimeOnly(fg.deobf("curse.maven:connector-extras-913445:5027683"))
 }
 
 tasks {

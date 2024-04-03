@@ -1,5 +1,8 @@
 package dev.su5ed.sinytra.connector.mod;
 
+import com.electronwill.nightconfig.core.file.FileConfigBuilder;
+import com.electronwill.nightconfig.core.file.FileNotFoundAction;
+import com.electronwill.nightconfig.core.file.GenericBuilder;
 import com.google.gson.JsonElement;
 import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.locator.ConnectorConfig;
@@ -29,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Optional;
 
 @Mod(ConnectorUtil.CONNECTOR_MODID)
@@ -85,6 +89,13 @@ public class ConnectorMod {
     public static <T> Optional<T> deserializeLootTable(LootDataType<T> type, ResourceLocation location, JsonElement json) {
         return type.deserialize(location, json, DummyResourceManager.INSTANCE);
     }
+
+    // Injected into mod code by ClassAnalysingTransformer
+    @SuppressWarnings("unused")
+    public static GenericBuilder<?, ?> useModConfigResource(FileConfigBuilder builder, String resource) {
+        URL url = ConnectorMod.class.getClassLoader().getResource(resource);
+        return builder.onFileNotFound(FileNotFoundAction.copyData(url));
+    } 
 
     @SuppressWarnings("deprecation")
     public static void unfreezeRegistries() {

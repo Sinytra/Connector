@@ -17,7 +17,10 @@ public class ClassAnalysingTransformer implements ClassNodeTransformer.ClassProc
         new MethodQualifier("dev/su5ed/sinytra/connector/mod/ConnectorMod", "getModResourceAsStream", "(Ljava/lang/Class;Ljava/lang/String;)Ljava/io/InputStream;"),
 
         new MethodQualifier("Lnet/minecraft/world/level/storage/loot/LootDataType;", ASMAPI.mapMethod("m_278763_"), "(Lnet/minecraft/resources/ResourceLocation;Lcom/google/gson/JsonElement;)Ljava/util/Optional;"),
-        new MethodQualifier("dev/su5ed/sinytra/connector/mod/ConnectorMod", "deserializeLootTable", "(Lnet/minecraft/world/level/storage/loot/LootDataType;Lnet/minecraft/resources/ResourceLocation;Lcom/google/gson/JsonElement;)Ljava/util/Optional;")
+        new MethodQualifier("dev/su5ed/sinytra/connector/mod/ConnectorMod", "deserializeLootTable", "(Lnet/minecraft/world/level/storage/loot/LootDataType;Lnet/minecraft/resources/ResourceLocation;Lcom/google/gson/JsonElement;)Ljava/util/Optional;"),
+
+        new MethodQualifier("Lcom/electronwill/nightconfig/core/file/FileConfigBuilder;", "defaultResource", "(Ljava/lang/String;)Lcom/electronwill/nightconfig/core/file/GenericBuilder;"),
+        new MethodQualifier("dev/su5ed/sinytra/connector/mod/ConnectorMod", "useModConfigResource", "(Lcom/electronwill/nightconfig/core/file/FileConfigBuilder;Ljava/lang/String;)Lcom/electronwill/nightconfig/core/file/GenericBuilder;")
     );
 
     @Override

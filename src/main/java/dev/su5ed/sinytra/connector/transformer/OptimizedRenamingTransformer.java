@@ -26,6 +26,7 @@ import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.sinytra.adapter.patch.selector.AnnotationHandle;
 import org.sinytra.adapter.patch.util.MethodQualifier;
+import org.spongepowered.asm.mixin.gen.AccessorInfo;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -45,6 +46,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
     private static final String FQN_CLASS_NAME_PATTERN = "^(?:[a-zA-Z0-9$_]+\\.)*[a-zA-Z0-9$_]+$";
     private static final String INTERNAL_CLASS_NAME_PATTERN = "^(?:[a-zA-Z0-9$_]+/)*[a-zA-Z0-9$_]+$";
     private static final Pattern FIELD_QUALIFIER_PATTERN = Pattern.compile("^(?<owner>L[\\\\\\w/$]+;)?(?<name>\\w+)(?::(?<desc>\\[*[ZCBSIFJD]|\\[*L[a-zA-Z0-9/_$]+;))?$");
+    private static final String ACCESSOR_METHOD_PATTERN = "^.*(Method_|Field_|Comp_).*$";
 
     private final boolean remapRefs;
 
@@ -272,6 +274,15 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                             String fastMappedLambda = this.flatMappings.mapMethod(actualName, descriptor);
                             String mapped = fastMappedLambda != null ? fastMappedLambda : mapMethodName(owner, actualName, descriptor);
                             return name.substring(0, interfacePrefix + 1) + mapped;
+                        }
+                        if (name.matches(ACCESSOR_METHOD_PATTERN)) {
+                            AccessorInfo.AccessorName accessorName = AccessorInfo.AccessorName.of(name);
+                            if (accessorName != null) {
+                                String mapped = this.flatMappings.mapMethod(accessorName.name, descriptor);
+                                if (mapped != null) {
+                                    return accessorName.prefix + mapped.substring(0, 1).toUpperCase() + mapped.substring(1);
+                                }
+                            }
                         }
                     }
                     return null;

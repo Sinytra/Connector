@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import org.spongepowered.asm.launch.MixinLaunchPluginLegacy;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.service.MixinService;
 
 import java.io.File;
@@ -42,6 +43,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -167,7 +169,7 @@ public final class JarTransformer {
         } catch (InterruptedException ignored) {
             return List.of();
         } finally {
-            setMixinClassProvider(null);
+            cleanupEnvironment();
             progress.complete();
         }
     }
@@ -236,6 +238,31 @@ public final class JarTransformer {
         } catch (IOException e) {
             LOGGER.error("Error reading mixin config entry {} in file {}", entry.getName(), input.getAbsolutePath());
             throw new UncheckedIOException(e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void cleanupEnvironment() {
+        setMixinClassProvider(null);
+        try {
+            MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(ClassInfo.class, MethodHandles.lookup());
+
+            // Remove cached class infos, which might not be up-to-date
+            VarHandle cacheField = lookup.findStaticVarHandle(ClassInfo.class, "cache", Map.class);
+            Map<String, ClassInfo> cache = (Map<String, ClassInfo>) cacheField.get();
+            cache.clear();
+
+            VarHandle nonExpandedCacheField = lookup.findStaticVarHandle(ClassInfo.class, "nonExpandedCache", Map.class);
+            Map<String, ClassInfo> nonExpandedCache = (Map<String, ClassInfo>) nonExpandedCacheField.get();
+            nonExpandedCache.clear();
+
+            VarHandle objectField = lookup.findStaticVarHandle(ClassInfo.class, "OBJECT", ClassInfo.class);
+            ClassInfo object = (ClassInfo) objectField.get();
+
+            cache.put("java/lang/Object", object);
+            nonExpandedCache.put("java/lang/Object", object);
+        } catch (Throwable t) {
+            LOGGER.error("Error cleaning up after jar transformation", t);
         }
     }
 

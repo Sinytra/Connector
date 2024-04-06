@@ -39,6 +39,11 @@ public class ConnectorLoaderService implements ITransformationService {
     private static final String AUTHLIB_MODULE = "authlib";
     private static final Logger LOGGER = LogUtils.getLogger();
 
+    static {
+        // Enable frame expansion fixes on our mixin fork
+        System.setProperty("mixin.env.fixFrameExpansion", "true");
+    }
+
     @Override
     public String name() {
         return NAME;

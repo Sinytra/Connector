@@ -1,6 +1,7 @@
 package dev.su5ed.sinytra.connector.mod.mixin.registries;
 
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
+import dev.su5ed.sinytra.connector.mod.compat.DynamicRegistryPrefixes;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.RegistryDataLoader;
@@ -70,9 +71,13 @@ public abstract class RegistryDataLoaderMixin {
 
     @Unique
     private static boolean connector$shouldOmitPrefix(ResourceLocation location, ResourceKey<? extends Registry<?>> registryKey, ResourceManager manager) {
+        String modid = location.getNamespace();
+        // Fabric mod registries added directly to RegistryDataLoader.WORLDGEN_REGISTRIES should not be prefixed
+        if (ConnectorEarlyLoader.isConnectorMod(modid) && ModList.get().isLoaded("fabric_registry_sync_v0") && !DynamicRegistryPrefixes.isRegisteredFabricDynamicRegistry(registryKey)) {
+            return true;
+        }
         // Check if the registry has been registered
         if (DataPackRegistriesHooks.getDataPackRegistries().stream().noneMatch(data -> registryKey.equals(data.key()))) {
-            String modid = location.getNamespace();
             // If the namespace is one of a fabric mod, omit the prefix
             if (ConnectorEarlyLoader.isConnectorMod(modid)) {
                 return true;

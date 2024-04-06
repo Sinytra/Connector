@@ -5,14 +5,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
-import dev.su5ed.sinytra.connector.transformer.patch.ReflectionRenamingTransformer;
-import org.sinytra.adapter.patch.LVTOffsets;
-import org.sinytra.adapter.patch.api.GlobalReferenceMapper;
-import org.sinytra.adapter.patch.api.Patch;
-import org.sinytra.adapter.patch.api.PatchEnvironment;
-import org.sinytra.adapter.patch.serialization.PatchSerialization;
-import org.sinytra.adapter.patch.util.provider.ClassLookup;
-import org.sinytra.adapter.patch.util.provider.ZipClassLookup;
 import dev.su5ed.sinytra.connector.locator.EmbeddedDependencies;
 import dev.su5ed.sinytra.connector.service.FabricMixinBootstrap;
 import dev.su5ed.sinytra.connector.transformer.AccessWidenerTransformer;
@@ -27,17 +19,25 @@ import dev.su5ed.sinytra.connector.transformer.SrgRemappingReferenceMapper;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import dev.su5ed.sinytra.connector.transformer.patch.ConnectorRefmapHolder;
+import dev.su5ed.sinytra.connector.transformer.patch.ReflectionRenamingTransformer;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.MappingResolverImpl;
 import net.minecraftforge.coremod.api.ASMAPI;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.api.Renamer;
-import net.minecraftforge.fart.api.Transformer;
+import net.minecraftforge.fart.internal.EnhancedRemapper;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.targets.CommonLaunchHandler;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.srgutils.IMappingFile;
+import org.sinytra.adapter.patch.LVTOffsets;
+import org.sinytra.adapter.patch.api.GlobalReferenceMapper;
+import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.api.PatchEnvironment;
+import org.sinytra.adapter.patch.serialization.PatchSerialization;
+import org.sinytra.adapter.patch.util.provider.ClassLookup;
+import org.sinytra.adapter.patch.util.provider.ZipClassLookup;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -66,7 +66,7 @@ public class JarTransformInstance {
     private final List<? extends Patch> adapterPatches;
     private final LVTOffsets lvtOffsetsData;
     private final BytecodeFixerUpperFrontend bfu;
-    private final Transformer remappingTransformer;
+    private final EnhancedRemapper enhancedRemapper;
     private final ClassLookup cleanClassLookup;
     private final List<Path> libs;
 
@@ -94,7 +94,9 @@ public class JarTransformInstance {
         }
 
         this.bfu = new BytecodeFixerUpperFrontend();
-        this.remappingTransformer = OptimizedRenamingTransformer.create(classProvider, s -> {}, FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE), IntermediateMapping.get(SOURCE_NAMESPACE));
+        IMappingFile mappingFile = FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(SOURCE_NAMESPACE);
+        ClassProvider intermediaryClassProvider = new OptimizedRenamingTransformer.IntermediaryClassProvider(classProvider, mappingFile, mappingFile.reverse(), s -> {});
+        this.enhancedRemapper = new OptimizedRenamingTransformer.MixinAwareEnhancedRemapper(intermediaryClassProvider, mappingFile, IntermediateMapping.get(SOURCE_NAMESPACE), s -> {});
         this.cleanClassLookup = createCleanClassLookup();
         this.libs = libs;
 
@@ -137,7 +139,7 @@ public class JarTransformInstance {
                 accessorRedirectTransformer,
                 new ReflectionRenamingTransformer(intermediaryToSrg, IntermediateMapping.get(SOURCE_NAMESPACE))
             ))
-            .add(this.remappingTransformer)
+            .add(new OptimizedRenamingTransformer(this.enhancedRemapper, false, metadata.refmaps().isEmpty()))
             .add(new ClassNodeTransformer(new ClassAnalysingTransformer()))
             .add(patchTransformer)
             .add(refmapRemapper)

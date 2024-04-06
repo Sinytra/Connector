@@ -2,7 +2,6 @@ package dev.su5ed.sinytra.connector.transformer;
 
 import dev.su5ed.sinytra.connector.transformer.jar.IntermediateMapping;
 import net.minecraftforge.fart.api.ClassProvider;
-import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.fart.internal.ClassProviderImpl;
 import net.minecraftforge.fart.internal.EnhancedClassRemapper;
 import net.minecraftforge.fart.internal.EnhancedRemapper;
@@ -27,6 +26,7 @@ import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.sinytra.adapter.patch.selector.AnnotationHandle;
 import org.sinytra.adapter.patch.util.MethodQualifier;
+import org.spongepowered.asm.mixin.gen.AccessorInfo;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -37,20 +37,23 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public final class OptimizedRenamingTransformer extends RenamingTransformer {
     private static final String CLASS_DESC_PATTERN = "^L[a-zA-Z0-9/$_]+;$";
-    private static final String FQN_CLASS_NAME_PATTERN = "^([a-zA-Z0-9$_]+\\.)*[a-zA-Z0-9$_]+$";
+    private static final String FQN_CLASS_NAME_PATTERN = "^(?:[a-zA-Z0-9$_]+\\.)*[a-zA-Z0-9$_]+$";
+    private static final String INTERNAL_CLASS_NAME_PATTERN = "^(?:[a-zA-Z0-9$_]+/)*[a-zA-Z0-9$_]+$";
+    private static final Pattern FIELD_QUALIFIER_PATTERN = Pattern.compile("^(?<owner>L[\\\\\\w/$]+;)?(?<name>\\w+)(?::(?<desc>\\[*[ZCBSIFJD]|\\[*L[a-zA-Z0-9/_$]+;))?$");
+    private static final String ACCESSOR_METHOD_PATTERN = "^.*(Method_|Field_|Comp_).*$";
 
-    public static Transformer create(ClassProvider classProvider, Consumer<String> log, IMappingFile mappingFile, IntermediateMapping flatMappings) {
-        IntermediaryClassProvider reverseProvider = new IntermediaryClassProvider(classProvider, mappingFile, mappingFile.reverse(), log);
-        EnhancedRemapper enhancedRemapper = new MixinAwareEnhancedRemapper(reverseProvider, mappingFile, flatMappings, log);
-        return new OptimizedRenamingTransformer(enhancedRemapper, false);
-    }
+    private final boolean remapRefs;
 
-    public OptimizedRenamingTransformer(EnhancedRemapper remapper, boolean collectAbstractParams) {
+    public OptimizedRenamingTransformer(EnhancedRemapper remapper, boolean collectAbstractParams, boolean remapRefs) {
         super(remapper, collectAbstractParams);
+
+        this.remapRefs = remapRefs;
     }
 
     @Override
@@ -66,11 +69,16 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                 postProcessRemapper.mapAnnotationValues(annotation.values);
             }
         }
+        if (node.invisibleAnnotations != null) {
+            for (AnnotationNode annotation : node.invisibleAnnotations) {
+                postProcessRemapper.mapAnnotationValues(annotation.values);
+            }
+        }
         for (MethodNode method : node.methods) {
             if (method.visibleAnnotations != null) {
-                // If remap has been set to false during compilation, we must manually map the annotation values ourselves instead of relying on the provided refmap
-                if (method.visibleAnnotations.stream().anyMatch(ann -> new AnnotationHandle(ann).<Boolean>getValue("remap").map(h -> !h.get()).orElse(false))) {
-                    for (AnnotationNode annotation : method.visibleAnnotations) {
+                for (AnnotationNode annotation : method.visibleAnnotations) {
+                    // If remap has been set to false during compilation, we must manually map the annotation values ourselves instead of relying on the provided refmap
+                    if (this.remapRefs || new AnnotationHandle(annotation).<Boolean>getValue("remap").map(h -> !h.get()).orElse(false)) {
                         postProcessRemapper.mapAnnotationValues(annotation.values);
                     }
                 }
@@ -117,15 +125,21 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         public Object mapValue(Object value) {
             if (value instanceof String str) {
                 if (str.matches(CLASS_DESC_PATTERN)) {
-                    String mapped = flatMappings.map(str.substring(1, str.length() - 1));
+                    String mapped = this.flatMappings.map(str.substring(1, str.length() - 1));
                     if (mapped != null) {
                         return 'L' + mapped + ';';
                     }
                 }
                 else if (str.matches(FQN_CLASS_NAME_PATTERN)) {
-                    String mapped = flatMappings.map(str.replace('.', '/'));
+                    String mapped = this.flatMappings.map(str.replace('.', '/'));
                     if (mapped != null) {
                         return mapped.replace('/', '.');
+                    }
+                }
+                else if (str.matches(INTERNAL_CLASS_NAME_PATTERN)) {
+                    String mapped = this.flatMappings.map(str);
+                    if (mapped != null) {
+                        return mapped;
                     }
                 }
 
@@ -135,6 +149,21 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                     String name = qualifier.name() != null ? this.flatMappings.mapMethodOrDefault(qualifier.name(), qualifier.desc()) : "";
                     String desc = this.remapper.mapMethodDesc(qualifier.desc());
                     return owner + name + desc;
+                }
+                else {
+                    Matcher fieldMatcher = FIELD_QUALIFIER_PATTERN.matcher(str);
+                    if (fieldMatcher.matches()) {
+                        String owner = fieldMatcher.group("owner");
+                        String name = fieldMatcher.group("name");
+                        String desc = fieldMatcher.group("desc");
+
+                        if (owner != null || name != null && (name.startsWith("field_") || name.startsWith("comp_"))) {
+                            String mappedOwner = owner != null ? this.remapper.mapDesc(owner) : "";
+                            String mappedName = name != null ? this.flatMappings.mapField(name, desc != null ? desc : "") : "";
+
+                            return mappedOwner + mappedName + (desc != null ? ":" + this.remapper.mapDesc(desc) : "");
+                        }
+                    }
                 }
 
                 String mapped = this.flatMappings.map(str);
@@ -146,14 +175,14 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         }
     }
 
-    private static final class IntermediaryClassProvider implements ClassProvider {
+    public static final class IntermediaryClassProvider implements ClassProvider {
         private final ClassProvider upstream;
         private final IMappingFile forwardMapping;
         private final EnhancedRemapper remapper;
 
         private final Map<String, Optional<IClassInfo>> classCache = new ConcurrentHashMap<>();
 
-        private IntermediaryClassProvider(ClassProvider upstream, IMappingFile forwardMapping, IMappingFile reverseMapping, Consumer<String> log) {
+        public IntermediaryClassProvider(ClassProvider upstream, IMappingFile forwardMapping, IMappingFile reverseMapping, Consumer<String> log) {
             this.upstream = upstream;
             this.forwardMapping = forwardMapping;
             this.remapper = new EnhancedRemapper(upstream, reverseMapping, log);
@@ -191,7 +220,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         }
     }
 
-    private static class MixinAwareEnhancedRemapper extends EnhancedRemapper {
+    public static class MixinAwareEnhancedRemapper extends EnhancedRemapper {
         private final IntermediateMapping flatMappings;
 
         public MixinAwareEnhancedRemapper(ClassProvider classProvider, IMappingFile map, IntermediateMapping flatMappings, Consumer<String> log) {
@@ -245,6 +274,15 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                             String fastMappedLambda = this.flatMappings.mapMethod(actualName, descriptor);
                             String mapped = fastMappedLambda != null ? fastMappedLambda : mapMethodName(owner, actualName, descriptor);
                             return name.substring(0, interfacePrefix + 1) + mapped;
+                        }
+                        if (name.matches(ACCESSOR_METHOD_PATTERN)) {
+                            AccessorInfo.AccessorName accessorName = AccessorInfo.AccessorName.of(name);
+                            if (accessorName != null) {
+                                String mapped = this.flatMappings.mapMethod(accessorName.name, descriptor);
+                                if (mapped != null) {
+                                    return accessorName.prefix + mapped.substring(0, 1).toUpperCase() + mapped.substring(1);
+                                }
+                            }
                         }
                     }
                     return null;

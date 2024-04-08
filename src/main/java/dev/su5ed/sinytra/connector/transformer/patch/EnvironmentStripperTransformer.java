@@ -1,11 +1,9 @@
 package dev.su5ed.sinytra.connector.transformer.patch;
 
-import org.sinytra.adapter.patch.api.ClassTransform;
-import org.sinytra.adapter.patch.api.Patch;
-import org.sinytra.adapter.patch.api.PatchContext;
-import org.sinytra.adapter.patch.selector.AnnotationValueHandle;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.api.EnvironmentInterface;
+import net.fabricmc.api.EnvironmentInterfaces;
 import net.fabricmc.loader.api.FabricLoader;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Handle;
@@ -16,6 +14,11 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.sinytra.adapter.patch.api.ClassTransform;
+import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.api.PatchContext;
+import org.sinytra.adapter.patch.selector.AnnotationHandle;
+import org.sinytra.adapter.patch.selector.AnnotationValueHandle;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -23,12 +26,15 @@ import java.util.List;
 
 public class EnvironmentStripperTransformer implements ClassTransform {
     private static final String ENVIRONMENT_ANNOTATION = Type.getDescriptor(Environment.class);
+    private static final String ENVIRONMENT_INTERFACE_DESCRIPTOR = Type.getDescriptor(EnvironmentInterface.class);
+    private static final String ENVIRONMENT_INTERFACES_DESCRIPTOR = Type.getDescriptor(EnvironmentInterfaces.class);
     private static final EnvType CURRENT_ENV = FabricLoader.getInstance().getEnvironmentType();
     private static final String LAMBDA_PREFIX = "lambda$";
 
     @Override
     public Patch.Result apply(ClassNode classNode, @Nullable AnnotationValueHandle<?> annotation, PatchContext context) {
-        boolean applied = false;
+        boolean applied = stripEnvironmentInterface(classNode.interfaces, classNode.invisibleAnnotations);
+
         List<MethodNode> removeMethods = new ArrayList<>();
         for (MethodNode method : classNode.methods) {
             if (remove(method.invisibleAnnotations)) {
@@ -71,6 +77,40 @@ public class EnvironmentStripperTransformer implements ClassTransform {
         return list;
     }
 
+    private static boolean stripEnvironmentInterface(List<String> interfaces, @Nullable List<AnnotationNode> annotations) {
+        if (annotations != null) {
+            boolean removed = false;
+            for (AnnotationNode annotation : annotations) {
+                if (ENVIRONMENT_INTERFACE_DESCRIPTOR.equals(annotation.desc) && stripInterface(interfaces, new AnnotationHandle(annotation)) 
+                    || ENVIRONMENT_INTERFACES_DESCRIPTOR.equals(annotation.desc) && stripInterfaces(interfaces, new AnnotationHandle(annotation))
+                ) {
+                    removed = true;
+                }
+            }
+            return removed;
+        }
+        return false;
+    }
+
+    private static boolean stripInterfaces(List<String> interfaces, AnnotationHandle handle) {
+        boolean removed = false;
+        List<AnnotationNode> annotations = handle.<List<AnnotationNode>>getValue("value").map(AnnotationValueHandle::get).orElse(List.of());
+        for (AnnotationNode annotation : annotations) {
+            removed |= stripInterface(interfaces, new AnnotationHandle(annotation));
+        }
+        return removed;
+    }
+
+    private static boolean stripInterface(List<String> interfaces, AnnotationHandle handle) {
+        boolean strip = handle.<String[]>getValue("value").map(h -> readEnvType(h.get()) != CURRENT_ENV).orElse(false);
+        if (strip) {
+            Type itf = handle.<Type>getValue("itf").orElseThrow().get();
+            interfaces.remove(itf.getInternalName());
+            return true;
+        }
+        return false;
+    }
+
     // We strip annotations ahead of time to avoid class resolution issues leading to CNFEs
     private static boolean remove(@Nullable List<AnnotationNode> annotations) {
         if (annotations != null) {
@@ -88,11 +128,15 @@ public class EnvironmentStripperTransformer implements ClassTransform {
             throw new IllegalArgumentException("Unexpected " + node.values.size() + " values for annotation " + node.desc);
         }
         String[] args = (String[]) node.values.get(1);
+        EnvType type = readEnvType(args);
+        return CURRENT_ENV != type;
+    }
+
+    private static EnvType readEnvType(String[] args) {
         if (args.length != 2) {
-            throw new IllegalArgumentException("Unexpected size of annotation value array" + args.length + " for " + node.desc);
+            throw new IllegalArgumentException("Unexpected size of annotation value array" + args.length);
         }
         String side = args[1];
-        EnvType type = EnvType.valueOf(side);
-        return CURRENT_ENV != type;
+        return EnvType.valueOf(side);
     }
 }

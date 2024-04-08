@@ -69,6 +69,7 @@ public final class DependencyResolver {
             List<JarTransformer.TransformableJar> candidateJars = resolved.stream()
                 .map(jarToCandidate.inverse()::get)
                 .filter(Objects::nonNull)
+                .filter(jar -> jar.modPath().metadata().modMetadata().loadsInEnvironment(envType))
                 .toList();
             LOGGER.info("Dependency resolution found {} candidates to load", candidateJars.size());
             return candidateJars;

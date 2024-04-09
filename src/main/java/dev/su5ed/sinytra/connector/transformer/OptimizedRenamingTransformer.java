@@ -25,6 +25,7 @@ import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.sinytra.adapter.patch.selector.AnnotationHandle;
+import org.sinytra.adapter.patch.selector.AnnotationValueHandle;
 import org.sinytra.adapter.patch.util.MethodQualifier;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
 
@@ -47,6 +48,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
     private static final String INTERNAL_CLASS_NAME_PATTERN = "^(?:[a-zA-Z0-9$_]+/)*[a-zA-Z0-9$_]+$";
     private static final Pattern FIELD_QUALIFIER_PATTERN = Pattern.compile("^(?<owner>L[\\\\\\w/$]+;)?(?<name>\\w+)(?::(?<desc>\\[*[ZCBSIFJD]|\\[*L[a-zA-Z0-9/_$]+;))?$");
     private static final String ACCESSOR_METHOD_PATTERN = "^.*(Method_|Field_|Comp_).*$";
+    private static final Pattern REGEX_DESC_PATTERN = Pattern.compile("^.*(net\\\\/minecraft\\\\/class_\\d{4}).*$");
 
     private final boolean remapRefs;
 
@@ -77,10 +79,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         for (MethodNode method : node.methods) {
             if (method.visibleAnnotations != null) {
                 for (AnnotationNode annotation : method.visibleAnnotations) {
-                    // If remap has been set to false during compilation, we must manually map the annotation values ourselves instead of relying on the provided refmap
-                    if (this.remapRefs || new AnnotationHandle(annotation).<Boolean>getValue("remap").map(h -> !h.get()).orElse(false)) {
-                        postProcessRemapper.mapAnnotationValues(annotation.values);
-                    }
+                    processMixinAnnotation(annotation, postProcessRemapper);
                 }
             }
             for (AbstractInsnNode insn : method.instructions) {
@@ -97,6 +96,31 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         }
         for (FieldNode field : node.fields) {
             field.value = postProcessRemapper.mapValue(field.value);
+        }
+    }
+
+    private void processMixinAnnotation(AnnotationNode annotation, PostProcessRemapper postProcessRemapper) {
+        AnnotationHandle handle = new AnnotationHandle(annotation);
+        // Take care of regex method specifiers
+        handle.<List<String>>getValue("method")
+            .map(AnnotationValueHandle::get)
+            .filter(list -> list.size() == 1 && list.get(0).startsWith("desc="))
+            .ifPresent(h -> {
+                String method = h.get(0);
+                Matcher matcher = REGEX_DESC_PATTERN.matcher(method);
+                if (matcher.matches()) {
+                    String className = matcher.group(1);
+                    String mapped = ((MixinAwareEnhancedRemapper) this.remapper).flatMappings.map(className.replace("\\/", "/"));
+                    if (mapped != null) {
+                        String mappedClassName = mapped.replace("/", "\\/");
+                        String mappedMethod = method.replace(className, mappedClassName);
+                        h.set(0, mappedMethod);
+                    }
+                }
+            });
+        // If remap has been set to false during compilation, we must manually map the annotation values ourselves instead of relying on the provided refmap
+        if (this.remapRefs || handle.<Boolean>getValue("remap").map(h -> !h.get()).orElse(false)) {
+            postProcessRemapper.mapAnnotationValues(annotation.values);
         }
     }
 

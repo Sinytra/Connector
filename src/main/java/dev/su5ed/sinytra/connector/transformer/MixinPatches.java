@@ -90,6 +90,12 @@ public class MixinPatches {
                 .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/world/entity/monster/Zombie")
+                .targetMethod("m_6469_")
+                .targetInjectionPoint("Lnet/minecraft/world/entity/monster/Zombie;m_21133_(Lnet/minecraft/world/entity/ai/attributes/Attribute;)D")
+                .modifyInjectionPoint("Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;m_22135_()D")
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/world/level/block/FarmBlock")
                 .targetMethod("m_53258_(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z")
                 .targetInjectionPoint("Lnet/minecraft/world/level/material/FluidState;m_205070_(Lnet/minecraft/tags/TagKey;)Z")

@@ -452,6 +452,13 @@ public class MixinPatches {
                         }))
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/world/entity/LivingEntity")
+                .targetMethod("updateFallFlying") // updateFallFlying, m_21323_
+                .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41622_(ILnet/minecraft/world/entity/LivingEntity;Ljava/util/function/Consumer;)V") // hurtAndBreak, m_41622_
+                .extractMixin("net/minecraft/world/item/ElytraItem")
+                .modifyTarget("elytraFlightTick(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;I)Z")
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
                 .targetMethod("m_9280_")
                 .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V")

@@ -1,7 +1,6 @@
 package dev.su5ed.sinytra.connector.transformer;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -51,15 +50,7 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowConsumer;
 import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 
 public class MixinPatchTransformer implements Transformer {
-    private static final List<Patch> PRIORITY_PATCHES = Lists.newArrayList(
-        Patch.builder()
-            .targetClass("net/minecraft/world/item/ItemStack")
-            .targetMethod("m_41661_")
-            .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;")
-            .modifyTarget("connector_useOn")
-            .modifyInjectionPoint("RETURN", "", true)
-            .build()
-    );
+    private static final List<Patch> PRIORITY_PATCHES = MixinPatches.getPriorityPatches();
     private static final List<Patch> PATCHES = MixinPatches.getPatches();
     // Applied to non-mixins
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(

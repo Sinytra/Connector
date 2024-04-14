@@ -9,7 +9,6 @@ import dev.su5ed.sinytra.connector.ConnectorUtil;
 import dev.su5ed.sinytra.connector.loader.ConnectorEarlyLoader;
 import dev.su5ed.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import dev.su5ed.sinytra.connector.transformer.jar.JarTransformer;
-import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.minecraftforge.fml.loading.ClasspathLocatorUtils;
 import net.minecraftforge.fml.loading.EarlyLoadingException;
@@ -135,7 +134,7 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
         Collection<? super IModFile> ignoredModFiles = new ArrayList<>();
         // Remove mods loaded by FML
         List<JarTransformer.TransformableJar> uniqueJars = handleDuplicateMods(discoveredJars, discoveredNestedJars, loadedModInfos, ignoredModFiles);
-        // Ensure we have all required dependencies before transforming
+        // Ensure we have all required dependencies before transforming, remove side-only mods
         List<JarTransformer.TransformableJar> candidates = DependencyResolver.resolveDependencies(uniqueJars, parentToChildren, loadedModFiles);
         // Get renamer library classpath
         List<Path> renameLibs = loadedModFiles.stream().map(modFile -> modFile.getSecureJar().getRootPath()).toList();
@@ -318,7 +317,6 @@ public class ConnectorLocator extends AbstractJarFileModProvider implements IDep
     }
 
     private static boolean shouldIgnoreMod(ConnectorLoaderModMetadata metadata, Collection<String> loadedModIds) {
-        if (!metadata.loadsInEnvironment(FabricLoader.getInstance().getEnvironmentType())) return true;
         String id = metadata.getId();
         return ConnectorUtil.DISABLED_MODS.contains(id) || loadedModIds.contains(id);
     }

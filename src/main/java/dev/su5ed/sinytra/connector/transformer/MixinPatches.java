@@ -23,6 +23,24 @@ import java.util.stream.Stream;
 
 @SuppressWarnings("deprecation")
 public class MixinPatches {
+    public static List<Patch> getPriorityPatches() {
+        return List.of(
+            Patch.builder()
+                .targetClass("net/minecraft/world/item/ItemStack")
+                .targetMethod("m_41661_")
+                .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;")
+                .modifyTarget("connector_useOn")
+                .modifyInjectionPoint("RETURN", "", true)
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/server/level/ServerPlayer")
+                .targetMethod("m_5489_(Lnet/minecraft/server/level/ServerLevel;)Lnet/minecraft/world/entity/Entity;")
+                .targetInjectionPoint("Lnet/minecraft/server/level/ServerPlayer;m_284127_(Lnet/minecraft/server/level/ServerLevel;)V")
+                .modifyTarget("lambda$changeDimension$8(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/portal/PortalInfo;Ljava/lang/Boolean;)Lnet/minecraft/world/entity/Entity;")
+                .build()
+        );
+    }
+
     public static List<Patch> getPatches() {
         final List<Object> patches = List.of(Patch.builder()
                 .targetClass("net/minecraft/client/Minecraft")
@@ -35,6 +53,15 @@ public class MixinPatches {
                 .targetMethod("main([Ljava/lang/String;)V")
                 .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
                 .modifyInjectionPoint("Lnet/minecraftforge/server/loading/ServerModLoader;load()V")
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/LivingEntity")
+                .targetMethod("m_7023_(Lnet/minecraft/world/phys/Vec3;)V")
+                .targetConstant(0.01)
+                .modifyMixinType(MixinConstants.MODIFY_EXPR_VAL, b -> b
+                    .sameTarget()
+                    .injectionPoint("INVOKE", "Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;m_22135_()D")
+                    .putValue("ordinal", 0))
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/client/KeyMapping")
@@ -55,11 +82,18 @@ public class MixinPatches {
                 .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC))
                 .extractMixin("net/minecraftforge/common/extensions/IForgeBlockState")
                 .build(),
+            // TODO This should be handled by adapter
             Patch.builder()
                 .targetClass("net/minecraft/client/multiplayer/MultiPlayerGameMode")
                 .targetMethod("m_105267_")
                 .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V")
                 .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/monster/Zombie")
+                .targetMethod("m_6469_")
+                .targetInjectionPoint("Lnet/minecraft/world/entity/monster/Zombie;m_21133_(Lnet/minecraft/world/entity/ai/attributes/Attribute;)D")
+                .modifyInjectionPoint("Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;m_22135_()D")
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/world/level/block/FarmBlock")
@@ -390,32 +424,32 @@ public class MixinPatches {
                 .targetMethod("m_7023_") // travel
                 .targetMixinType(MixinConstants.MODIFY_VAR)
                 .targetAnnotationValues(handle -> handle.getNested("at")
-                        .filter(at -> at.getValue("value")
-                                .filter(h -> h.get().equals("CONSTANT"))
-                                .isPresent())
-                        .flatMap(at -> at.getValue("args"))
-                        .map(v -> (List<String>) v.get())
-                        .map(v -> v.size() == 1 && v.get(0).equals("doubleValue=0.01"))
-                        .orElse(false))
+                    .filter(at -> at.getValue("value")
+                        .filter(h -> h.get().equals("CONSTANT"))
+                        .isPresent())
+                    .flatMap(at -> at.getValue("args"))
+                    .map(v -> (List<String>) v.get())
+                    .map(v -> v.size() == 1 && v.get(0).equals("doubleValue=0.01"))
+                    .orElse(false))
                 .modifyMixinType(MixinConstants.WRAP_OPERATION, builder -> builder
-                        .sameTarget()
-                        .injectionPoint("INVOKE", "Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;m_22135_()D") // getValue
-                        .putValue("ordinal", 0))
+                    .sameTarget()
+                    .injectionPoint("INVOKE", "Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;m_22135_()D") // getValue
+                    .putValue("ordinal", 0))
                 .transformParams(builder ->
-                        builder.inject(0, Type.getType("Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;"))
-                                .inject(1, Type.getObjectType(MixinConstants.OPERATION_INTERNAL_NAME))
-                                .inline(2, adapter -> {
-                                    adapter.visitVarInsn(Opcodes.ALOAD, 2);
-                                    adapter.visitInsn(Opcodes.ICONST_1);
-                                    adapter.visitTypeInsn(Opcodes.ANEWARRAY, "java/lang/Object");
-                                    adapter.visitInsn(Opcodes.DUP);
-                                    adapter.visitInsn(Opcodes.ICONST_0);
-                                    adapter.visitVarInsn(Opcodes.ALOAD, 1);
-                                    adapter.visitInsn(Opcodes.AASTORE);
-                                    adapter.visitMethodInsn(Opcodes.INVOKEINTERFACE, "com/llamalad7/mixinextras/injector/wrapoperation/Operation", "call", "([Ljava/lang/Object;)Ljava/lang/Object;", true);
-                                    adapter.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/Double");
-                                    adapter.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
-                                }))
+                    builder.inject(0, Type.getType("Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;"))
+                        .inject(1, Type.getObjectType(MixinConstants.OPERATION_INTERNAL_NAME))
+                        .inline(2, adapter -> {
+                            adapter.visitVarInsn(Opcodes.ALOAD, 2);
+                            adapter.visitInsn(Opcodes.ICONST_1);
+                            adapter.visitTypeInsn(Opcodes.ANEWARRAY, "java/lang/Object");
+                            adapter.visitInsn(Opcodes.DUP);
+                            adapter.visitInsn(Opcodes.ICONST_0);
+                            adapter.visitVarInsn(Opcodes.ALOAD, 1);
+                            adapter.visitInsn(Opcodes.AASTORE);
+                            adapter.visitMethodInsn(Opcodes.INVOKEINTERFACE, "com/llamalad7/mixinextras/injector/wrapoperation/Operation", "call", "([Ljava/lang/Object;)Ljava/lang/Object;", true);
+                            adapter.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/Double");
+                            adapter.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
+                        }))
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/server/level/ServerPlayerGameMode")
@@ -570,7 +604,7 @@ public class MixinPatches {
                 })
                 .build(),
 
-                buildReplayModPatches());
+            buildReplayModPatches());
 
         return patches.stream()
             .flatMap(p -> p instanceof List<?> lst ? lst.stream() : Stream.of(p))

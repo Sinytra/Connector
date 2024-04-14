@@ -24,7 +24,8 @@
     "registries.BuiltInRegistriesMixin",
     "registries.ForgeRegistryMixin",
     "registries.MappedRegistryMixin",
-    "registries.RegistryDataLoaderMixin"
+    "registries.RegistryDataLoaderMixin",
+    "registries.NamespacedWrapperMixin"
   ],
   "client": [
     "ForgeHooksClientMixin",

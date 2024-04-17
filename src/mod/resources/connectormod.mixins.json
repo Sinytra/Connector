@@ -43,7 +43,8 @@
     "recipebook.RecipeBookCategoriesAccessor",
     "recipebook.RecipeBookCategoriesMixin",
     "recipebook.RecipeBookManagerMixin",
-    "registries.MinecraftMixin"
+    "registries.MinecraftMixin",
+    "registries.ClientForgeRegistryMixin"
   ],
   "server": [
     "boot.ServerMainMixin",

@@ -42,7 +42,8 @@ public class MixinPatches {
     }
 
     public static List<Patch> getPatches() {
-        final List<Object> patches = List.of(Patch.builder()
+        final List<Object> patches = List.of(
+            Patch.builder()
                 .targetClass("net/minecraft/client/Minecraft")
                 .targetMethod("<init>")
                 .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startClient(Ljava/io/File;Ljava/lang/Object;)V")

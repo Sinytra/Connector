@@ -50,7 +50,7 @@ public class ModMetadataGenerator implements Transformer {
 
         // Generate pack metadata
         if (!this.seen) {
-            byte[] data = generatePackMetadataFile(this.modid);
+            byte[] data = generatePackMetadataFile(this.modid); // TODO Remove in 1.20.5
             extras.add(ResourceEntry.create(RESOURCE, ConnectorUtil.ZIP_TIME, data));
         }
         return extras;

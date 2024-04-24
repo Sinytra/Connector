@@ -65,6 +65,12 @@ public class MixinPatches {
                     .putValue("ordinal", 0))
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/world/item/HoeItem")
+                .targetMethod("m_6225_(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;")
+                .targetInjectionPoint("FIELD", "Lnet/minecraft/world/item/HoeItem;f_41332_:Ljava/util/Map;")
+                .modifyInjectionPoint("INVOKE", "Lnet/minecraft/world/level/block/state/BlockState;getToolModifiedState(Lnet/minecraft/world/item/context/UseOnContext;Lnet/minecraftforge/common/ToolAction;Z)Lnet/minecraft/world/level/block/state/BlockState;", true)
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/client/KeyMapping")
                 .targetMethod("m_90837_")
                 .targetInjectionPoint("TAIL", "")

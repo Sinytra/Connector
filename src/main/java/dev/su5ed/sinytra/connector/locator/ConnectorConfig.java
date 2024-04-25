@@ -80,8 +80,4 @@ public record ConnectorConfig(int version, List<String> hiddenMods, Multimap<Str
         }
         return DEFAULT;
     });
-
-    public static boolean usesUnsupportedConfiguration() {
-        return Files.exists(FMLPaths.CONFIGDIR.get().resolve("connector_global_mod_aliases.json"));
-    }
 }

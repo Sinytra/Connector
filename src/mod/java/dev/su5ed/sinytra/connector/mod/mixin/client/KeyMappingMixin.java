@@ -29,11 +29,11 @@ public class KeyMappingMixin {
     @Shadow
     private static KeyMappingLookup MAP;
 
-    @Shadow(remap = false, aliases = "f_90810_")
+    @Shadow(remap = false, aliases = { "f_90810_", "MAP" })
     private static final Map<InputConstants.Key, KeyMapping> vanillaKeyMapping;
-    
+
     private static final ThreadLocal<KeyMapping> KEY_MAPPING_LOCAL = new ThreadLocal<>();
-    
+
     @Inject(method = "set", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/KeyMapping;setDown(Z)V"))
     private static void onSetKeyMapping(InputConstants.Key pKey, boolean pHeld, CallbackInfo ci, @Local KeyMapping keyMapping) {
         KEY_MAPPING_LOCAL.set(keyMapping);
@@ -50,7 +50,7 @@ public class KeyMappingMixin {
         // if they use the field in their code or otherwise reflect (see voxelmap)
         // The field is added back through a coremod, and here it is semi-delegated
         final EnumMap<KeyModifier, Map<InputConstants.Key, Collection<KeyMapping>>> actualMap = ObfuscationReflectionHelper
-                .getPrivateValue(KeyMappingLookup.class, MAP, "map");
+            .getPrivateValue(KeyMappingLookup.class, MAP, "map");
         final var delegate = actualMap.get(KeyModifier.NONE);
         vanillaKeyMapping = new Map<>() {
             @Override
@@ -99,7 +99,7 @@ public class KeyMappingMixin {
             public boolean remove(Object key, Object value) {
                 Object curValue = get(key);
                 if (!Objects.equals(curValue, value) ||
-                        (curValue == null && !containsKey(key))) {
+                    (curValue == null && !containsKey(key))) {
                     return false;
                 }
                 MAP.remove((KeyMapping) value);
@@ -126,20 +126,20 @@ public class KeyMappingMixin {
             @Override
             public Collection<KeyMapping> values() {
                 return delegate.values()
-                        .stream().flatMap(Collection::stream)
-                        .toList();
+                    .stream().flatMap(Collection::stream)
+                    .toList();
             }
 
             @NotNull
             @Override
             public Set<Entry<InputConstants.Key, KeyMapping>> entrySet() {
                 return delegate.entrySet().stream()
-                        .filter(e -> !e.getValue().isEmpty())
-                        .collect(Collectors.toMap(
-                                Entry::getKey,
-                                e -> ((ArrayList<KeyMapping>) e.getValue()).get(0)
-                        ))
-                        .entrySet();
+                    .filter(e -> !e.getValue().isEmpty())
+                    .collect(Collectors.toMap(
+                        Entry::getKey,
+                        e -> ((ArrayList<KeyMapping>) e.getValue()).get(0)
+                    ))
+                    .entrySet();
             }
         };
     }

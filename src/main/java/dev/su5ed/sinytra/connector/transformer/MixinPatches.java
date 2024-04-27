@@ -306,6 +306,14 @@ public class MixinPatches {
             Patch.builder()
                 .targetClass("net/minecraft/client/gui/Gui")
                 .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+                .targetInjectionPoint("Lnet/minecraft/world/food/FoodData;m_38722_()F")
+                .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+                .modifyTarget("renderFood(IILnet/minecraft/client/gui/GuiGraphics;)V")
+                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ParamTransformTarget.METHOD))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/gui/Gui")
+                .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
                 .targetInjectionPoint("HEAD", "")
                 .modifyTarget("connector_renderHealth")
                 .build(),

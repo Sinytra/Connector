@@ -42,7 +42,8 @@ public class MixinPatches {
     }
 
     public static List<Patch> getPatches() {
-        final List<Object> patches = List.of(Patch.builder()
+        final List<Object> patches = List.of(
+            Patch.builder()
                 .targetClass("net/minecraft/client/Minecraft")
                 .targetMethod("<init>")
                 .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startClient(Ljava/io/File;Ljava/lang/Object;)V")
@@ -62,6 +63,12 @@ public class MixinPatches {
                     .sameTarget()
                     .injectionPoint("INVOKE", "Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;m_22135_()D")
                     .putValue("ordinal", 0))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/item/HoeItem")
+                .targetMethod("m_6225_(Lnet/minecraft/world/item/context/UseOnContext;)Lnet/minecraft/world/InteractionResult;")
+                .targetInjectionPoint("FIELD", "Lnet/minecraft/world/item/HoeItem;f_41332_:Ljava/util/Map;")
+                .modifyInjectionPoint("INVOKE", "Lnet/minecraft/world/level/block/state/BlockState;getToolModifiedState(Lnet/minecraft/world/item/context/UseOnContext;Lnet/minecraftforge/common/ToolAction;Z)Lnet/minecraft/world/level/block/state/BlockState;", true)
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/client/KeyMapping")
@@ -299,6 +306,14 @@ public class MixinPatches {
             Patch.builder()
                 .targetClass("net/minecraft/client/gui/Gui")
                 .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
+                .targetInjectionPoint("Lnet/minecraft/world/food/FoodData;m_38722_()F")
+                .extractMixin("net/minecraftforge/client/gui/overlay/ForgeGui")
+                .modifyTarget("renderFood(IILnet/minecraft/client/gui/GuiGraphics;)V")
+                .modifyParams(b -> b.insert(0, Type.INT_TYPE).insert(1, Type.INT_TYPE).targetType(ParamTransformTarget.METHOD))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/client/gui/Gui")
+                .targetMethod("m_280173_(Lnet/minecraft/client/gui/GuiGraphics;)V")
                 .targetInjectionPoint("HEAD", "")
                 .modifyTarget("connector_renderHealth")
                 .build(),
@@ -450,6 +465,13 @@ public class MixinPatches {
                             adapter.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/Double");
                             adapter.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
                         }))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/LivingEntity")
+                .targetMethod("updateFallFlying") // updateFallFlying, m_21323_
+                .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41622_(ILnet/minecraft/world/entity/LivingEntity;Ljava/util/function/Consumer;)V") // hurtAndBreak, m_41622_
+                .extractMixin("net/minecraft/world/item/ElytraItem")
+                .modifyTarget("elytraFlightTick(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;I)Z")
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/server/level/ServerPlayerGameMode")

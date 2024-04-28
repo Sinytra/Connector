@@ -96,9 +96,6 @@ public class ConnectorEarlyLoader {
         LOGGER.debug("Starting early connector loader setup");
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Early Setup", 0);
         try {
-            if (ConnectorConfig.usesUnsupportedConfiguration()) {
-                LOGGER.warn("Outdated connector_global_mod_aliases.json configuration file detected. Please migrate to the new connector.json configuration.");
-            }
             List<String> hiddenMods = ConnectorConfig.INSTANCE.get().hiddenMods();
             // Find all connector loader mods
             List<ModInfo> mods = LoadingModList.get().getMods().stream()

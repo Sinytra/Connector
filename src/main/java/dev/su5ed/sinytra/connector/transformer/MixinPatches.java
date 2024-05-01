@@ -71,6 +71,24 @@ public class MixinPatches {
                 .modifyInjectionPoint("INVOKE", "Lnet/minecraft/world/level/block/state/BlockState;getToolModifiedState(Lnet/minecraft/world/item/context/UseOnContext;Lnet/minecraftforge/common/ToolAction;Z)Lnet/minecraft/world/level/block/state/BlockState;", true)
                 .build(),
             Patch.builder()
+                .targetClass("net/minecraft/world/entity/animal/SnowGolem")
+                .targetMethod("m_6071_(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult;")
+                .targetInjectionPoint("FIELD", "Lnet/minecraft/world/level/Level;f_46443_:Z")
+                .splitMixin("net/minecraft/world/entity/animal/SnowGolem")
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/animal/Sheep")
+                .targetMethod("m_6071_(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult;")
+                .targetInjectionPoint("FIELD", "Lnet/minecraft/world/level/Level;f_46443_:Z")
+                .splitMixin("net/minecraft/world/entity/animal/Sheep")
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/animal/MushroomCow")
+                .targetMethod("m_6071_(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult;")
+                .targetInjectionPoint("FIELD", "Lnet/minecraft/world/level/Level;f_46443_:Z")
+                .splitMixin("net/minecraft/world/entity/animal/MushroomCow")
+                .build(),
+            Patch.builder()
                 .targetClass("net/minecraft/client/KeyMapping")
                 .targetMethod("m_90837_")
                 .targetInjectionPoint("TAIL", "")
@@ -638,6 +656,31 @@ public class MixinPatches {
             .flatMap(p -> p instanceof List<?> lst ? lst.stream() : Stream.of(p))
             .map(o -> (Patch) o)
             .collect(Collectors.toList()); // Mutable list
+    }
+
+    public static List<Patch> getGeneratedClassPatches() {
+        return List.of(
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/animal/SnowGolem")
+                .targetClass("net/minecraft/world/entity/animal/Sheep")
+                .targetClass("net/minecraft/world/entity/animal/MushroomCow")
+                .targetMethod("m_6071_(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult;")
+                .targetInjectionPoint("FIELD", "Lnet/minecraft/world/level/Level;f_46443_:Z")
+                .modifyTarget("onSheared")
+                .modifyInjectionPoint("HEAD", "")
+                .transformParams(b -> b
+                    .inject(1, Type.getObjectType("net/minecraft/world/item/ItemStack"))
+                    .inject(2, Type.getObjectType("net/minecraft/world/level/Level"))
+                    .inject(3, Type.getObjectType("net/minecraft/core/BlockPos"))
+                    .inject(4, Type.INT_TYPE)
+                    .inline(5, i -> {
+                        i.visitVarInsn(Opcodes.ALOAD, 1);
+                        i.visitVarInsn(Opcodes.ALOAD, 2);
+                        i.invokestatic("dev/su5ed/sinytra/connector/mod/ConnectorMod", "itemToHand", "(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/world/InteractionHand;", false);
+                    })
+                    .withOffset())
+                .build()
+        );
     }
 
     private static Patch buildGuiPatch(int minOrdinal, int maxOrdinal, String targetMethodName, String injectionPoint, boolean offsetOrdinal) {

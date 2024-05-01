@@ -52,6 +52,7 @@ import static cpw.mods.modlauncher.api.LamdbaExceptionUtils.rethrowFunction;
 public class MixinPatchTransformer implements Transformer {
     private static final List<Patch> PRIORITY_PATCHES = MixinPatches.getPriorityPatches();
     private static final List<Patch> PATCHES = MixinPatches.getPatches();
+    private static final List<Patch> EXTRA_CLASS_PATCHES = MixinPatches.getGeneratedClassPatches();
     // Applied to non-mixins
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
         new EnvironmentStripperTransformer(),
@@ -235,11 +236,17 @@ public class MixinPatchTransformer implements Transformer {
     @Override
     public Collection<? extends Entry> getExtras() {
         List<Entry> entries = new ArrayList<>();
-        Patch patch = Patch.builder()
-            .transform(new DynamicInheritedInjectionPointPatch())
-            .build();
+        List<Patch> patches = ImmutableList.<Patch>builder()
+            .addAll(EXTRA_CLASS_PATCHES)
+            .add(
+                Patch.builder()
+                    .transform(new DynamicInheritedInjectionPointPatch())
+                    .build()
+            ).build();
         this.environment.classGenerator().getGeneratedMixinClasses().forEach((name, cls) -> {
-            patch.apply(cls.node(), this.environment);
+            for (Patch patch : patches) {
+                patch.apply(cls.node(), this.environment);
+            }
 
             ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
             cls.node().accept(writer);

@@ -14,6 +14,9 @@ import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -82,7 +85,12 @@ public class ConnectorMod {
     public static GenericBuilder<?, ?> useModConfigResource(FileConfigBuilder builder, String resource) {
         URL url = ConnectorMod.class.getClassLoader().getResource(resource);
         return builder.onFileNotFound(FileNotFoundAction.copyData(url));
-    } 
+    }
+
+    @SuppressWarnings("unused")
+    public static InteractionHand itemToHand(Player player, ItemStack stack) {
+        return ItemStack.isSameItemSameTags(stack, player.getItemInHand(InteractionHand.MAIN_HAND)) ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+    }
 
     @SuppressWarnings("deprecation")
     public static void unfreezeRegistries() {

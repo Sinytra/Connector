@@ -557,7 +557,13 @@ public class MixinPatches {
                 .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
                 .targetMethod("m_289604_(Lnet/minecraft/world/item/ArmorMaterial;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/armortrim/ArmorTrim;Lnet/minecraft/client/model/HumanoidModel;Z)V")
                 .modifyTarget("renderTrim(Lnet/minecraft/world/item/ArmorMaterial;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/armortrim/ArmorTrim;Lnet/minecraft/client/model/Model;Z)V")
-                .modifyParams(builder -> builder.replace(5, Type.getObjectType("net/minecraft/client/model/Model")))
+                .transformParams(builder -> builder.replace(5, Type.getObjectType("net/minecraft/client/model/Model")))
+                .build(),
+            Patch.builder()
+                .targetMixinType(MixinConstants.REDIRECT)
+                .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
+                .targetMethod("m_289597_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/model/HumanoidModel;)V") // renderGlint
+                .modifyTarget("renderGlint(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/client/model/Model;)V")
                 .build(),
             // For mods who wish to override HumanoidArmorLayer parts. On Fabric, the usual approach seems to be modifying the model (4th) arg of renderModel in HumanoidArmorLayer#renderArmorPiece.
             // To make this kind of modification forge-compatible, we:

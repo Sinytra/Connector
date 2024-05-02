@@ -1,1 +1,1 @@
-dev.su5ed.sinytra.connector.service.ConnectorLoaderService
+org.sinytra.connector.service.ConnectorLoaderService

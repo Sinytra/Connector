@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
+import org.sinytra.adapter.patch.transformer.dynamic.DynamicSyntheticInstanceofPatch;
 import org.sinytra.connector.ConnectorUtil;
 import org.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import net.minecraftforge.fart.api.Transformer;
@@ -81,6 +82,7 @@ public class MixinPatchTransformer implements Transformer {
                     .transform(new DynamicAnonymousShadowFieldTypePatch())
                     .transform(new DynamicModifyVarAtReturnPatch())
                     .transform(new DynamicInheritedInjectionPointPatch())
+                    .transform(new DynamicSyntheticInstanceofPatch())
                     .build(),
                 Patch.interfaceBuilder()
                     .transform(new FieldTypePatchTransformer())

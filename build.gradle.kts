@@ -41,6 +41,7 @@ plugins {
 val versionConnector: String by project
 val versionAdapter: String by project
 val versionAdapterDefinition: String by project
+val versionAdapterRuntime: String by project
 val versionMc: String by project
 val versionForge: String by project
 val versionForgeAutoRenamingTool: String by project
@@ -322,8 +323,11 @@ dependencies {
 
     annotationProcessor(group = "org.sinytra", name = "sponge-mixin", version = versionMixin)
     compileOnly(group = "org.sinytra", name = "sponge-mixin", version = versionMixin)
-    implementation(jarJar("io.github.llamalad7:mixinextras-forge:${mixinextrasVersion}")!!) {
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:$mixinextrasVersion")!!) {
         jarJar.ranged(this, "[${mixinextrasVersion},)")
+    }
+    implementation(jarJar("org.sinytra.adapter:runtime:$versionAdapterRuntime+$versionMc")!!) {
+        jarJar.ranged(this, "[${versionAdapterRuntime},)")
     }
     compileOnly(group = "dev.su5ed.sinytra.fabric-api", name = "fabric-api", version = versionFabricApi)
     runtimeOnly(fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:$versionFabricApi"))

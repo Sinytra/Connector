@@ -149,7 +149,7 @@ public final class JarTransformer {
                 })
                 .toList();
             executorService.shutdown();
-            if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
+            if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {
                 throw new RuntimeException("Timed out waiting for jar remap");
             }
             List<FabricModPath> results = futures.stream()

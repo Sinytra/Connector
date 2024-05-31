@@ -14,6 +14,10 @@ public class LateSheetsInit {
                 Sheets.HANGING_SIGN_MATERIALS.put(woodType, Sheets.createHangingSignMaterial(woodType));
             }
         });
+        BuiltInRegistries.BANNER_PATTERN.registryKeySet().stream()
+            .filter(key -> !Sheets.BANNER_MATERIALS.containsKey(key))
+            .forEach(key -> Sheets.BANNER_MATERIALS.put(key, Sheets.createBannerMaterial(key)));
+
         BuiltInRegistries.DECORATED_POT_PATTERNS.registryKeySet().stream()
             .filter(key -> !Sheets.DECORATED_POT_MATERIALS.containsKey(key))
             .forEach(key -> Sheets.DECORATED_POT_MATERIALS.put(key, Sheets.createDecoratedPotMaterial(key)));

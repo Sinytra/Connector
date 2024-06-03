@@ -62,7 +62,7 @@ val mixinextrasVersion: String by project
 
 val PUBLISH_RELEASE_TYPE: Provider<String> = providers.environmentVariable("PUBLISH_RELEASE_TYPE")
 
-group = "dev.su5ed.sinytra"
+group = "org.sinytra"
 version = "$versionConnector+$versionMc"
 // Append git commit hash for dev versions
 if (!PUBLISH_RELEASE_TYPE.isPresent) {
@@ -351,7 +351,7 @@ tasks {
                 "Implementation-Version" to project.version,
                 "Implementation-Vendor" to "Sinytra",
                 "Implementation-Timestamp" to LocalDateTime.now(),
-                "Automatic-Module-Name" to "dev.su5ed.sinytra.connector"
+                "Automatic-Module-Name" to "org.sinytra.connector"
             )
         }
 

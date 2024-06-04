@@ -187,7 +187,7 @@ public class MixinPatches {
             Patch.builder()
                 .targetClass("net/minecraft/world/entity/LivingEntity")
                 .targetMethod("m_21208_()V")
-                .targetMixinType(MixinConstants.MODIFY_CONST)
+                .targetConstant(-0.03999999910593033D)
                 .extractMixin("net/minecraftforge/common/extensions/IForgeLivingEntity")
                 .modifyTarget("sinkInFluid(Lnet/minecraftforge/fluids/FluidType;)V")
                 .build(),
@@ -456,14 +456,7 @@ public class MixinPatches {
                 .targetClass("net/minecraft/world/entity/LivingEntity")
                 .targetMethod("m_7023_") // travel
                 .targetMixinType(MixinConstants.MODIFY_VAR)
-                .targetAnnotationValues(handle -> handle.getNested("at")
-                    .filter(at -> at.getValue("value")
-                        .filter(h -> h.get().equals("CONSTANT"))
-                        .isPresent())
-                    .flatMap(at -> at.getValue("args"))
-                    .map(v -> (List<String>) v.get())
-                    .map(v -> v.size() == 1 && v.get(0).equals("doubleValue=0.01"))
-                    .orElse(false))
+                .targetConstant(0.01)
                 .modifyMixinType(MixinConstants.WRAP_OPERATION, builder -> builder
                     .sameTarget()
                     .injectionPoint("INVOKE", "Lnet/minecraft/world/entity/ai/attributes/AttributeInstance;m_22135_()D") // getValue

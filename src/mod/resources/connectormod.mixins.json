@@ -12,6 +12,7 @@
     "PlayerListMixin",
     "PoiTypesMixin",
     "TagLoaderMixin",
+    "boot.DatagenModLoaderMixin",
     "item.ForgeHooksMixin",
     "item.ItemStackMixin",
     "item.LateItemStackMixin",

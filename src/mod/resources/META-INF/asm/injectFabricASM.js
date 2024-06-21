@@ -21,7 +21,7 @@ function initializeCoreMod() {
                 },
                 'transformer': function (node) {
                     var insns = new InsnList();
-                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, 'dev/su5ed/sinytra/connector/service/FabricASMFixer', 'fishAddURL', '()Ljava/util/function/Consumer;'));
+                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, 'org/sinytra/connector/service/FabricASMFixer', 'fishAddURL', '()Ljava/util/function/Consumer;'));
                     insns.add(new InsnNode(Opcodes.ARETURN));
                     node.instructions.insert(insns);
                     ASMAPI.log('DEBUG', 'Injected fishAddURL hook into FabricASM plugin');
@@ -38,7 +38,7 @@ function initializeCoreMod() {
                 'transformer': function (node) {
                     var insns = new InsnList();
                     insns.add(new VarInsnNode(Opcodes.ALOAD, 1));
-                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, 'dev/su5ed/sinytra/connector/service/FabricASMFixer', 'flattenMixinClass', '(Ljava/lang/String;)Ljava/lang/String;'));
+                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, 'org/sinytra/connector/service/FabricASMFixer', 'flattenMixinClass', '(Ljava/lang/String;)Ljava/lang/String;'));
                     insns.add(new VarInsnNode(Opcodes.ASTORE, 1));
                     node.instructions.insert(insns);
                     ASMAPI.log('DEBUG', 'Injected flattenMixinClass modifier into FabricASM Plugin$1');
@@ -56,7 +56,7 @@ function initializeCoreMod() {
                     var insns = new InsnList();
                     insns.add(new VarInsnNode(Opcodes.ALOAD, 0));
                     insns.add(new VarInsnNode(Opcodes.ALOAD, 2));
-                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, 'dev/su5ed/sinytra/connector/service/FabricASMFixer', 'permitEnumSubclass', '(Lorg/objectweb/asm/tree/ClassNode;Ljava/lang/String;)V'));
+                    insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, 'org/sinytra/connector/service/FabricASMFixer', 'permitEnumSubclass', '(Lorg/objectweb/asm/tree/ClassNode;Ljava/lang/String;)V'));
                     node.instructions.insert(insns);
                     ASMAPI.log('DEBUG', 'Injected permitEnumSubclass modifier into FabricASM EnumSubclasser');
                     return node;

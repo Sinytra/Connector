@@ -117,9 +117,9 @@ repositories {
 }
 dependencies {
     // Add Connector to the launch classpath
-    minecraftLibrary fg.deobf("dev.su5ed.sinytra:Connector:<version>")
+    minecraftLibrary fg.deobf("org.sinytra:Connector:<version>")
     // Add FFAPI dependency (if required)
-    runtimeOnly fg.deobf("dev.su5ed.sinytra.fabric-api:fabric-api:<version>")
+    runtimeOnly fg.deobf("org.sinytra.fabric-api:fabric-api:<version>")
     // Install desired Fabric mods 
     implementation "some.fabric:mod:<version>"
 }

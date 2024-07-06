@@ -1,5 +1,6 @@
 pluginManagement {
     repositories {
+        mavenLocal()
         gradlePluginPortal()
         maven {
             name = "MinecraftForge"
@@ -32,4 +33,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "Connector"
+rootProject.name = "connector"

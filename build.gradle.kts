@@ -56,7 +56,11 @@ logger.lifecycle("Project version: $version")
 val mod: SourceSet by sourceSets.creating
 val test: SourceSet by sourceSets
 
-val shade: Configuration by configurations.creating { isTransitive = false }
+val shade: Configuration by configurations.creating { 
+    isTransitive = false
+    attributes.attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.SHADOWED))
+}
+val legacyClasspath: Configuration by configurations.creating { isTransitive = false }
 val adapterData: Configuration by configurations.creating
 
 java {
@@ -82,6 +86,7 @@ println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty(
 neoForge {
     // Specify the version of NeoForge to use.
     version = versionNeoForge
+    neoFormRuntime.version.set("0.1.70") // TODO TEMP
     
 //    accessTransformer(file("src/mod/resources/META-INF/accesstransformer.cfg"))
 
@@ -99,6 +104,8 @@ neoForge {
             systemProperty("connector.clean.path", tasks.createCleanArtifact.get().outputFile.get().asFile.absolutePath)
 //            systemProperty("connector.cache.enabled", "false")
             gameDirectory.set(layout.projectDirectory.dir("run"))
+            additionalRuntimeClasspath.add(files(tasks.jar))
+            additionalRuntimeClasspathConfiguration.extendsFrom(legacyClasspath)
         }
 
         create("client") {
@@ -110,16 +117,16 @@ neoForge {
             config(this)
         }
 
-        create("testModClient") {
-            client()
-            mods {
-                create("testconnector") {
-                    sourceSet(test)
-                }
-            }
-            programArguments.addAll("--mixin.config", "connectortest.mixins.json", "--quickPlaySingleplayer", "ctest")
-            gameDirectory.set(layout.projectDirectory.dir("run/test"))
-        }
+//        create("testModClient") {
+//            client()
+//            mods {
+//                create("testconnector") {
+//                    sourceSet(test)
+//                }
+//            }
+//            programArguments.addAll("--mixin.config", "connectortest.mixins.json", "--quickPlaySingleplayer", "ctest")
+//            gameDirectory.set(layout.projectDirectory.dir("run/test"))
+//        }
     }
 }
 
@@ -142,17 +149,21 @@ repositories {
 }
 
 dependencies {
-    // TODO TEST
-    shade(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader, classifier = "full")
-    shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener)
-    shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool)
-    shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
+    shade(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader)
+    legacyClasspath(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader, classifier = "full")
+    legacyClasspath(shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener))
+    legacyClasspath(shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool))
+    legacyClasspath(shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false })
     adapterData(group = "org.sinytra.adapter", name = "adapter", version = versionAdapter)
 
     jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
-    implementation(group = "org.sinytra.forgified-fabric-api", name = "forgified-fabric-api", version = versionForgifiedFabricApi)
+    implementation(group = "org.sinytra.forgified-fabric-api", name = "forgified-fabric-api", version = versionForgifiedFabricApi) {
+        exclude(group = "org.sinytra", module = "forgified-fabric-loader")
+    }
 
     "modCompileOnly"(sourceSets.main.get().output)
+
+    attributesSchema.getMatchingStrategy(Bundling.BUNDLING_ATTRIBUTE).compatibilityRules.add(BundlingCompatRule::class)
 }
 
 // We need fabric loader to be present on the service layer. In order to do that, we use shadow jar to ship it ourselves.
@@ -333,7 +344,7 @@ publishing {
 fun localJarJar(configName: String, mavenCoords: String, version: String, artifact: Any) {
     configurations.create(configName) {
         attributes { 
-            attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage::class, Usage.JAVA_RUNTIME))
+            attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage.JAVA_RUNTIME))
         }
         outgoing {
             artifact(artifact)
@@ -342,5 +353,13 @@ fun localJarJar(configName: String, mavenCoords: String, version: String, artifa
     }
     dependencies {
         jarJar(project(":")) { capabilities { requireCapability(mavenCoords) } }
+    }
+}
+
+class BundlingCompatRule : AttributeCompatibilityRule<Bundling> {
+    override fun execute(t: CompatibilityCheckDetails<Bundling>) {
+        if (t.consumerValue?.name == Bundling.SHADOWED) {
+            t.compatible()
+        }
     }
 }

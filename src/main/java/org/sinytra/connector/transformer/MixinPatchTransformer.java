@@ -179,7 +179,7 @@ public class MixinPatchTransformer implements Transformer {
             return;
         }
         // Injection point data extracted from coremods/method_redirector.js
-        String[] targetClasses = StreamSupport.stream(mods.spliterator(), false)
+        String[] targetClasses = mods.stream()
             .filter(m -> m.getModFileInfo() != null && !m.getModInfos().isEmpty() && m.getModInfos().get(0).getModId().equals(ConnectorUtil.NEOFORGE_MODID))
             .map(m -> m.findResource("coremods/finalize_spawn_targets.json"))
             .filter(Files::exists)

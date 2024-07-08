@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "minVersion": "0.8.4",
+  "package": "org.sinytra.connector.mod.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "plugin": "org.sinytra.connector.mod.ConnectorBootstrap",
+  "mixins": [
+    "boot.DatagenModLoaderMixin",
+    "registries.BuiltInRegistriesMixin",
+    "registries.NeoForgeRegistriesSetupAccessor",
+    "registries.NeoForgeRegistriesSetupMixin"
+  ],
+  "client": [
+    "boot.MinecraftMixin"
+  ],
+  "server": [
+    "boot.ServerMainMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -54,7 +54,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
@@ -85,14 +84,14 @@ public final class JarTransformer {
         return GENERATED_JAR_PATH;
     }
 
-    public static List<FabricModPath> transform(List<TransformableJar> jars, List<Path> libs, Collection<IModFile> loadedMods) {
-        List<FabricModPath> transformed = new ArrayList<>();
+    public static List<TransformedFabricModPath> transform(List<TransformableJar> jars, List<Path> libs, Collection<IModFile> loadedMods) {
+        List<TransformedFabricModPath> transformed = new ArrayList<>();
 
         List<Path> inputLibs = new ArrayList<>(libs);
         List<TransformableJar> needTransforming = new ArrayList<>();
         for (TransformableJar jar : jars) {
             if (jar.cacheFile().isUpToDate()) {
-                transformed.add(jar.modPath());
+                transformed.add(jar.toTransformedPath());
             }
             else {
                 needTransforming.add(jar);
@@ -101,9 +100,7 @@ public final class JarTransformer {
         }
 
         if (!needTransforming.isEmpty()) {
-            List<Path> renamerLibs = List.of(); // TODO add mc here
-            List<Path> allLibs = Stream.concat(inputLibs.stream(), renamerLibs.stream()).toList();
-            transformed.addAll(transformJars(needTransforming, allLibs, loadedMods));
+            transformed.addAll(transformJars(needTransforming, inputLibs, loadedMods));
         }
 
         return transformed;
@@ -120,7 +117,7 @@ public final class JarTransformer {
         return new TransformableJar(input, path, cacheFile);
     }
 
-    private static List<FabricModPath> transformJars(List<TransformableJar> paths, List<Path> libs, Collection<IModFile> loadedMods) {
+    private static List<TransformedFabricModPath> transformJars(List<TransformableJar> paths, List<Path> libs, Collection<IModFile> loadedMods) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Transforming Jars", paths.size());
         try {
@@ -128,7 +125,7 @@ public final class JarTransformer {
             JarTransformInstance transformInstance;
             try {
                 ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
-                EarlyJSCoremodTransformer transformingClassProvider = EarlyJSCoremodTransformer.create(classProvider);
+                EarlyJSCoremodTransformer transformingClassProvider = EarlyJSCoremodTransformer.create(classProvider, loadedMods);
                 ILaunchPluginService.ITransformerLoader loader = name -> transformingClassProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
                 setMixinClassProvider(loader);
                 transformInstance = new JarTransformInstance(transformingClassProvider, loadedMods, libs);
@@ -150,10 +147,10 @@ public final class JarTransformer {
             if (!executorService.awaitTermination(1, TimeUnit.HOURS)) {
                 throw new RuntimeException("Timed out waiting for jar remap");
             }
-            List<FabricModPath> results = futures.stream()
+            List<TransformedFabricModPath> results = futures.stream()
                 .map(pair -> {
                     try {
-                        return pair.getSecond().get();
+                        return new TransformedFabricModPath(pair.getFirst().toPath(), pair.getSecond().get());
                     } catch (Throwable t) {
                         throw new ModLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Error transforming jar " + pair.getFirst().getAbsolutePath()));
                     }
@@ -263,6 +260,8 @@ public final class JarTransformer {
 
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
 
+    public record TransformedFabricModPath(Path input, FabricModPath output) {}
+
     public record FabricModFileMetadata(ConnectorFabricModMetadata modMetadata, Collection<String> visibleMixinConfigs, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT, boolean generated) {}
 
     public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
@@ -271,6 +270,10 @@ public final class JarTransformer {
             transformInstance.transformJar(this.input, this.modPath.path, this.modPath.metadata());
             this.cacheFile.save();
             return this.modPath;
+        }
+
+        public TransformedFabricModPath toTransformedPath() {
+            return new TransformedFabricModPath(this.input.toPath(), this.modPath);
         }
     }
 }

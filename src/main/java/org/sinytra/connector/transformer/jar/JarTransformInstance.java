@@ -32,7 +32,6 @@ import org.sinytra.connector.transformer.FieldToMethodTransformer;
 import org.sinytra.connector.transformer.JarSignatureStripper;
 import org.sinytra.connector.transformer.MappingAwareReferenceMapper;
 import org.sinytra.connector.transformer.MixinPatchTransformer;
-import org.sinytra.connector.transformer.ModMetadataGenerator;
 import org.sinytra.connector.transformer.OptimizedRenamingTransformer;
 import org.sinytra.connector.transformer.RefmapRemapper;
 import org.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
@@ -77,6 +76,7 @@ public class JarTransformInstance {
         resolver.getMap(JarTransformer.SOURCE_NAMESPACE, JarTransformer.OBF_NAMESPACE);
         this.remapper = new MappingAwareReferenceMapper(resolver.getCurrentMap(JarTransformer.SOURCE_NAMESPACE));
 
+        // TODO Read using service in Adapter definition
         Path patchDataPath = EmbeddedDependencies.getAdapterData(EmbeddedDependencies.ADAPTER_PATCH_DATA);
         try (Reader reader = Files.newBufferedReader(patchDataPath)) {
             JsonElement json = GSON.fromJson(reader, JsonElement.class);
@@ -111,7 +111,7 @@ public class JarTransformInstance {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         if (metadata.generated()) {
-            processGeneratedJar(input, output, metadata, stopwatch);
+            processGeneratedJar(input, output, stopwatch);
             return;
         }
 
@@ -143,7 +143,6 @@ public class JarTransformInstance {
             .add(new ClassNodeTransformer(new ClassAnalysingTransformer()))
             .add(patchTransformer)
             .add(refmapRemapper)
-            .add(new ModMetadataGenerator(metadata.modMetadata().getId()))
             .logger(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
             .ignoreJarPathPrefix("assets/", "data/");
@@ -159,7 +158,7 @@ public class JarTransformInstance {
                 patchTransformer.finalize(zipFile.getPath("/"), metadata.mixinConfigs(), refmap.files(), refmapHolder.getDirtyRefmaps());
             }
         } catch (Throwable t) {
-            LOGGER.error("Encountered error while transforming jar file " + input.getAbsolutePath(), t);
+            LOGGER.error("Encountered error while transforming jar file {}", input.getAbsolutePath(), t);
             throw t;
         }
 
@@ -167,7 +166,7 @@ public class JarTransformInstance {
         LOGGER.debug(JarTransformer.TRANSFORM_MARKER, "Jar {} transformed in {} ms", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
     }
 
-    private static void processGeneratedJar(File input, Path output, JarTransformer.FabricModFileMetadata metadata, Stopwatch stopwatch) throws IOException {
+    private static void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
         Files.copy(input.toPath(), output);
         stopwatch.stop();
         LOGGER.debug(JarTransformer.TRANSFORM_MARKER, "Skipping transformation of jar {} after {} ms as it contains generated metadata, assuming it's a java library", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));

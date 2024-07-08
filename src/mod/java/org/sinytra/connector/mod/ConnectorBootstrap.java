@@ -1,11 +1,7 @@
 package org.sinytra.connector.mod;
 
-import org.sinytra.connector.loader.ConnectorEarlyLoader;
-import net.minecraftforge.coremod.api.ASMAPI;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodInsnNode;
+import org.sinytra.connector.ConnectorEarlyLoader;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
@@ -28,20 +24,21 @@ public class ConnectorBootstrap implements IMixinConfigPlugin {
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
-        if (mixinClassName.equals("dev.su5ed.sinytra.connector.mod.mixin.item.LateItemStackMixin")) {
-            String methodName = ASMAPI.mapMethod("m_41638_");
-            targetClass.methods.stream()
-                .filter(m -> m.name.equals(methodName) && m.desc.equals("(Lnet/minecraft/world/entity/EquipmentSlot;)Lcom/google/common/collect/Multimap;"))
-                .findFirst()
-                .ifPresent(method -> {
-                    for (AbstractInsnNode insn : method.instructions) {
-                        if (insn.getOpcode() == Opcodes.ARETURN) {
-                            method.instructions.insertBefore(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, "com/google/common/collect/HashMultimap", "create", "(Lcom/google/common/collect/Multimap;)Lcom/google/common/collect/HashMultimap;", false));
-                        }
-                    }
-                });
-
-        }
+        // TODO
+//        if (mixinClassName.equals("dev.su5ed.sinytra.connector.mod.mixin.item.LateItemStackMixin")) {
+//            String methodName = ASMAPI.mapMethod("m_41638_");
+//            targetClass.methods.stream()
+//                .filter(m -> m.name.equals(methodName) && m.desc.equals("(Lnet/minecraft/world/entity/EquipmentSlot;)Lcom/google/common/collect/Multimap;"))
+//                .findFirst()
+//                .ifPresent(method -> {
+//                    for (AbstractInsnNode insn : method.instructions) {
+//                        if (insn.getOpcode() == Opcodes.ARETURN) {
+//                            method.instructions.insertBefore(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, "com/google/common/collect/HashMultimap", "create", "(Lcom/google/common/collect/Multimap;)Lcom/google/common/collect/HashMultimap;", false));
+//                        }
+//                    }
+//                });
+//
+//        }
     }
 
     // We don't need any of the mixin stuff

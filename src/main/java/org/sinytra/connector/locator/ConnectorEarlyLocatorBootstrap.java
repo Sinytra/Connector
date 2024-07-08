@@ -27,6 +27,8 @@ import java.util.Locale;
 public class ConnectorEarlyLocatorBootstrap implements IModFileCandidateLocator {
     private static final Logger LOGGER = LogUtils.getLogger();
 
+    private static ILaunchContext launchContext;
+
     public ConnectorEarlyLocatorBootstrap() {
         // Unfortunately, FML doesn't provide a way to sort mod/dependency locators by priority, so we have to create our own
         try {
@@ -44,6 +46,10 @@ public class ConnectorEarlyLocatorBootstrap implements IModFileCandidateLocator 
             ConnectorEarlyLoader.addGenericLoadingException(t, "Error sorting FML dependency locators");
         }
         injectLogMarkers();
+    }
+
+    public static ILaunchContext getLaunchContext() {
+        return launchContext;
     }
 
     private static void injectLogMarkers() {
@@ -69,6 +75,6 @@ public class ConnectorEarlyLocatorBootstrap implements IModFileCandidateLocator 
 
     @Override
     public void findCandidates(ILaunchContext context, IDiscoveryPipeline pipeline) {
-
+        launchContext = context;
     }
 }

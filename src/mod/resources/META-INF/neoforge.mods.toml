@@ -1,12 +1,12 @@
 modLoader="javafml"
-loaderVersion="[47,)"
+loaderVersion="*"
 license="MIT"
 issueTrackerURL="https://github.com/Sinytra/Connector/issues"
 
 [[mods]]
-modId="connectormod"
+modId="connector"
 version="${file.jarVersion}"
-displayName="Connector"
+displayName="Sinytra Connector"
 logoFile="logo.png"
 authors="Su5eD"
 displayURL="https://github.com/Sinytra/Connector"
@@ -16,15 +16,17 @@ Its goal is to bring the two platforms closer together, saving developers time a
 multiple platforms at once, as well as allowing players to play all their favourite mods in one modpack.
 '''
 displayTest = 'IGNORE_ALL_VERSION' # Connector is optional for both sides
+[[mixins]]
+config="connector.mixins.json"
 [[dependencies.connectormod]]
-    modId="forge"
+    modId="neoforge"
     mandatory=true
-    versionRange="[47,)"
+    versionRange="*"
     ordering="NONE"
     side="BOTH"
 [[dependencies.connectormod]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.20.1,1.21)"
+    versionRange="[1.21,1.22)"
     ordering="NONE"
     side="BOTH"

@@ -12,6 +12,7 @@ import net.neoforged.fml.loading.ImmediateWindowHandler;
 import net.neoforged.fml.loading.LoadingModList;
 import net.neoforged.neoforgespi.earlywindow.ImmediateWindowProvider;
 import org.sinytra.connector.ConnectorEarlyLoader;
+import org.sinytra.connector.locator.ConnectorLocator;
 import org.sinytra.connector.service.hacks.ConnectorForkJoinThreadFactory;
 import org.sinytra.connector.service.hacks.FabricASMFixer;
 import org.sinytra.connector.service.hacks.LenientRuntimeEnumExtender;
@@ -57,7 +58,7 @@ public class ConnectorLoaderService implements ITransformationService {
                 ConnectorEarlyLoader.setup();
                 // Invoke mixin on a dummy class to initialize mixin plugins
                 // Necessary to avoid duplicate class definition errors when a plugin loads the class that is being transformed
-//                uncheck(() -> Class.forName("org.sinytra.connector.mod.DummyTarget", false, Thread.currentThread().getContextClassLoader())); TODO
+                uncheck(() -> Class.forName("org.sinytra.connector.mod.DummyTarget", false, Thread.currentThread().getContextClassLoader()));
                 // Run preLaunch
                 ConnectorEarlyLoader.preLaunch();
                 original.updateModuleReads(layer);
@@ -108,6 +109,11 @@ public class ConnectorLoaderService implements ITransformationService {
 
     @Override
     public List<Resource> completeScan(IModuleLayerManager layerManager) {
+        LoadingModList.get().getModLoadingIssues().removeIf(issue ->
+            issue.translationKey().equals("fml.modloadingissue.brokenfile.fabric")
+                && issue.affectedPath() != null && ConnectorLocator.shouldIgnorePath(issue.affectedPath())
+        );
+
         if (!LoadingModList.get().hasErrors()) {
             LoadingModList.get().getModLoadingIssues().addAll(ConnectorEarlyLoader.getLoadingExceptions());
         } else {

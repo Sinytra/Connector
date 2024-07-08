@@ -15,7 +15,7 @@ buildscript {
 plugins {
     java
     `maven-publish`
-    id("net.neoforged.moddev") version "0.1.124"
+    id("net.neoforged.moddev") version "0.1.126"
     id("io.github.goooler.shadow") version "8.1.8" apply false
     id("me.modmuss50.mod-publish-plugin") version "0.5.+"
     id("net.neoforged.gradleutils") version "3.0.0"
@@ -56,7 +56,7 @@ logger.lifecycle("Project version: $version")
 val mod: SourceSet by sourceSets.creating
 val test: SourceSet by sourceSets
 
-val shade: Configuration by configurations.creating { 
+val shade: Configuration by configurations.creating {
     isTransitive = false
     attributes.attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.SHADOWED))
 }
@@ -80,6 +80,10 @@ configurations {
     "modImplementation" {
         extendsFrom(/*configurations.minecraft.get(), */shade)
     }
+    
+    additionalRuntimeClasspath {
+        extendsFrom(legacyClasspath)
+    }
 }
 
 println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty("java.vm.version")} (${System.getProperty("java.vendor")}), Arch: ${System.getProperty("os.arch")}")
@@ -87,14 +91,14 @@ neoForge {
     // Specify the version of NeoForge to use.
     version = versionNeoForge
     neoFormRuntime.version.set("0.1.70") // TODO TEMP
-    
+
 //    accessTransformer(file("src/mod/resources/META-INF/accesstransformer.cfg"))
 
     parchment {
         mappingsVersion = versionParchment
         minecraftVersion = versionMc
     }
-    
+
     runs {
         val config = Action<RunModel> {
             systemProperty("forge.logging.console.level", "debug")
@@ -104,8 +108,12 @@ neoForge {
             systemProperty("connector.clean.path", tasks.createCleanArtifact.get().outputFile.get().asFile.absolutePath)
 //            systemProperty("connector.cache.enabled", "false")
             gameDirectory.set(layout.projectDirectory.dir("run"))
-            additionalRuntimeClasspath.add(files(tasks.jar))
-            additionalRuntimeClasspathConfiguration.extendsFrom(legacyClasspath)
+
+            mods {
+                maybeCreate("connector").apply {
+                    sourceSet(mod)
+                }
+            }
         }
 
         create("client") {
@@ -163,6 +171,7 @@ dependencies {
 
     "modCompileOnly"(sourceSets.main.get().output)
 
+    additionalRuntimeClasspath(files(tasks.jar))
     attributesSchema.getMatchingStrategy(Bundling.BUNDLING_ATTRIBUTE).compatibilityRules.add(BundlingCompatRule::class)
 }
 
@@ -343,7 +352,7 @@ publishing {
 
 fun localJarJar(configName: String, mavenCoords: String, version: String, artifact: Any) {
     configurations.create(configName) {
-        attributes { 
+        attributes {
             attribute(Usage.USAGE_ATTRIBUTE, project.objects.named(Usage.JAVA_RUNTIME))
         }
         outgoing {

@@ -92,7 +92,7 @@ neoForge {
     version = versionNeoForge
     neoFormRuntime.version.set("0.1.70") // TODO TEMP
 
-//    accessTransformer(file("src/mod/resources/META-INF/accesstransformer.cfg"))
+    accessTransformers.add("src/mod/resources/META-INF/accesstransformer.cfg")
 
     parchment {
         mappingsVersion = versionParchment
@@ -165,7 +165,7 @@ dependencies {
     adapterData(group = "org.sinytra.adapter", name = "adapter", version = versionAdapter)
 
     jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
-    implementation(group = "org.sinytra.forgified-fabric-api", name = "forgified-fabric-api", version = versionForgifiedFabricApi) {
+    "modImplementation"(implementation(group = "org.sinytra.forgified-fabric-api", name = "forgified-fabric-api", version = versionForgifiedFabricApi)) {
         exclude(group = "org.sinytra", module = "forgified-fabric-loader")
     }
 

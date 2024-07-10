@@ -12,6 +12,17 @@ import java.util.Locale;
 public final class CrashReportUpgrade {
 
     public static void registerCrashLogInfo() {
+        CrashReportCallables.registerHeader(() -> {
+            StringBuilder builder = new StringBuilder();
+            builder.append("\n// Hi. I'm Connector, and I'm a crashaholic");
+            builder.append("\n").append(StringUtils.repeat('=', 25));
+            builder.append("\nSINYTRA CONNECTOR IS PRESENT!");
+            builder.append("\nPlease verify issues are not caused by Connector before reporting them to mod authors.");
+            builder.append("\nIf you're unsure, file a report on Connector's issue tracker found at ").append(ConnectorUtil.CONNECTOR_ISSUE_TRACKER_URL).append(".");
+            builder.append("\n").append(StringUtils.repeat('=', 25));
+            builder.append("\n\n");
+            return builder.toString();
+        });
         CrashReportCallables.registerCrashCallable("Sinytra Connector", () -> {
             String format = "| %-50.50s | %-30.30s | %-30.30s | %-20.20s |";
             String version = ConnectorBootstrap.class.getModule().getDescriptor().rawVersion().orElse("<unknown>");
@@ -39,15 +50,5 @@ public final class CrashReportUpgrade {
             }
             return builder.toString();
         });
-    }
-
-    public static void addCrashReportHeader(StringBuilder builder) {
-        builder.append("\n// Hi. I'm Connector, and I'm a crashaholic");
-        builder.append("\n").append(StringUtils.repeat('=', 25));
-        builder.append("\nSINYTRA CONNECTOR IS PRESENT!");
-        builder.append("\nPlease verify issues are not caused by Connector before reporting them to mod authors.");
-        builder.append("\nIf you're unsure, file a report on Connector's issue tracker found at ").append(ConnectorUtil.CONNECTOR_ISSUE_TRACKER_URL).append(".");
-        builder.append("\n").append(StringUtils.repeat('=', 25));
-        builder.append("\n\n");
     }
 }

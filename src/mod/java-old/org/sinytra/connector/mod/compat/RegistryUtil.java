@@ -30,27 +30,6 @@ public class RegistryUtil {
         return DynamicRegistriesImpl.FABRIC_DYNAMIC_REGISTRY_KEYS.stream().anyMatch(key::equals);
     }
 
-    public static <V> void retainFabricClientEntries(ResourceLocation name, ForgeRegistry<V> from, IForgeRegistry<V> to) {
-        if (FMLLoader.getDist().isClient() && name.equals(PARTICLE_TYPE_REGISTRY)) {
-            List<Pair<ResourceLocation, V>> list = new ArrayList<>();
-
-            for (Map.Entry<ResourceKey<V>, V> entry : to.getEntries()) {
-                ResourceLocation location = entry.getKey().location();
-                if (!from.containsKey(location) && ConnectorEarlyLoader.isConnectorMod(location.getNamespace())) {
-                    list.add(Pair.of(location, entry.getValue()));
-                }
-            }
-
-            if (!list.isEmpty()) {
-                LOGGER.info("Connector found {} items to retain in registry {}", list.size(), name);
-            }
-
-            for (Pair<ResourceLocation, V> pair : list) {
-                RegistryUtil.getNames(from).put(pair.getFirst(), pair.getSecond());
-            }
-        }
-    }
-
     private static <V> BiMap<ResourceLocation, V> getNames(ForgeRegistry<V> registry) {
         return (BiMap<ResourceLocation, V>) uncheck(() -> REGISTRY_NAMES.get(registry));
     }

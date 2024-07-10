@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import java.util.function.Consumer;
 
 @Mixin(NeoForgeRegistriesSetup.class)
-public class NeoForgeRegistriesSetupMixin {
+public abstract class NeoForgeRegistriesSetupMixin {
 
     @Redirect(method = "setup", at = @At(value = "INVOKE", target = "Lnet/neoforged/bus/api/IEventBus;addListener(Ljava/util/function/Consumer;)V", ordinal = 1))
     private static void setup(IEventBus bus, Consumer<?> consumer) {

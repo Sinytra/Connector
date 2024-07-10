@@ -11,6 +11,7 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.progress.ProgressMeter;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import org.sinytra.connector.ConnectorEarlyLoader;
+import org.sinytra.connector.mod.compat.LazyEntityAttributes;
 import org.sinytra.connector.mod.mixin.registries.NeoForgeRegistriesSetupAccessor;
 import org.slf4j.Logger;
 
@@ -40,7 +41,7 @@ public class ConnectorLoader {
 
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Loading mods", 0);
         try {
-//            LazyEntityAttributes.inject();
+            LazyEntityAttributes.inject();
 
             // Invoke entry points
             FabricLoader loader = FabricLoader.getInstance();
@@ -52,7 +53,7 @@ public class ConnectorLoader {
                 loader.invokeEntrypoints("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
             }
 
-//            LazyEntityAttributes.release();
+            LazyEntityAttributes.release();
             finishedLoading = true;
         } catch (Throwable t) {
             throw new ModLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Encountered error during early mod loading"));

@@ -2,22 +2,11 @@ package org.sinytra.connector.transformer;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.InsnNode;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.tree.TypeInsnNode;
-import org.objectweb.asm.tree.VarInsnNode;
-import org.sinytra.adapter.patch.api.MixinConstants;
 import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.transformer.ModifyMethodAccess;
 import org.sinytra.adapter.patch.transformer.param.ParamTransformTarget;
 
 import java.util.List;
-import java.util.ListIterator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,14 +14,14 @@ import java.util.stream.Stream;
 public class MixinPatches {
     public static List<Patch> getPriorityPatches() {
         return List.of(
-            /*Patch.builder()
+            Patch.builder()
                 .targetClass("net/minecraft/world/item/ItemStack")
-                .targetMethod("m_41661_")
-                .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;m_41720_()Lnet/minecraft/world/item/Item;")
+                .targetMethod("useOn")
+                .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;getItem()Lnet/minecraft/world/item/Item;")
                 .modifyTarget("connector_useOn")
                 .modifyInjectionPoint("RETURN", "", true)
-                .build(),
-            Patch.builder()
+                .build()
+            /*Patch.builder()
                 .targetClass("net/minecraft/server/level/ServerPlayer")
                 .targetMethod("m_5489_(Lnet/minecraft/server/level/ServerLevel;)Lnet/minecraft/world/entity/Entity;")
                 .targetInjectionPoint("Lnet/minecraft/server/level/ServerPlayer;m_284127_(Lnet/minecraft/server/level/ServerLevel;)V")

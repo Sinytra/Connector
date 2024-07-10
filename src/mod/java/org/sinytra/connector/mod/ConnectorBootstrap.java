@@ -22,27 +22,9 @@ public class ConnectorBootstrap implements IMixinConfigPlugin {
         return !ConnectorEarlyLoader.hasEncounteredException();
     }
 
-    @Override
-    public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
-        // TODO
-//        if (mixinClassName.equals("dev.su5ed.sinytra.connector.mod.mixin.item.LateItemStackMixin")) {
-//            String methodName = ASMAPI.mapMethod("m_41638_");
-//            targetClass.methods.stream()
-//                .filter(m -> m.name.equals(methodName) && m.desc.equals("(Lnet/minecraft/world/entity/EquipmentSlot;)Lcom/google/common/collect/Multimap;"))
-//                .findFirst()
-//                .ifPresent(method -> {
-//                    for (AbstractInsnNode insn : method.instructions) {
-//                        if (insn.getOpcode() == Opcodes.ARETURN) {
-//                            method.instructions.insertBefore(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, "com/google/common/collect/HashMultimap", "create", "(Lcom/google/common/collect/Multimap;)Lcom/google/common/collect/HashMultimap;", false));
-//                        }
-//                    }
-//                });
-//
-//        }
-    }
-
     // We don't need any of the mixin stuff
     //@formatter:off
+    @Override public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {}
     @Override public void onLoad(String mixinPackage) {}
     @Override public String getRefMapperConfig() {return null;}
     @Override public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {}

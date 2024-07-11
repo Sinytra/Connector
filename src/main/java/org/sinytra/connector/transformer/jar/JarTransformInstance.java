@@ -76,7 +76,6 @@ public class JarTransformInstance {
         resolver.getMap(JarTransformer.SOURCE_NAMESPACE, JarTransformer.OBF_NAMESPACE);
         this.remapper = new MappingAwareReferenceMapper(resolver.getCurrentMap(JarTransformer.SOURCE_NAMESPACE));
 
-        // TODO Read using service in Adapter definition
         Path patchDataPath = EmbeddedDependencies.getAdapterData(EmbeddedDependencies.ADAPTER_PATCH_DATA);
         try (Reader reader = Files.newBufferedReader(patchDataPath)) {
             JsonElement json = GSON.fromJson(reader, JsonElement.class);

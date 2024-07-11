@@ -45,7 +45,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.rethrowConsumer;
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.rethrowFunction;
@@ -53,7 +52,6 @@ import static cpw.mods.modlauncher.api.LambdaExceptionUtils.rethrowFunction;
 public class MixinPatchTransformer implements Transformer {
     private static final List<Patch> PRIORITY_PATCHES = MixinPatches.getPriorityPatches();
     private static final List<Patch> PATCHES = MixinPatches.getPatches();
-    private static final List<Patch> EXTRA_CLASS_PATCHES = MixinPatches.getGeneratedClassPatches();
     // Applied to non-mixins
     private static final List<ClassTransform> CLASS_TRANSFORMS = List.of(
         new EnvironmentStripperTransformer(),
@@ -239,7 +237,6 @@ public class MixinPatchTransformer implements Transformer {
     public Collection<? extends Entry> getExtras() {
         List<Entry> entries = new ArrayList<>();
         List<Patch> patches = ImmutableList.<Patch>builder()
-            .addAll(EXTRA_CLASS_PATCHES)
             .add(
                 Patch.builder()
                     .transform(new DynamicInheritedInjectionPointPatch())

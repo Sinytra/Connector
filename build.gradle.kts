@@ -15,7 +15,7 @@ buildscript {
 plugins {
     java
     `maven-publish`
-    id("net.neoforged.moddev") version "0.1.126"
+    id("net.neoforged.moddev") version "1.0.3"
     id("io.github.goooler.shadow") version "8.1.8" apply false
     id("me.modmuss50.mod-publish-plugin") version "0.5.+"
     id("net.neoforged.gradleutils") version "3.0.0"
@@ -90,9 +90,10 @@ println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty(
 neoForge {
     // Specify the version of NeoForge to use.
     version = versionNeoForge
-    neoFormRuntime.version.set("0.1.70") // TODO TEMP
 
-    accessTransformers.add("src/mod/resources/META-INF/accesstransformer.cfg")
+    accessTransformers {
+        from(project.file("src/mod/resources/META-INF/accesstransformer.cfg"))
+    }
 
     parchment {
         mappingsVersion = versionParchment
@@ -140,12 +141,11 @@ neoForge {
 
 repositories {
     maven {
-        name = "Fabric"
-        url = uri("https://maven.fabricmc.net")
-    }
-    maven {
         name = "Sinytra"
         url = uri("https://maven.su5ed.dev/releases")
+        content {
+            includeGroupAndSubgroups("org.sinytra")
+        }
     }
     maven {
         url = uri("https://www.cursemaven.com")
@@ -187,7 +187,7 @@ val dummyFabricLoaderLangJar: Jar by tasks.creating(Jar::class) {
     )
     archiveClassifier.set("fabricloader")
 }
-localJarJar("dummyForgifiedFabridLoaderConfig", "org.sinytra:forgified-fabric-loader", dummyFabricLoaderVersion, dummyFabricLoaderLangJar)
+localJarJar("dummyForgifiedFabricLoaderConfig", "org.sinytra:forgified-fabric-loader", dummyFabricLoaderVersion, dummyFabricLoaderLangJar)
 
 val modJar: Jar by tasks.creating(Jar::class) {
     from(mod.output)

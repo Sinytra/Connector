@@ -153,7 +153,6 @@ repositories {
             includeGroup("curse.maven")
         }
     }
-    mavenLocal()
 }
 
 dependencies {

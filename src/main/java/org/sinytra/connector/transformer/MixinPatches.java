@@ -160,30 +160,6 @@ public class MixinPatches {
                 .build(),
             // ======= TODO Handle in adapter
             Patch.builder()
-                .targetClass("net/minecraft/world/item/Item")
-                .targetMethod("use")
-                .targetInjectionPoint("Lnet/minecraft/world/item/Item;getFoodProperties()Lnet/minecraft/world/food/FoodProperties;") // now itemstack.get(DataComponents.FOOD)
-                .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;getFoodProperties(Lnet/minecraft/world/entity/LivingEntity;)Lnet/minecraft/world/food/FoodProperties;")
-                .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/world/item/MilkBucketItem")
-                .targetMethod("finishUsingItem")
-                .targetInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;removeAllEffects()Z")
-                .modifyInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;removeEffectsCuredBy(Lnet/neoforged/neoforge/common/EffectCure;)Z")
-                .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/client/multiplayer/MultiPlayerGameMode")
-                .targetMethod("m_105267_")
-                .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V")
-                .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;onDestroyedByPlayer(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;ZLnet/minecraft/world/level/material/FluidState;)Z")
-                .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/world/level/block/FarmBlock")
-                .targetMethod("isNearWater(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z")
-                .targetInjectionPoint("Lnet/minecraft/world/level/material/FluidState;is(Lnet/minecraft/tags/TagKey;)Z")
-                .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;canBeHydrated(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/core/BlockPos;)Z")
-                .build(),
-            Patch.builder()
                 .targetClass("net/minecraft/world/entity/vehicle/AbstractMinecart")
                 .targetMethod("moveAlongTrack")
                 .targetInjectionPoint("Lnet/minecraft/world/entity/vehicle/AbstractMinecart;move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V")

@@ -28,6 +28,7 @@ import org.sinytra.adapter.patch.transformer.dynamic.DynamicInjectorOrdinalPatch
 import org.sinytra.adapter.patch.transformer.dynamic.DynamicLVTPatch;
 import org.sinytra.adapter.patch.transformer.dynamic.DynamicModifyVarAtReturnPatch;
 import org.sinytra.adapter.patch.transformer.dynamic.DynamicSyntheticInstanceofPatch;
+import org.sinytra.adapter.patch.transformer.dynfix.DynamicInjectionPointPatch;
 import org.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.slf4j.Logger;
@@ -81,6 +82,7 @@ public class MixinPatchTransformer implements Transformer {
                     .transform(new DynamicModifyVarAtReturnPatch())
                     .transform(new DynamicInheritedInjectionPointPatch())
                     .transform(new DynamicSyntheticInstanceofPatch())
+                    .transform(new DynamicInjectionPointPatch())
                     .build(),
                 Patch.interfaceBuilder()
                     .transform(new FieldTypePatchTransformer())

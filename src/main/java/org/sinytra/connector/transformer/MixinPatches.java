@@ -242,13 +242,6 @@ public class MixinPatches {
                     .sameTarget()
                     .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;getItem()Lnet/minecraft/world/item/Item;"))
                 .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/client/renderer/GameRenderer")
-                .targetMethod("render(FJZ)V")
-                .targetInjectionPoint("Lnet/minecraft/client/gui/screens/Screen;renderWithTooltip(Lnet/minecraft/client/gui/GuiGraphics;IIF)V")
-                .modifyInjectionPoint("Lnet/minecraftforge/client/ForgeHooksClient;drawScreen(Lnet/minecraft/client/gui/screens/Screen;Lnet/minecraft/client/gui/GuiGraphics;IIF)V")
-                .modifyVariableIndex(0, 1)
-                .build(),
             // TODO Fix clientcommands
             Patch.builder()
                 .targetClass("net/minecraft/world/entity/LivingEntity")

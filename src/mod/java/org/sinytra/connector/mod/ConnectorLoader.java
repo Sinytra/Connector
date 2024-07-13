@@ -6,7 +6,6 @@ import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.ModLoadingException;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.progress.ProgressMeter;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
@@ -56,7 +55,7 @@ public class ConnectorLoader {
             LazyEntityAttributes.release();
             finishedLoading = true;
         } catch (Throwable t) {
-            throw new ModLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Encountered error during early mod loading"));
+            ConnectorEarlyLoader.addGenericLoadingException(t, "Encountered error during early mod loading");
         }
         progress.complete();
     }

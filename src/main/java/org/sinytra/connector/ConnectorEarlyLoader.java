@@ -82,7 +82,7 @@ public class ConnectorEarlyLoader {
     }
 
     public static ModLoadingIssue createLoadingIssue(Throwable original, String message, boolean keepOriginal, Object... args) {
-        return ModLoadingIssue.error(ConnectorUtil.stripColor(original.getMessage()), args);
+        return new ModLoadingIssue(ModLoadingIssue.Severity.ERROR, ConnectorUtil.stripColor(original.getMessage()), List.of(), original, null, null, null);
     }
 
     /**

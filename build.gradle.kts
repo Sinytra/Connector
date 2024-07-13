@@ -1,5 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
+import net.neoforged.moddevgradle.dsl.InternalModelHelper
 import net.neoforged.moddevgradle.dsl.RunModel
 import java.time.LocalDateTime
 
@@ -115,6 +116,10 @@ neoForge {
                     sourceSet(mod)
                 }
             }
+
+            tasks.named(InternalModelHelper.nameOfRun(this, "prepare", "run")) {
+                dependsOn(tasks.createCleanArtifact)
+            }
         }
 
         create("client") {
@@ -173,21 +178,6 @@ dependencies {
     additionalRuntimeClasspath(files(tasks.jar))
     attributesSchema.getMatchingStrategy(Bundling.BUNDLING_ATTRIBUTE).compatibilityRules.add(BundlingCompatRule::class)
 }
-
-// We need fabric loader to be present on the service layer. In order to do that, we use shadow jar to ship it ourselves.
-// However, this easily creates conflicts with other mods that might be providing it via JarInJar. To avoid this conflict,
-// we provide a dummy nested jar with the same identifier, but a "max" version, so that it always takes priority over
-// nested jars shipped by other mods, effectively disabling them.
-val dummyFabricLoaderVersion = "999.999.999"
-// This is the actualy dummy jar, set to a LIBRARY type to be put on the PLUGIN layer
-val dummyFabricLoaderLangJar: Jar by tasks.creating(Jar::class) {
-    manifest.attributes(
-        "FMLModType" to "LIBRARY",
-        "Implementation-Version" to dummyFabricLoaderVersion
-    )
-    archiveClassifier.set("fabricloader")
-}
-localJarJar("dummyForgifiedFabricLoaderConfig", "org.sinytra:forgified-fabric-loader", dummyFabricLoaderVersion, dummyFabricLoaderLangJar)
 
 val modJar: Jar by tasks.creating(Jar::class) {
     from(mod.output)

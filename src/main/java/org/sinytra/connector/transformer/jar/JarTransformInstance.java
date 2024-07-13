@@ -186,6 +186,7 @@ public class JarTransformInstance {
             // Search for system property
             Path cleanPath = Optional.ofNullable(System.getProperty("connector.clean.path"))
                 .map(Path::of)
+                .filter(Files::exists)
                 .orElseThrow(() -> new RuntimeException("Could not determine clean minecraft artifact path"));
             return new SimpleClassLookup(ClassProvider.fromPaths(cleanPath));
         }

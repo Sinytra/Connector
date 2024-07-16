@@ -160,42 +160,6 @@ public class MixinPatches {
                 .build(),
             // ======= TODO Handle in adapter
             Patch.builder()
-                .targetClass("net/minecraft/world/entity/vehicle/AbstractMinecart")
-                .targetMethod("moveAlongTrack")
-                .targetInjectionPoint("Lnet/minecraft/world/entity/vehicle/AbstractMinecart;move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V")
-                .modifyTarget("moveMinecartOnRail(Lnet/minecraft/core/BlockPos;)V")
-                .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/world/level/NaturalSpawner")
-                .targetMethod("mobsAt")
-                .targetInjectionPoint("Lnet/minecraft/world/level/levelgen/structure/structures/NetherFortressStructure;FORTRESS_ENEMIES:Lnet/minecraft/util/random/WeightedRandomList;")
-                .modifyInjectionPoint("INVOKE", "Lnet/minecraft/world/level/StructureManager;registryAccess()Lnet/minecraft/core/RegistryAccess;")
-                .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/world/entity/Entity")
-                .targetMethod("updateFluidHeightAndDoFluidPushing(Lnet/minecraft/tags/TagKey;D)Z")
-                .targetInjectionPoint("Lnet/minecraft/world/phys/Vec3;length()D")
-                .modifyTarget("lambda$updateFluidHeightAndDoFluidPushing$22")
-                .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/world/entity/Entity")
-                .targetMethod("updateFluidHeightAndDoFluidPushing(Lnet/minecraft/tags/TagKey;D)Z")
-                .targetInjectionPoint("Lnet/minecraft/world/entity/Entity;touchingUnloadedChunk()Z")
-                .modifyTarget("updateFluidHeightAndDoFluidPushing()V")
-                .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/world/item/BoneMealItem")
-                .targetMethod("growCrop")
-                .modifyTarget("applyBonemeal(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;)Z")
-                .modifyParams(builder -> builder.insert(3, Type.getObjectType("net/minecraft/world/entity/player/Player")))
-                .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/world/entity/LivingEntity")
-                .targetMethod("travel(Lnet/minecraft/world/phys/Vec3;)V")
-                .targetInjectionPoint("Lnet/minecraft/world/level/block/Block;getFriction()F")
-                .modifyInjectionPoint("Lnet/minecraft/world/level/block/state/BlockState;getFriction(Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/Entity;)F")
-                .build(),
-            Patch.builder()
                 .targetClass("net/minecraft/world/entity/vehicle/Boat")
                 .targetMethod("m_38394_", "m_38393_", "m_38371_", "m_7840_")
                 .targetInjectionPoint("Lnet/minecraft/world/level/material/FluidState;is(Lnet/minecraft/tags/TagKey;)Z")
@@ -231,7 +195,7 @@ public class MixinPatches {
                 .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canWalkOnPowderedSnow(Lnet/minecraft/world/entity/LivingEntity;)Z")
                 .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraft/world/entity/LivingEntity")))
                 .build(),
-            Patch.builder() // This is the annoying instanceof CrossbowItem patch
+            Patch.builder() // This is the annoying instanceof CrossbowItem patch TODO see DynamicSyntheticInstanceofPatch
                 .targetClass("net/minecraft/client/renderer/ItemInHandRenderer")
                 .targetMethod("renderArmWithItem")
                 .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z")
@@ -241,13 +205,6 @@ public class MixinPatches {
                 .modifyMixinType(MixinConstants.REDIRECT, builder -> builder
                     .sameTarget()
                     .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;getItem()Lnet/minecraft/world/item/Item;"))
-                .build(),
-            // TODO Fix clientcommands
-            Patch.builder()
-                .targetClass("net/minecraft/world/entity/LivingEntity")
-                .targetMethod("baseTick")
-                .targetInjectionPoint("Lnet/minecraft/world/level/Level;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;")
-                .modifyInjectionPoint("INVOKE", "Lnet/neoforged/neoforge/common/CommonHooks;onLivingBreathe(Lnet/minecraft/world/entity/LivingEntity;II)V", true)
                 .build()
             // ========
             /*

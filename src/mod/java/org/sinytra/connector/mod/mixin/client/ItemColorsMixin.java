@@ -10,7 +10,9 @@ import org.sinytra.connector.mod.compat.fieldtypes.FieldTypeUtil;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Map;
 
@@ -21,18 +23,16 @@ public abstract class ItemColorsMixin {
     @Final
     private Map<Holder.Reference<Item>, ItemColor> itemColors;
 
-    @Unique
+    // Added via coremod
+    @Shadow(aliases = { "itemColors" })
     private IdMapper<ItemColor> connector$itemColors;
 
-    @Unique
-    public IdMapper<ItemColor> connector$getItemColors() {
-        if (this.connector$itemColors == null) {
-            this.connector$itemColors = FieldTypeUtil.createRedirectingMapperSafely(
-                ud -> BuiltInRegistries.ITEM.getHolder(ud).orElseThrow(),
-                itemReference -> BuiltInRegistries.ITEM.getId(itemReference.value()),
-                this.itemColors
-            );
-        }
-        return this.connector$itemColors;
+    @Inject(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/color/item/ItemColors;itemColors:Ljava/util/Map;", shift = At.Shift.AFTER))
+    private void onInit(CallbackInfo ci) {
+        this.connector$itemColors = FieldTypeUtil.createRedirectingMapperSafely(
+            ud -> BuiltInRegistries.ITEM.getHolder(ud).orElseThrow(),
+            itemReference -> BuiltInRegistries.ITEM.getId(itemReference.value()),
+            this.itemColors
+        );
     }
 }

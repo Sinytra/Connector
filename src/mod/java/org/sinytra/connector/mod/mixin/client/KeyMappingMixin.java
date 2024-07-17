@@ -25,7 +25,7 @@ public abstract class KeyMappingMixin {
     @Shadow
     private static KeyMappingLookup MAP;
 
-    @Shadow(remap = false, aliases = { "MAP" })
+    @Shadow(aliases = { "MAP" })
     private static final Map<InputConstants.Key, KeyMapping> vanillaKeyMapping;
 
     static {
@@ -119,7 +119,7 @@ public abstract class KeyMappingMixin {
                     .filter(e -> !e.getValue().isEmpty())
                     .collect(Collectors.toMap(
                         Entry::getKey,
-                        e -> ((ArrayList<KeyMapping>) e.getValue()).get(0)
+                        e -> ((ArrayList<KeyMapping>) e.getValue()).getFirst()
                     ))
                     .entrySet();
             }

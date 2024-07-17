@@ -10,7 +10,9 @@ import org.sinytra.connector.mod.compat.fieldtypes.FieldTypeUtil;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Map;
 
@@ -21,18 +23,16 @@ public abstract class BlockColorsMixin {
     @Final
     private Map<Holder.Reference<Block>, BlockColor> blockColors;
 
-    @Unique
+    // Added via coremod
+    @Shadow(aliases = { "blockColors" })
     private IdMapper<BlockColor> connector$blockColors;
 
-    @Unique
-    public IdMapper<BlockColor> connector$getBlockColors() {
-        if (this.connector$blockColors == null) {
-            this.connector$blockColors = FieldTypeUtil.createRedirectingMapperSafely(
-                id -> BuiltInRegistries.BLOCK.getHolder(id).orElseThrow(),
-                blockReference -> BuiltInRegistries.BLOCK.getId(blockReference.value()),
-                this.blockColors
-            );
-        }
-        return this.connector$blockColors;
+    @Inject(method = "<init>", at = @At(value = "FIELD", target = "Lnet/minecraft/client/color/block/BlockColors;blockColors:Ljava/util/Map;", shift = At.Shift.AFTER))
+    private void onInit(CallbackInfo ci) {
+        this.connector$blockColors = FieldTypeUtil.createRedirectingMapperSafely(
+            id -> BuiltInRegistries.BLOCK.getHolder(id).orElseThrow(),
+            blockReference -> BuiltInRegistries.BLOCK.getId(blockReference.value()),
+            this.blockColors
+        );
     }
 }

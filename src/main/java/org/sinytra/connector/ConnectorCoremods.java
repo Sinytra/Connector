@@ -92,8 +92,29 @@ public class ConnectorCoremods implements ICoreMod {
                 LOGGER.debug("Injected vanilla CreativeModeTab constructor");
             }
         );
+        List<ITransformer<?>> addedFields = List.of(
+            addFieldToClass("net.minecraft.client.particle.ParticleEngine", "providers", "Lit/unimi/dsi/fastutil/ints/Int2ObjectMap;", Opcodes.ACC_PRIVATE),
+            addFieldToClass("net.minecraft.client.color.block.BlockColors", "blockColors", "Lnet/minecraft/core/IdMapper;", Opcodes.ACC_PRIVATE),
+            addFieldToClass("net.minecraft.client.color.item.ItemColors", "itemColors", "Lnet/minecraft/core/IdMapper;", Opcodes.ACC_PRIVATE)
+        );
 
-        return ImmutableList.<ITransformer<?>>builder().add(keyMappingFieldTypeTransform, creativeModeTabConstructorTransform).addAll(getFabricASMTransformers()).build();
+        return ImmutableList.<ITransformer<?>>builder()
+            .add(keyMappingFieldTypeTransform, creativeModeTabConstructorTransform)
+            .addAll(addedFields)
+            .addAll(getFabricASMTransformers())
+            .build();
+    }
+
+    private static ITransformer<?> addFieldToClass(String cls, String name, String desc, int access) {
+        return new BaseTransformer<>(
+            TargetType.CLASS,
+            ITransformer.Target.targetClass(cls),
+            input -> {
+                input.fields.add(new FieldNode(access, name, desc, null, null));
+                
+                LOGGER.debug("Added field {} to class {}", name, cls);
+            }
+        );
     }
 
     private static List<ITransformer<?>> getFabricASMTransformers() {

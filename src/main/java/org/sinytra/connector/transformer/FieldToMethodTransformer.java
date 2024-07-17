@@ -36,16 +36,6 @@ public class FieldToMethodTransformer implements ClassNodeTransformer.ClassProce
         .put("net.minecraft.world.level.block.FlowerPotBlock", Map.of(
             "potted", "getPotted"
         ))
-        // Custom getters added by Connector TODO
-//        .put("net.minecraft.client.particle.ParticleEngine", Map.of(
-//            "f_107293_", "connector$getProviders"
-//        ))
-//        .put("net.minecraft.client.color.block.BlockColors", Map.of(
-//            "f_92571_", "connector$getBlockColors"
-//        ))
-//        .put("net.minecraft.client.color.item.ItemColors", Map.of(
-//            "f_92674_", "connector$getItemColors"
-//        ))
         .buildOrThrow();
 
     private static final Logger LOGGER = LogUtils.getLogger();

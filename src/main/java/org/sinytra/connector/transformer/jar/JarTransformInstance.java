@@ -21,7 +21,7 @@ import net.neoforged.neoforgespi.locating.IModFile;
 import org.sinytra.adapter.patch.LVTOffsets;
 import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.api.PatchEnvironment;
-import org.sinytra.adapter.patch.serialization.PatchSerialization;
+import org.sinytra.adapter.patch.transformer.serialization.PatchSerialization;
 import org.sinytra.adapter.patch.util.provider.ClassLookup;
 import org.sinytra.adapter.patch.util.provider.ZipClassLookup;
 import org.sinytra.connector.locator.EmbeddedDependencies;
@@ -130,7 +130,7 @@ public class JarTransformInstance {
         int fabricLVTCompatibility = FabricMixinBootstrap.MixinConfigDecorator.getMixinCompat(metadata.modMetadata());
         PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility);
         MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, environment, extraPatches);
-        RefmapRemapper refmapRemapper = new RefmapRemapper(metadata.visibleMixinConfigs(), refmap.files());
+        RefmapRemapper refmapRemapper = new RefmapRemapper(refmap.files());
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())
             .add(new ClassNodeTransformer(

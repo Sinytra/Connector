@@ -13,7 +13,9 @@
     "recipebook.RecipeBookCategoriesAccessor",
     "recipebook.RecipeBookCategoriesMixin",
     "recipebook.RecipeBookManagerMixin",
+    "registries.MappedRegistryAccessor",
     "registries.BuiltInRegistriesMixin",
+    "registries.EntityDataSerializersMixin",
     "registries.NeoForgeRegistriesSetupAccessor",
     "registries.NeoForgeRegistriesSetupMixin"
   ],

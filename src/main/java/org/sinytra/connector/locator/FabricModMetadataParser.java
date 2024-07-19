@@ -31,7 +31,7 @@ public final class FabricModMetadataParser {
     private static final Pattern VALID_VERSION = Pattern.compile("^\\d+.*");
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static IModFileInfo createForgeMetadata(IModFile modFile, ConnectorFabricModMetadata metadata, boolean lowCode) {
+    public static IModFileInfo createForgeMetadata(IModFile modFile, ConnectorFabricModMetadata metadata, Collection<String> activeMixinConfigs, boolean lowCode) {
         String modid = metadata.getId();
 
         Config config = Config.inMemory();
@@ -87,6 +87,16 @@ public final class FabricModMetadataParser {
             .map(Person::getName)
             .collect(Collectors.joining(", ")));
         config.add("mods", List.of(modListConfig));
+        List<Config> mixins = activeMixinConfigs.stream()
+            .map(str -> {
+                Config mixinConfig = modListConfig.createSubConfig();
+                mixinConfig.add("config", str);
+                return mixinConfig;
+            })
+            .toList();
+        if (!mixins.isEmpty()) {
+            config.add("mixins", mixins);
+        }
         switch (metadata.getEnvironment()) {
             case CLIENT -> config.add("displayTest", "IGNORE_ALL_VERSION");
             case SERVER -> config.add("displayTest", "IGNORE_SERVER_VERSION");

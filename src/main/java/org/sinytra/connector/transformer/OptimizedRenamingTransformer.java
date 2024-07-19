@@ -1,5 +1,7 @@
 package org.sinytra.connector.transformer;
 
+import org.sinytra.adapter.patch.analysis.selector.AnnotationHandle;
+import org.sinytra.adapter.patch.analysis.selector.AnnotationValueHandle;
 import org.sinytra.connector.transformer.jar.IntermediateMapping;
 import net.minecraftforge.fart.api.ClassProvider;
 import net.minecraftforge.fart.internal.ClassProviderImpl;
@@ -24,8 +26,6 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.sinytra.adapter.patch.selector.AnnotationHandle;
-import org.sinytra.adapter.patch.selector.AnnotationValueHandle;
 import org.sinytra.adapter.patch.util.MethodQualifier;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
 

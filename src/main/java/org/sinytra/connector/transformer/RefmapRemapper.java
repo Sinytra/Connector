@@ -2,16 +2,13 @@ package org.sinytra.connector.transformer;
 
 import com.google.gson.Gson;
 import com.mojang.logging.LogUtils;
-import org.sinytra.connector.util.ConnectorUtil;
 import net.minecraftforge.fart.api.Transformer;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
-import org.spongepowered.asm.util.Constants;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
@@ -25,8 +22,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
 
 public class RefmapRemapper implements Transformer {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -85,13 +80,9 @@ public class RefmapRemapper implements Transformer {
         return null;
     }
 
-    private final Collection<String> visibleMixinConfigs;
     private final Map<String, MappingAwareReferenceMapper.SimpleRefmap> files;
 
-    private boolean hasManifest;
-
-    public RefmapRemapper(Collection<String> visibleMixinConfigs, Map<String, MappingAwareReferenceMapper.SimpleRefmap> files) {
-        this.visibleMixinConfigs = visibleMixinConfigs;
+    public RefmapRemapper(Map<String, MappingAwareReferenceMapper.SimpleRefmap> files) {
         this.files = files;
     }
 
@@ -111,41 +102,6 @@ public class RefmapRemapper implements Transformer {
             }
         }
         return entry;
-    }
-
-    @Override
-    public ManifestEntry process(ManifestEntry entry) {
-        this.hasManifest = true;
-        if (!this.visibleMixinConfigs.isEmpty()) {
-            Manifest manifest = new Manifest();
-            try (InputStream is = new ByteArrayInputStream(entry.getData())) {
-                manifest.read(is);
-                return modifyManifest(manifest, entry.getTime());
-            } catch (IOException e) {
-                throw new UncheckedIOException("Error writing manifest", e);
-            }
-        }
-        return entry;
-    }
-
-    @Override
-    public Collection<? extends Entry> getExtras() {
-        if (!this.visibleMixinConfigs.isEmpty() && !this.hasManifest) {
-            Manifest manifest = new Manifest();
-            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
-            return List.of(modifyManifest(manifest, ConnectorUtil.ZIP_TIME));
-        }
-        return List.of();
-    }
-
-    private ManifestEntry modifyManifest(Manifest manifest, long time) {
-        manifest.getMainAttributes().putValue(Constants.ManifestAttributes.MIXINCONFIGS, String.join(",", this.visibleMixinConfigs));
-        try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
-            manifest.write(byteStream);
-            return ManifestEntry.create(time, byteStream.toByteArray());
-        } catch (IOException e) {
-            throw new UncheckedIOException("Error writing generated manifest", e);
-        }
     }
 
     private static MappingAwareReferenceMapper.SimpleRefmap remapRefmapInPlace(byte[] data, MappingAwareReferenceMapper remapper) {

@@ -31,13 +31,11 @@ import org.spongepowered.asm.mixin.FabricUtil;
 import org.spongepowered.asm.mixin.Mixins;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfig;
 import org.spongepowered.asm.mixin.transformer.Config;
-import org.spongepowered.asm.util.Constants;
 
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.jar.Manifest;
 
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
 
@@ -51,10 +49,9 @@ public final class FabricMixinBootstrap {
         Map<String, ModFileInfo> configToModMap = new HashMap<>();
 
         for (ModFileInfo modFile : LoadingModList.get().getModFiles()) {
-            Manifest manifest = modFile.getFile().getSecureJar().moduleDataProvider().getManifest();
-            String configsValue = manifest.getMainAttributes().getValue(Constants.ManifestAttributes.MIXINCONFIGS);
-            if (configsValue != null) {
-                for (String config : configsValue.split(",")) {
+            List<String> mixinConfigs = modFile.getFile().getMixinConfigs();
+            if (mixinConfigs != null) {
+                for (String config : mixinConfigs) {
                     if (Files.exists(modFile.getFile().findResource(config))) {
                         ModFileInfo prev = configToModMap.putIfAbsent(config, modFile);
                         if (prev != null)
@@ -83,15 +80,15 @@ public final class FabricMixinBootstrap {
                 if (mod == null) continue;
 
                 IMixinConfig config = rawConfig.getConfig();
-                config.decorate(FabricUtil.KEY_MOD_ID, mod.moduleName());
                 if (!mod.getMods().isEmpty()) {
-                    String modid = mod.getMods().get(0).getModId();
+                    String modid = mod.getMods().getFirst().getModId();
                     int compat;
                     if (ConnectorEarlyLoader.isConnectorMod(modid)) {
                         compat = FabricLoaderImpl.INSTANCE.getModContainer(modid)
                             .map(m -> getMixinCompat(m.getMetadata()))
                             .orElse(FabricUtil.COMPATIBILITY_0_10_0);
-                    } else {
+                    }
+                    else {
                         compat = FabricUtil.COMPATIBILITY_0_10_0;
                     }
                     config.decorate(FabricUtil.KEY_COMPATIBILITY, compat);

@@ -192,7 +192,6 @@ public final class JarTransformer {
                     readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages);
                 }
             }
-            Set<String> visibleConfigs = Set.copyOf(configs);
             // Find additional configs that may not be listed in mod metadata
             jarFile.stream()
                 .forEach(entry -> {
@@ -203,7 +202,7 @@ public final class JarTransformer {
                 });
             Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
             boolean generated = isGeneratedLibraryJarMetadata(manifestAttributes, metadata);
-            return new FabricModFileMetadata(metadata, visibleConfigs, configs, refmaps, mixinPackages, manifestAttributes, containsAT, generated);
+            return new FabricModFileMetadata(metadata, Set.copyOf(configs), configs, refmaps, mixinPackages, manifestAttributes, containsAT, generated);
         }
     }
 

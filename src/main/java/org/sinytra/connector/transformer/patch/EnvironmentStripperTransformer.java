@@ -14,11 +14,11 @@ import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.sinytra.adapter.patch.analysis.selector.AnnotationHandle;
+import org.sinytra.adapter.patch.analysis.selector.AnnotationValueHandle;
 import org.sinytra.adapter.patch.api.ClassTransform;
 import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.api.PatchContext;
-import org.sinytra.adapter.patch.selector.AnnotationHandle;
-import org.sinytra.adapter.patch.selector.AnnotationValueHandle;
 
 import java.util.ArrayList;
 import java.util.Iterator;

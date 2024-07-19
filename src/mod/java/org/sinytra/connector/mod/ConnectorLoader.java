@@ -18,10 +18,15 @@ public class ConnectorLoader {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     // Whether we are currently in a loading state
+    private static boolean loading;
     private static boolean finishedLoading;
 
     public static boolean hasFinishedLoading() {
         return finishedLoading;
+    }
+
+    public static boolean isLoading() {
+        return loading;
     }
 
     /**
@@ -38,6 +43,7 @@ public class ConnectorLoader {
             return;
         }
 
+        loading = true;
         ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Loading mods", 0);
         try {
             LazyEntityAttributes.inject();
@@ -57,6 +63,7 @@ public class ConnectorLoader {
         } catch (Throwable t) {
             ConnectorEarlyLoader.addGenericLoadingException(t, "Encountered error during early mod loading");
         }
+        loading = false;
         progress.complete();
     }
 }

@@ -7,8 +7,8 @@ import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.sinytra.adapter.patch.api.MixinConstants;
 import org.sinytra.adapter.patch.api.Patch;
-import org.sinytra.adapter.patch.transformer.ModifyMethodAccess;
-import org.sinytra.adapter.patch.transformer.param.ParamTransformTarget;
+import org.sinytra.adapter.patch.transformer.operation.ModifyMethodAccess;
+import org.sinytra.adapter.patch.transformer.operation.param.ParamTransformTarget;
 
 import java.util.List;
 import java.util.ListIterator;

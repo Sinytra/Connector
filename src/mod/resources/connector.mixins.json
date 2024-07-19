@@ -7,17 +7,22 @@
   "mixins": [
     "CommonHooksMixin",
     "PlayerListMixin",
+    "ChunkGeneratorMixin",
     "boot.DatagenModLoaderMixin",
     "item.IItemExtensionMixin",
     "item.ItemStackMixin",
     "recipebook.RecipeBookCategoriesAccessor",
     "recipebook.RecipeBookCategoriesMixin",
     "recipebook.RecipeBookManagerMixin",
+    "registries.DataPackRegistriesHooksAccessor",
     "registries.MappedRegistryAccessor",
     "registries.BuiltInRegistriesMixin",
     "registries.EntityDataSerializersMixin",
     "registries.NeoForgeRegistriesSetupAccessor",
-    "registries.NeoForgeRegistriesSetupMixin"
+    "registries.NeoForgeRegistriesSetupMixin",
+    "registries.NetworkRegistryMixin",
+    "registries.PoiTypesMixin",
+    "registries.RegistryDataLoaderMixin"
   ],
   "client": [
     "boot.MinecraftMixin",

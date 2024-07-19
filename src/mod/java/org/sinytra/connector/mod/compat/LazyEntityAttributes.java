@@ -24,7 +24,7 @@ import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
 
 public class LazyEntityAttributes {
     private static final MethodHandle DEFERRED_HOLDER_SET_VALUE = uncheck(() -> MethodHandles.privateLookupIn(DeferredHolder.class, MethodHandles.lookup()).findSetter(DeferredHolder.class, "holder", Holder.class));
-    private static final List<Holder<Attribute>> ATTRIBUTES = List.of(NeoForgeMod.SWIM_SPEED, NeoForgeMod.NAMETAG_DISTANCE);
+    private static final List<Holder<Attribute>> ATTRIBUTES = List.of(NeoForgeMod.SWIM_SPEED, NeoForgeMod.NAMETAG_DISTANCE, NeoForgeMod.CREATIVE_FLIGHT);
     private static final Map<Holder<Attribute>, Holder<Attribute>> PLACEHOLDERS = new HashMap<>();
 
     public static void inject() {

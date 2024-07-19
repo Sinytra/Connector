@@ -11,15 +11,12 @@ import org.sinytra.adapter.patch.util.MethodQualifier;
 import java.util.Map;
 
 public class ClassAnalysingTransformer implements ClassNodeTransformer.ClassProcessor {
-    private static final Map<MethodQualifier, MethodQualifier> REPLACEMENTS = Map.of( // TODO
-//        new MethodQualifier("Ljava/lang/Class;", "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;"),
-//        new MethodQualifier("org/sinytra/connector/mod/ConnectorMod", "getModResourceAsStream", "(Ljava/lang/Class;Ljava/lang/String;)Ljava/io/InputStream;"),
+    private static final Map<MethodQualifier, MethodQualifier> REPLACEMENTS = Map.of(
+        new MethodQualifier("Ljava/lang/Class;", "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;"),
+        new MethodQualifier("org/sinytra/connector/mod/ConnectorMod", "getModResourceAsStream", "(Ljava/lang/Class;Ljava/lang/String;)Ljava/io/InputStream;"),
 
-//        new MethodQualifier("Lnet/minecraft/world/level/storage/loot/LootDataType;", ASMAPI.mapMethod("m_278763_"), "(Lnet/minecraft/resources/ResourceLocation;Lcom/google/gson/JsonElement;)Ljava/util/Optional;"),
-//        new MethodQualifier("org/sinytra/connector/mod/ConnectorMod", "deserializeLootTable", "(Lnet/minecraft/world/level/storage/loot/LootDataType;Lnet/minecraft/resources/ResourceLocation;Lcom/google/gson/JsonElement;)Ljava/util/Optional;"),
-
-//        new MethodQualifier("Lcom/electronwill/nightconfig/core/file/FileConfigBuilder;", "defaultResource", "(Ljava/lang/String;)Lcom/electronwill/nightconfig/core/file/GenericBuilder;"),
-//        new MethodQualifier("org/sinytra/connector/mod/ConnectorMod", "useModConfigResource", "(Lcom/electronwill/nightconfig/core/file/FileConfigBuilder;Ljava/lang/String;)Lcom/electronwill/nightconfig/core/file/GenericBuilder;")
+        new MethodQualifier("Lcom/electronwill/nightconfig/core/file/FileConfigBuilder;", "defaultResource", "(Ljava/lang/String;)Lcom/electronwill/nightconfig/core/file/GenericBuilder;"),
+        new MethodQualifier("org/sinytra/connector/mod/ConnectorMod", "useModConfigResource", "(Lcom/electronwill/nightconfig/core/file/FileConfigBuilder;Ljava/lang/String;)Lcom/electronwill/nightconfig/core/file/GenericBuilder;")
     );
 
     @Override

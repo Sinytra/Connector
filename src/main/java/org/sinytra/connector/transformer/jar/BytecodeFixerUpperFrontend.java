@@ -2,8 +2,11 @@ package org.sinytra.connector.transformer.jar;
 
 import com.mojang.datafixers.util.Pair;
 import net.neoforged.neoforgespi.locating.IModFile;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.sinytra.adapter.patch.fixes.BytecodeFixerUpper;
+import org.sinytra.adapter.patch.fixes.SimpleTypeAdapter;
 import org.sinytra.adapter.patch.fixes.TypeAdapter;
 import org.sinytra.connector.util.ConnectorUtil;
 
@@ -36,8 +39,8 @@ public class BytecodeFixerUpperFrontend {
 //            list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/core/Holder$Reference", "get", "()Ljava/lang/Object;"))),
 //        new SimpleTypeAdapter(Type.getObjectType("net/minecraft/resources/ResourceLocation"), Type.getObjectType("java/lang/String"), (list, insn) ->
 //            list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/resources/ResourceLocation", "toString", "()Ljava/lang/String;"))),
-//        new SimpleTypeAdapter(Type.getObjectType("net/minecraft/world/item/ItemStack"), Type.getObjectType("net/minecraft/world/item/Item"), (list, insn) ->
-//            list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/item/ItemStack", ASMAPI.mapMethod("m_41720_"), "()Lnet/minecraft/world/item/Item;"))),
+        new SimpleTypeAdapter(Type.getObjectType("net/minecraft/world/item/ItemStack"), Type.getObjectType("net/minecraft/world/item/Item"), (list, insn) ->
+            list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/item/ItemStack", "getItem", "()Lnet/minecraft/world/item/Item;")))
 //        new SimpleTypeAdapter(Type.getObjectType("java/util/List"), Type.getType("[Lnet/minecraft/world/level/storage/loot/LootPool;"), (list, insn) -> {
 //            list.insert(insn, ASMAPI.listOf(
 //                new InsnNode(Opcodes.ICONST_0),

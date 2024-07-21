@@ -8,14 +8,14 @@ import cpw.mods.modlauncher.api.IModuleLayerManager;
 import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
-import org.sinytra.connector.loader.ConnectorEarlyLoader;
-import org.sinytra.connector.service.hacks.ConnectorForkJoinThreadFactory;
-import org.sinytra.connector.service.hacks.LenientRuntimeEnumExtender;
-import org.sinytra.connector.service.hacks.ModuleLayerMigrator;
 import net.minecraftforge.fml.loading.ImmediateWindowHandler;
 import net.minecraftforge.fml.loading.ImmediateWindowProvider;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.unsafe.UnsafeHacks;
+import org.sinytra.connector.loader.ConnectorEarlyLoader;
+import org.sinytra.connector.service.hacks.ConnectorForkJoinThreadFactory;
+import org.sinytra.connector.service.hacks.LenientRuntimeEnumExtender;
+import org.sinytra.connector.service.hacks.ModuleLayerMigrator;
 import org.slf4j.Logger;
 
 import java.lang.invoke.VarHandle;
@@ -55,16 +55,17 @@ public class ConnectorLoaderService implements ITransformationService {
 
         ImmediateWindowProvider original = (ImmediateWindowProvider) provider.get();
         ImmediateWindowProvider newProvider = new ImmediateWindowProvider() {
-
             @Override
             public void updateModuleReads(ModuleLayer layer) {
-                // Setup entrypoints
-                ConnectorEarlyLoader.setup();
-                // Invoke mixin on a dummy class to initialize mixin plugins
-                // Necessary to avoid duplicate class definition errors when a plugin loads the class that is being transformed
-                uncheck(() -> Class.forName("org.sinytra.connector.mod.DummyTarget", false, Thread.currentThread().getContextClassLoader()));
-                // Run preLaunch
-                ConnectorEarlyLoader.preLaunch();
+                if (!ConnectorEarlyLoader.hasEncounteredException()) {
+                    // Setup entrypoints
+                    ConnectorEarlyLoader.setup();
+                    // Invoke mixin on a dummy class to initialize mixin plugins
+                    // Necessary to avoid duplicate class definition errors when a plugin loads the class that is being transformed
+                    uncheck(() -> Class.forName("org.sinytra.connector.mod.DummyTarget", false, Thread.currentThread().getContextClassLoader()));
+                    // Run preLaunch
+                    ConnectorEarlyLoader.preLaunch();
+                }
                 original.updateModuleReads(layer);
             }
 
@@ -116,7 +117,8 @@ public class ConnectorLoaderService implements ITransformationService {
     public List<Resource> completeScan(IModuleLayerManager layerManager) {
         if (LoadingModList.get().getBrokenFiles().isEmpty()) {
             LoadingModList.get().getErrors().addAll(ConnectorEarlyLoader.getLoadingExceptions());
-        } else {
+        }
+        else {
             LOGGER.warn("Broken FML mod files found, not adding Connector locator errors");
         }
         return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(

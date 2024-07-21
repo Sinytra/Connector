@@ -8,7 +8,6 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.fml.loading.ModDirTransformerDiscoverer;
 import net.neoforged.fml.loading.StringUtils;
-import net.neoforged.fml.loading.moddiscovery.NightConfigWrapper;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.slf4j.Logger;
 
@@ -111,8 +110,7 @@ public final class FabricModsDiscoverer {
             FileConfig fileConfig = FileConfig.of(modsTomlPath);
             fileConfig.load();
             fileConfig.close();
-            NightConfigWrapper config = new NightConfigWrapper(fileConfig);
-            return config.<Map<String, Object>>getConfigElement("properties")
+            return fileConfig.<Map<String, Object>>getOptional("properties")
                 .map(map -> map.containsKey(ConnectorLocator.PLACEHOLDER_PROPERTY))
                 .orElse(false);
         } catch (Throwable t) {

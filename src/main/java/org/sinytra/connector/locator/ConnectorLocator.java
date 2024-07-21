@@ -8,8 +8,11 @@ import cpw.mods.jarhandling.JarContentsBuilder;
 import cpw.mods.jarhandling.SecureJar;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.neoforged.fml.ModLoadingException;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.fml.loading.moddiscovery.ModJarMetadata;
+import net.neoforged.fml.loading.moddiscovery.locators.JarInJarDependencyLocator;
+import net.neoforged.fml.loading.moddiscovery.readers.JarModsDotTomlModFileReader;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import net.neoforged.neoforgespi.language.IModInfo;
 import net.neoforged.neoforgespi.locating.IDependencyLocator;
@@ -73,6 +76,10 @@ public class ConnectorLocator implements IDependencyLocator {
                 }
 
                 IGNORE_PATHS.addAll(results.originalPaths());
+            }
+
+            if (FMLEnvironment.production) {
+                loadEmbeddedJars(pipeline);
             }
         } catch (ModLoadingException e) {
             // Let these pass through
@@ -239,6 +246,12 @@ public class ConnectorLocator implements IDependencyLocator {
                 return Stream.of(new SimpleModInfo(modFileInfo.moduleName(), new DefaultArtifactVersion(version), true, modFile));
             })
             .toList();
+    }
+
+    private static void loadEmbeddedJars(IDiscoveryPipeline pipeline) throws Exception {
+        SecureJar secureJar = SecureJar.from(Path.of(ConnectorLocator.class.getProtectionDomain().getCodeSource().getLocation().toURI()));
+        IModFile modFile = IModFile.create(secureJar, JarModsDotTomlModFileReader::manifestParser);
+        new JarInJarDependencyLocator().scanMods(List.of(modFile), pipeline);
     }
 
     private record SimpleModInfo(String modid, ArtifactVersion version, boolean library, @Nullable IModFile origin) {}

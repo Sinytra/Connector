@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = DatagenModLoader.class, remap = false)
 public abstract class DatagenModLoaderMixin {
-    @Inject(method = "begin", at = @At(value = "INVOKE", target = "Lnet/neoforged/neoforge/data/loading/DatagenModLoader;begin(Ljava/lang/Runnable;)V"))
+    @Inject(method = "begin", at = @At(value = "INVOKE", target = "Lnet/neoforged/neoforge/data/loading/DatagenModLoader;begin(Ljava/lang/Runnable;Z)V"))
     private static void earlyInit(CallbackInfo ci) {
         ConnectorLoader.load();
     }

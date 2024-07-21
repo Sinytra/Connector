@@ -59,7 +59,6 @@ val test: SourceSet by sourceSets
 
 val shade: Configuration by configurations.creating {
     isTransitive = false
-    attributes.attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.SHADOWED))
 }
 val legacyClasspath: Configuration by configurations.creating { isTransitive = false }
 val adapterData: Configuration by configurations.creating
@@ -176,7 +175,6 @@ dependencies {
     "modCompileOnly"(sourceSets.main.get().output)
 
     additionalRuntimeClasspath(files(tasks.jar))
-    attributesSchema.getMatchingStrategy(Bundling.BUNDLING_ATTRIBUTE).compatibilityRules.add(BundlingCompatRule::class)
 }
 
 val modJar: Jar by tasks.creating(Jar::class) {
@@ -208,7 +206,8 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
 
     archiveClassifier.set("deps")
 }
-val fullJar: ShadowJar by tasks.creating(ShadowJar::class) {
+
+val fullJar by tasks.registering(ShadowJar::class) {
     from(tasks.jar, depsJar)
     mergeServiceFiles() // Relocate services
     relocate("net.minecraftforge.fart", "reloc.net.minecraftforge.fart")
@@ -277,7 +276,7 @@ tasks {
 }
 
 publishMods {
-    file.set(fullJar.archiveFile)
+    file.set(fullJar.flatMap { it.archiveFile })
     changelog.set(providers.environmentVariable("CHANGELOG").orElse("# $version"))
     type.set(PUBLISH_RELEASE_TYPE.orElse("alpha").map(ReleaseType::of))
     modLoaders.add("forge")
@@ -348,13 +347,5 @@ fun localJarJar(configName: String, mavenCoords: String, version: String, artifa
     }
     dependencies {
         jarJar(project(":")) { capabilities { requireCapability(mavenCoords) } }
-    }
-}
-
-class BundlingCompatRule : AttributeCompatibilityRule<Bundling> {
-    override fun execute(t: CompatibilityCheckDetails<Bundling>) {
-        if (t.consumerValue?.name == Bundling.SHADOWED) {
-            t.compatible()
-        }
     }
 }

@@ -23,6 +23,7 @@ import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.api.PatchEnvironment;
 import org.sinytra.adapter.patch.transformer.serialization.PatchSerialization;
 import org.sinytra.adapter.patch.util.provider.ClassLookup;
+import org.sinytra.adapter.patch.util.provider.MixinClassLookup;
 import org.sinytra.adapter.patch.util.provider.ZipClassLookup;
 import org.sinytra.connector.locator.EmbeddedDependencies;
 import org.sinytra.connector.service.FabricMixinBootstrap;
@@ -92,11 +93,11 @@ public class JarTransformInstance {
             throw new UncheckedIOException(e);
         }
 
-        this.bfu = new BytecodeFixerUpperFrontend();
         IMappingFile mappingFile = FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(JarTransformer.SOURCE_NAMESPACE);
         ClassProvider intermediaryClassProvider = new OptimizedRenamingTransformer.IntermediaryClassProvider(classProvider, mappingFile, mappingFile.reverse(), s -> {});
         this.enhancedRemapper = new OptimizedRenamingTransformer.MixinAwareEnhancedRemapper(intermediaryClassProvider, mappingFile, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE), s -> {});
         this.cleanClassLookup = createCleanClassLookup();
+        this.bfu = new BytecodeFixerUpperFrontend(this.cleanClassLookup, MixinClassLookup.INSTANCE);
         this.libs = libs;
 
         MixinPatchTransformer.completeSetup(loadedMods);

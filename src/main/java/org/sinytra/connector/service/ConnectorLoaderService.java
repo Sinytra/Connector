@@ -54,13 +54,15 @@ public class ConnectorLoaderService implements ITransformationService {
         ImmediateWindowProvider newProvider = new ImmediateWindowProvider() {
             @Override
             public void updateModuleReads(ModuleLayer layer) {
-                // Setup entrypoints
-                ConnectorEarlyLoader.setup();
-                // Invoke mixin on a dummy class to initialize mixin plugins
-                // Necessary to avoid duplicate class definition errors when a plugin loads the class that is being transformed
-                uncheck(() -> Class.forName("org.sinytra.connector.mod.DummyTarget", false, Thread.currentThread().getContextClassLoader()));
-                // Run preLaunch
-                ConnectorEarlyLoader.preLaunch();
+                if (!ConnectorEarlyLoader.hasEncounteredException()) {
+                    // Setup entrypoints
+                    ConnectorEarlyLoader.setup();
+                    // Invoke mixin on a dummy class to initialize mixin plugins
+                    // Necessary to avoid duplicate class definition errors when a plugin loads the class that is being transformed
+                    uncheck(() -> Class.forName("org.sinytra.connector.mod.DummyTarget", false, Thread.currentThread().getContextClassLoader()));
+                    // Run preLaunch
+                    ConnectorEarlyLoader.preLaunch();
+                }
                 original.updateModuleReads(layer);
             }
 
@@ -116,7 +118,8 @@ public class ConnectorLoaderService implements ITransformationService {
 
         if (!LoadingModList.get().hasErrors()) {
             LoadingModList.get().getModLoadingIssues().addAll(ConnectorEarlyLoader.getLoadingExceptions());
-        } else {
+        }
+        else {
             LOGGER.warn("Broken FML mod files found, not adding Connector locator errors");
         }
         return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(

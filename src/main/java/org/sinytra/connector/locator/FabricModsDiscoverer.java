@@ -1,5 +1,6 @@
 package org.sinytra.connector.locator;
 
+import com.electronwill.nightconfig.core.Config;
 import com.electronwill.nightconfig.core.file.FileConfig;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.SecureJar;
@@ -21,7 +22,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -110,8 +110,8 @@ public final class FabricModsDiscoverer {
             FileConfig fileConfig = FileConfig.of(modsTomlPath);
             fileConfig.load();
             fileConfig.close();
-            return fileConfig.<Map<String, Object>>getOptional("properties")
-                .map(map -> map.containsKey(ConnectorLocator.PLACEHOLDER_PROPERTY))
+            return fileConfig.<Config>getOptional("properties")
+                .map(map -> map.contains(ConnectorLocator.PLACEHOLDER_PROPERTY))
                 .orElse(false);
         } catch (Throwable t) {
             LOGGER.error("Error reading placeholder information from {}", modsTomlPath, t);

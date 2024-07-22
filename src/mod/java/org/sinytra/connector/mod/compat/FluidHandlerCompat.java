@@ -5,18 +5,13 @@ import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.material.FluidState;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidType;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
@@ -27,7 +22,6 @@ import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 public final class FluidHandlerCompat {
     private static final Map<Fluid, FluidType> FABRIC_FLUID_TYPES = new HashMap<>();
@@ -37,6 +31,10 @@ public final class FluidHandlerCompat {
     public static void init(IEventBus bus) {
         initFabricFluidTypes();
         bus.addListener(FluidHandlerCompat::onRegisterFluids);
+    }
+
+    static Map<Fluid, FluidType> getFabricFluidTypes() {
+        return FABRIC_FLUID_TYPES;
     }
 
     public static FluidType getFabricFluidType(Fluid fluid) {
@@ -65,17 +63,19 @@ public final class FluidHandlerCompat {
         event.register(NeoForgeRegistries.Keys.FLUID_TYPES, helper -> FABRIC_FLUID_TYPES_BY_NAME.forEach(helper::register));
     }
 
-    private static class FabricFluidType extends FluidType {
-        private final Fluid fluid;
+    static class FabricFluidType extends FluidType {
         @Nullable
         private final FluidRenderHandler renderHandler;
         private final Component name;
 
         public FabricFluidType(Properties properties, Fluid fluid, @Nullable FluidRenderHandler renderHandler) {
             super(properties);
-            this.fluid = fluid;
             this.renderHandler = renderHandler;
             this.name = FluidVariantAttributes.getName(FluidVariant.of(fluid));
+        }
+
+        public FluidRenderHandler getRenderHandler() {
+            return renderHandler;
         }
 
         @Override
@@ -86,46 +86,6 @@ public final class FluidHandlerCompat {
         @Override
         public Component getDescription(FluidStack stack) {
             return FluidVariantAttributes.getName(FluidVariant.of(stack.getFluid(), stack.getComponentsPatch()));
-        }
-
-        @Override
-        public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
-            consumer.accept(new IClientFluidTypeExtensions() {
-                private TextureAtlasSprite[] getSprites() {
-                    return renderHandler.getFluidSprites(null, null, fluid.defaultFluidState());
-                }
-
-                @Override
-                public ResourceLocation getStillTexture() {
-                    TextureAtlasSprite[] sprites = getSprites();
-                    return sprites[0].contents().name();
-                }
-
-                @Override
-                public ResourceLocation getFlowingTexture() {
-                    TextureAtlasSprite[] sprites = getSprites();
-                    return sprites[1].contents().name();
-                }
-
-                @Nullable
-                @Override
-                public ResourceLocation getOverlayTexture() {
-                    TextureAtlasSprite[] sprites = getSprites();
-                    return sprites.length > 2 ? sprites[2].contents().name() : null;
-                }
-
-                @Override
-                public int getTintColor() {
-                    int baseColor = renderHandler.getFluidColor(null, null, fluid.defaultFluidState());
-                    return 0xFF000000 | baseColor;
-                }
-
-                @Override
-                public int getTintColor(FluidState state, BlockAndTintGetter getter, BlockPos pos) {
-                    int baseColor = renderHandler.getFluidColor(getter, pos, state);
-                    return 0xFF000000 | baseColor;
-                }
-            });
         }
     }
 

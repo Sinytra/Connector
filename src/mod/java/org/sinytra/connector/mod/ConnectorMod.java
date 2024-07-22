@@ -10,6 +10,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import org.sinytra.connector.mod.compat.FluidHandlerCompat;
+import org.sinytra.connector.mod.compat.FluidHandlerCompatClient;
 import org.sinytra.connector.mod.compat.LazyEntityAttributes;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.slf4j.Logger;
@@ -27,6 +28,7 @@ public class ConnectorMod {
         ModList modList = ModList.get();
 
         bus.addListener(ConnectorMod::onClientSetup);
+        bus.addListener(FluidHandlerCompatClient::onRegisterClientExtensions);
         FluidHandlerCompat.init(bus);
 
         if (modList.isLoaded("fabric_object_builder_api_v1")) {

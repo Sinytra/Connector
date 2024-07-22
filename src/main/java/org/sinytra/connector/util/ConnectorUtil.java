@@ -53,7 +53,9 @@ public final class ConnectorUtil {
         // No matter what, we remove upstream fabric api from loading to prevent it from conflicting with FFAPI 
         // The unique mod filter isn't enough to handle api modules that have been left behind and not ported
         // I'm sorry for hardcoding this, but it seems to be the best way around
-        "fabric_api"
+        "fabric_api",
+        // Mixinextras is included by NeoForge
+        "mixinextras"
     );
     private static final String MIXINEXTRAS_MODID = "com_github_llamalad7_mixinextras";
     private static final Version MIXINEXTRAS_ENTRYPOINT_VERSION = uncheck(() -> Version.parse("0.2.0-beta.6"));

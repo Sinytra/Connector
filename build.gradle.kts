@@ -239,6 +239,9 @@ tasks {
             )
         }
     }
+    withType<JavaCompile> {
+        options.encoding = "UTF-8"
+    }
 
 //
 //    val modDownload = register("resolveTestMods") {

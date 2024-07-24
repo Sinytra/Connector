@@ -15,6 +15,7 @@ import org.sinytra.connector.util.ConnectorUtil;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -78,11 +79,11 @@ public class ConnectorEarlyLoader {
     }
 
     public static ModLoadingIssue createGenericLoadingIssue(Throwable original, String message) {
-        return createLoadingIssue(original, "§e[Connector]§r {3}\n§c{4}§7: {5}§r", true, message, original.getClass().getName(), original.getMessage());
+        return createLoadingIssue(original, "§e[Connector]§r {0}\n§c{1}§7: {2}§r", true, message, original.getClass().getName(), original.getMessage());
     }
 
     public static ModLoadingIssue createLoadingIssue(Throwable original, String message, boolean keepOriginal, Object... args) {
-        return new ModLoadingIssue(ModLoadingIssue.Severity.ERROR, message, List.of(), keepOriginal ? original : null, null, null, null);
+        return new ModLoadingIssue(ModLoadingIssue.Severity.ERROR, message, Arrays.asList(args), keepOriginal ? original : null, null, null, null);
     }
 
     /**

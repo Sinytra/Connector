@@ -119,9 +119,9 @@ public final class JarTransformer {
 
     private static List<TransformedFabricModPath> transformJars(List<TransformableJar> paths, List<Path> libs, Collection<IModFile> loadedMods) {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Transforming Jars", paths.size());
+        ProgressMeter progress = StartupNotificationManager.prependProgressBar("[Connector] Transforming Jars", paths.size());
         try {
-            ProgressMeter initProgress = StartupNotificationManager.addProgressBar("[Connector] Initializing Transformer", 0);
+            ProgressMeter initProgress = StartupNotificationManager.prependProgressBar("[Connector] Initializing Transformer", 0);
             JarTransformInstance transformInstance;
             try {
                 ClassProvider classProvider = ClassProvider.fromPaths(libs.toArray(Path[]::new));
@@ -152,7 +152,7 @@ public final class JarTransformer {
                     try {
                         return new TransformedFabricModPath(pair.getFirst().toPath(), pair.getSecond().get());
                     } catch (Throwable t) {
-                        throw new ModLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Error transforming jar " + pair.getFirst().getAbsolutePath()));
+                        throw new ModLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Error transforming file " + pair.getFirst().getName()));
                     }
                 })
                 .filter(Objects::nonNull)

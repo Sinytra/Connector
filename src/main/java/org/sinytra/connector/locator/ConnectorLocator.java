@@ -52,12 +52,6 @@ public class ConnectorLocator implements IDependencyLocator {
     public static final String PLACEHOLDER_PROPERTY = "connector:placeholder";
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private static final List<Path> IGNORE_PATHS = new ArrayList<>();
-
-    public static boolean shouldIgnorePath(Path path) {
-        return IGNORE_PATHS.contains(path);
-    }
-
     @Override
     public void scanMods(List<IModFile> loadedMods, IDiscoveryPipeline pipeline) {
         if (ConnectorEarlyLoader.hasEncounteredException()) {
@@ -65,17 +59,15 @@ public class ConnectorLocator implements IDependencyLocator {
             return;
         }
         try {
-            DiscoveryResults results = locateFabricMods(loadedMods);
+            List<IModFile> results = locateFabricMods(loadedMods);
             if (results != null) {
-                results.modFiles().forEach(pipeline::addModFile);
+                results.forEach(pipeline::addModFile);
 
                 // Create mod file for generated adapter mixins jar
                 Path generatedAdapterJar = JarTransformer.getGeneratedJarPath();
                 if (Files.exists(generatedAdapterJar)) {
                     pipeline.addPath(generatedAdapterJar, ModFileDiscoveryAttributes.DEFAULT, IncompatibleFileReporting.ERROR);
                 }
-
-                IGNORE_PATHS.addAll(results.originalPaths());
             }
 
             if (FMLEnvironment.production) {
@@ -96,7 +88,7 @@ public class ConnectorLocator implements IDependencyLocator {
     }
 
     @Nullable
-    private DiscoveryResults locateFabricMods(List<IModFile> discoveredMods) {
+    private List<IModFile> locateFabricMods(List<IModFile> discoveredMods) {
         LOGGER.debug(SCAN, "Scanning mods dir {} for mods", FMLPaths.MODSDIR.get());
         Path tempDir = ConnectorUtil.CONNECTOR_FOLDER.resolve("temp");
 
@@ -148,8 +140,7 @@ public class ConnectorLocator implements IDependencyLocator {
         // Deal with split packages (thanks modules)
         List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed.stream().map(JarTransformer.TransformedFabricModPath::output).toList(), loadedModFiles, ignoredModFiles);
 
-        List<IModFile> resultingFiles = moduleSafeJars.stream().map(ConnectorLocator::createConnectorModFile).toList();
-        return new DiscoveryResults(resultingFiles, transformed.stream().map(JarTransformer.TransformedFabricModPath::input).toList());
+        return moduleSafeJars.stream().map(ConnectorLocator::createConnectorModFile).toList();
     }
 
     private static IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath) {
@@ -255,6 +246,4 @@ public class ConnectorLocator implements IDependencyLocator {
     }
 
     private record SimpleModInfo(String modid, ArtifactVersion version, boolean library, @Nullable IModFile origin) {}
-
-    private record DiscoveryResults(List<IModFile> modFiles, List<Path> originalPaths) {}
 }

@@ -111,10 +111,8 @@ public class ConnectorLoaderService implements ITransformationService {
 
     @Override
     public List<Resource> completeScan(IModuleLayerManager layerManager) {
-        LoadingModList.get().getModLoadingIssues().removeIf(issue ->
-            issue.translationKey().equals("fml.modloadingissue.brokenfile.fabric")
-                && issue.affectedPath() != null && ConnectorLocator.shouldIgnorePath(issue.affectedPath())
-        );
+        // Ignore default Fabric mod locator warnings
+        LoadingModList.get().getModLoadingIssues().removeIf(issue -> issue.translationKey().equals("fml.modloadingissue.brokenfile.fabric"));
 
         if (!LoadingModList.get().hasErrors()) {
             LoadingModList.get().getModLoadingIssues().addAll(ConnectorEarlyLoader.getLoadingExceptions());

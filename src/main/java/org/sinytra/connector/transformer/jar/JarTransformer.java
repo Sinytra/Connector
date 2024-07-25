@@ -158,6 +158,7 @@ public final class JarTransformer {
                 .filter(Objects::nonNull)
                 .toList();
             uncheck(() -> transformInstance.getBfu().saveGeneratedAdapterJar());
+            transformInstance.saveAuditReport();
             stopwatch.stop();
             LOGGER.debug(TRANSFORM_MARKER, "Processed all jars in {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
             return results;

@@ -20,6 +20,7 @@ import net.neoforged.fml.loading.MavenCoordinate;
 import net.neoforged.neoforgespi.locating.IModFile;
 import org.sinytra.adapter.patch.LVTOffsets;
 import org.sinytra.adapter.patch.api.Patch;
+import org.sinytra.adapter.patch.api.PatchAuditTrail;
 import org.sinytra.adapter.patch.api.PatchEnvironment;
 import org.sinytra.adapter.patch.transformer.serialization.PatchSerialization;
 import org.sinytra.adapter.patch.util.provider.ClassLookup;
@@ -39,6 +40,7 @@ import org.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
 import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import org.sinytra.connector.transformer.patch.ConnectorRefmapHolder;
 import org.sinytra.connector.transformer.patch.ReflectionRenamingTransformer;
+import org.sinytra.connector.util.ConnectorUtil;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -70,6 +72,7 @@ public class JarTransformInstance {
     private final EnhancedRemapper enhancedRemapper;
     private final ClassLookup cleanClassLookup;
     private final List<Path> libs;
+    private final PatchAuditTrail auditTrail;
 
     public JarTransformInstance(ClassProvider classProvider, Collection<IModFile> loadedMods, List<Path> libs) {
         MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
@@ -99,6 +102,7 @@ public class JarTransformInstance {
         this.cleanClassLookup = createCleanClassLookup();
         this.bfu = new BytecodeFixerUpperFrontend(this.cleanClassLookup, MixinClassLookup.INSTANCE);
         this.libs = libs;
+        this.auditTrail = PatchAuditTrail.create();
 
         MixinPatchTransformer.completeSetup(loadedMods);
     }
@@ -129,7 +133,7 @@ public class JarTransformInstance {
         List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
         ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
         int fabricLVTCompatibility = FabricMixinBootstrap.MixinConfigDecorator.getMixinCompat(metadata.modMetadata());
-        PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility);
+        PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility, this.auditTrail);
         MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.lvtOffsetsData, environment, extraPatches);
         RefmapRemapper refmapRemapper = new RefmapRemapper(refmap.files());
         Renamer.Builder builder = Renamer.builder()
@@ -190,6 +194,18 @@ public class JarTransformInstance {
                 .filter(Files::exists)
                 .orElseThrow(() -> new RuntimeException("Could not determine clean minecraft artifact path"));
             return new SimpleClassLookup(ClassProvider.fromPaths(cleanPath));
+        }
+    }
+
+    public void saveAuditReport() {
+        try {
+            Path path = ConnectorUtil.CONNECTOR_FOLDER.resolve("patch_audit.txt");
+
+            Files.deleteIfExists(path);
+            String log = this.auditTrail.getCompleteReport();
+            Files.writeString(path, log);
+        } catch (IOException e) {
+            LOGGER.error("Error writing patch audit report", e);
         }
     }
 }

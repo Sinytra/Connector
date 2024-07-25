@@ -26,6 +26,7 @@ public class ConnectorRefmapHolder implements RefmapHolder {
     public String remap(String cls, String reference) {
         String cleanReference = reference.replaceAll(" ", "");
         return Optional.ofNullable(this.merged.mappings.get(cls))
+            .or(() -> Optional.ofNullable(this.merged.mappings.get(cls.replace('.', '/'))))
             .map(map -> map.get(cleanReference))
             .orElse(reference);
     }

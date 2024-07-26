@@ -107,6 +107,7 @@ public class ConnectorCoremods implements ICoreMod {
                 if (insn != null && insn.getNext() instanceof TypeInsnNode typeInsn) {
                     input.instructions.insert(typeInsn, ASMAPI.listOf(
                         new MethodInsnNode(Opcodes.INVOKESTATIC, "com/google/common/collect/Ordering", "natural", "()Lcom/google/common/collect/Ordering;"),
+                        new InsnNode(Opcodes.SWAP),
                         new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "com/google/common/collect/Ordering", "sortedCopy", "(Ljava/lang/Iterable;)Ljava/util/List;")
                     ));
                 }

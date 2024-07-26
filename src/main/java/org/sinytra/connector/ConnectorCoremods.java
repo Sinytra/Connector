@@ -6,6 +6,7 @@ import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.api.ITransformerVotingContext;
 import cpw.mods.modlauncher.api.TargetType;
 import cpw.mods.modlauncher.api.TransformerVoteResult;
+import net.neoforged.coremod.api.ASMAPI;
 import net.neoforged.neoforgespi.coremod.ICoreMod;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -15,6 +16,7 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.slf4j.Logger;
 
@@ -97,11 +99,25 @@ public class ConnectorCoremods implements ICoreMod {
             addFieldToClass("net.minecraft.client.color.block.BlockColors", "blockColors", "Lnet/minecraft/core/IdMapper;", Opcodes.ACC_PRIVATE),
             addFieldToClass("net.minecraft.client.color.item.ItemColors", "itemColors", "Lnet/minecraft/core/IdMapper;", Opcodes.ACC_PRIVATE)
         );
+        ITransformer<?> missingOrderingCall = new BaseTransformer<>(
+            TargetType.METHOD,
+            ITransformer.Target.targetMethod("net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen", "renderEffects", "(Lnet/minecraft/client/gui/GuiGraphics;II)V"),
+            input -> {
+                MethodInsnNode insn = ASMAPI.findFirstMethodCall(input, ASMAPI.MethodType.INTERFACE, "java/util/stream/Stream", "collect", "(Ljava/util/stream/Collector;)Ljava/lang/Object;");
+                if (insn != null && insn.getNext() instanceof TypeInsnNode typeInsn) {
+                    input.instructions.insert(typeInsn, ASMAPI.listOf(
+                        new MethodInsnNode(Opcodes.INVOKESTATIC, "com/google/common/collect/Ordering", "natural", "()Lcom/google/common/collect/Ordering;"),
+                        new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "com/google/common/collect/Ordering", "sortedCopy", "(Ljava/lang/Iterable;)Ljava/util/List;")
+                    ));
+                }
+            }
+        );
 
         return ImmutableList.<ITransformer<?>>builder()
             .add(keyMappingFieldTypeTransform, creativeModeTabConstructorTransform)
             .addAll(addedFields)
             .addAll(getFabricASMTransformers())
+            .add(missingOrderingCall)
             .build();
     }
 

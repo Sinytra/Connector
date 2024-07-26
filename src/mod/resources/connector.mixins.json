@@ -11,6 +11,7 @@
     "boot.DatagenModLoaderMixin",
     "item.IItemExtensionMixin",
     "item.ItemStackMixin",
+    "network.StreamCodecMixin",
     "recipebook.RecipeBookCategoriesAccessor",
     "recipebook.RecipeBookCategoriesMixin",
     "recipebook.RecipeBookManagerMixin",

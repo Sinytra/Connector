@@ -20,7 +20,7 @@ plugins {
     id("io.github.goooler.shadow") version "8.1.8" apply false
     id("me.modmuss50.mod-publish-plugin") version "0.5.+"
     id("net.neoforged.gradleutils") version "3.0.0"
-    id("org.sinytra.adapter.userdev") version "1.0-SNAPSHOT"
+    id("org.sinytra.adapter.userdev") version "1.1-SNAPSHOT"
 }
 
 val versionConnector: String by project
@@ -78,7 +78,7 @@ configurations {
     }
 
     "modImplementation" {
-        extendsFrom(/*configurations.minecraft.get(), */shade)
+        extendsFrom(shade)
     }
     
     additionalRuntimeClasspath {
@@ -106,18 +106,12 @@ neoForge {
             systemProperty("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE,COREMOD")
             systemProperty("connector.logging.markers", "MIXINPATCH,MERGER")
             systemProperty("mixin.debug.export", "true")
-            systemProperty("connector.clean.path", tasks.createCleanArtifact.get().outputFile.get().asFile.absolutePath)
-//            systemProperty("connector.cache.enabled", "false")
             gameDirectory.set(layout.projectDirectory.dir("run"))
 
             mods {
                 maybeCreate("connector").apply {
                     sourceSet(mod)
                 }
-            }
-
-            tasks.named(InternalModelHelper.nameOfRun(this, "prepare", "run")) {
-                dependsOn(tasks.createCleanArtifact)
             }
         }
 
@@ -129,17 +123,6 @@ neoForge {
             server()
             config(this)
         }
-
-//        create("testModClient") {
-//            client()
-//            mods {
-//                create("testconnector") {
-//                    sourceSet(test)
-//                }
-//            }
-//            programArguments.addAll("--mixin.config", "connectortest.mixins.json", "--quickPlaySingleplayer", "ctest")
-//            gameDirectory.set(layout.projectDirectory.dir("run/test"))
-//        }
     }
 }
 
@@ -242,40 +225,6 @@ tasks {
     withType<JavaCompile> {
         options.encoding = "UTF-8"
     }
-
-//
-//    val modDownload = register("resolveTestMods") {
-//        doFirst {
-//            val configFile = rootProject.file("testmods.yaml")
-//            val data: List<Map<String, String>> = configFile.reader().use(Yaml()::load)
-//            val deps = data.map { project.dependencies.create(it["maven"] as String) }
-//
-//            val config = configurations.detachedConfiguration(*deps.toTypedArray())
-//            val files = config.resolve()
-//
-//            val dir = project.file("run/test/mods").apply {
-//                if (exists()) deleteRecursively()
-//                mkdirs()
-//            }
-//            files.forEach { it.copyTo(dir.resolve(it.name)) }
-//        }
-//    }
-//
-//    configureEach {
-//        if (name == "prepareRuns") {
-//            dependsOn(fullJar)
-//        }
-//        if (name == "addMixinsToJar") {
-//            enabled = false
-//        }
-//        if (name == "runTestModClient") {
-//            dependsOn(modDownload)
-//        }
-//        if (name == "downloadAssets" && providers.environmentVariable("CI").isPresent) {
-//            enabled = false
-//            (this as DownloadAssets).output.mkdirs()
-//        }
-//    }
 }
 
 publishMods {
@@ -311,6 +260,14 @@ publishMods {
         optional {
             id.set(connectorExtrasModrinth)
         }
+    }
+}
+
+configurations.runtimeElements {
+    setExtendsFrom(emptySet())
+    outgoing {
+        artifacts.clear()
+        artifact(fullJar)
     }
 }
 

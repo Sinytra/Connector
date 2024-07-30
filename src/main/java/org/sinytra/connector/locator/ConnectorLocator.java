@@ -8,7 +8,6 @@ import cpw.mods.jarhandling.JarContentsBuilder;
 import cpw.mods.jarhandling.SecureJar;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.neoforged.fml.ModLoadingException;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.fml.loading.moddiscovery.ModJarMetadata;
 import net.neoforged.fml.loading.moddiscovery.locators.JarInJarDependencyLocator;
@@ -70,9 +69,7 @@ public class ConnectorLocator implements IDependencyLocator {
                 }
             }
 
-            if (FMLEnvironment.production) {
-                loadEmbeddedJars(pipeline);
-            }
+            loadEmbeddedJars(pipeline);
         } catch (ModLoadingException e) {
             // Let these pass through
             ConnectorEarlyLoader.addGenericLoadingException(e.getIssues());

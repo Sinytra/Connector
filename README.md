@@ -1,27 +1,20 @@
 <p align="center">
-  <img src="https://github.com/Sinytra/Connector/assets/51261569/80106b55-dbd3-43d3-a00e-17075f03bcba">
+  <img src="https://raw.githubusercontent.com/Sinytra/.github/main/art/connector_banner_small.png">
 </p>
 <p align="center">
   <a href="https://github.com/Sinytra/Connector/actions/workflows/build.yml"><img src="https://github.com/Sinytra/Connector/actions/workflows/build.yml/badge.svg"></a>
   <a href="https://github.com/Sinytra/Connector/releases/latest"><img src="https://img.shields.io/github/v/release/Sinytra/Connector?style=flat&label=Release&include_prereleases&sort=semver"></a>
   <a href="https://legacy.curseforge.com/minecraft/mc-mods/sinytra-connector"><img src="https://cf.way2muchnoise.eu/title/sinytra-connector.svg"></a>
   <a href="https://modrinth.com/mod/connector"><img src="https://img.shields.io/modrinth/dt/u58R1TMW?color=00AF5C&label=modrinth&style=flat&logo=modrinth"></a>
-  <a href="https://github.com/Sinytra/ForgifiedFabricAPI"><img src="https://raw.githubusercontent.com/Sinytra/.github/main/badges/forgified-fabric-api/compacter.svg"></a>
-  <a href="https://discord.gg/mamk7z3TKZ"><img src="https://discordapp.com/api/guilds/1141048834177388746/widget.png?style=shield"></a>
+  <a href="https://github.com/Sinytra/ForgifiedFabricAPI"><img src="https://raw.githubusercontent.com/Sinytra/.github/main/badges/forgified-fabric-api-neo/compacter.svg"></a>
+  <a href="https://discord.sinytra.org"><img src="https://discordapp.com/api/guilds/1141048834177388746/widget.png?style=shield"></a>
   <a href="https://nightly.link/Sinytra/Connector/workflows/build/dev/Maven%20Local.zip"><img src="https://img.shields.io/badge/Nightly-Download-9a32f0?logo=github"></a>
 </p>
-
-> [!WARNING]  
-> Connector is currently in beta state, and many mods may not work as expected, or might be broken completely.  
-> Please refer to our [Mod Compatibility Thread](https://github.com/Sinytra/Connector/discussions/12) and
-> [Issue Tracker](https://github.com/Sinytra/Connector/issues) for ongoing compatibility issues.  
-> When reporting bugs, please make sure you are using the latest release of Connector and Forgified Fabric API,
-> as well as **Forge 47.1.3** on Minecraft 1.20.1
 
 ## 📖 About
 
 **Sinytra Connector** is a translation/compatibility layer that allows running [Fabric](https://fabricmc.net) mods
-on [MinecraftForge](https://minecraftforge.net). Its goal is to bring the two platforms closer together, saving
+on [NeoForge](https://neoforged.net). Its goal is to bring the two platforms closer together, saving
 developers time and effort maintaining their mods for multiple platforms at once, as well as allowing players to play
 all their favourite mods in one modpack.
 
@@ -31,13 +24,12 @@ all their favourite mods in one modpack.
 
 - Visit the [Mod Compatibility Thread](https://github.com/Sinytra/Connector/discussions/12) to can find information about known working / incompatible mods
 - To learn more about how Connector works, read our [Introductory blog post](https://github.com/Sinytra/Connector/discussions/11)
-- Developing cross-platform mods? Check out the [Forgified Fabric API](https://github.com/Sinytra/ForgifiedFabricAPI), a port of the Fabric API to Forge
+- Developing cross-platform mods? Check out the [Forgified Fabric API](https://github.com/Sinytra/ForgifiedFabricAPI), a port of the Fabric API to NeoForge
 - Install [Connector Extras](https://github.com/Sinytra/ConnectorExtras) for improved compatibility with third-party libraries and APIs
-- If you're using Embeddium with Fabric mods installed, also install [Lazurite](https://modrinth.com/mod/lazurite) for proper FRAPI compatibility
 
 ### 💬 Join the Community
 
-We have an official [Discord community](https://discord.gg/mamk7z3TKZ) for Connector. By joining, you can:
+We have an official [Discord community](https://discord.sinytra.org) for Connector. By joining, you can:
 
 - Get help and technical support from our team and community members
 - Keep in touch with the latest development updates and community events
@@ -48,22 +40,22 @@ We have an official [Discord community](https://discord.gg/mamk7z3TKZ) for Conne
 
 To install Connector and its dependencies, follow the same installation steps as you would for any other mods:
 
-1. Install **Minecraft Forge**. For Minecraft 1.20.1, it is recommended to use version **`47.1.3`**.  
-[\[Minecraft Forge website\]](https://files.minecraftforge.net)
+1. Install **NeoForge**. We recommend using the latest stable version.  
+[\[NeoForge's website\]](https://neoforged.net/)
 2. Install **Connector**. Get the latest release from one of our official distribution channels and drop the jar in your mods folder.  
-[\[CurseForge\]](https://legacy.curseforge.com/minecraft/mc-mods/sinytra-connector) [\[Modrinth\]](https://modrinth.com/mod/connector) [\[GitHub\]](https://github.com/Sinytra/Connector/releases)
+[\[CurseForge\]](https://curseforge.com/minecraft/mc-mods/sinytra-connector) [\[Modrinth\]](https://modrinth.com/mod/connector) [\[GitHub\]](https://github.com/Sinytra/Connector/releases)
 4. Download the **Forgified Fabric API**.
    It is meant to be a direct *replacement* for the Fabric API and is not compatible with it.
    We'll try our best to avoid loading the Fabric API if it's installed automatically (e.g.
    by your modpack manager), but if you have the option to avoid installing it, please do so.  
-[\[CurseForge\]](https://legacy.curseforge.com/minecraft/mc-mods/forgified-fabric-api) [\[Modrinth\]](https://modrinth.com/mod/forgified-fabric-api) [\[GitHub\]](https://github.com/Sinytra/ForgifiedFabricAPI/releases/latest)
+[\[CurseForge\]](https://curseforge.com/minecraft/mc-mods/forgified-fabric-api) [\[Modrinth\]](https://modrinth.com/mod/forgified-fabric-api) [\[GitHub\]](https://github.com/Sinytra/ForgifiedFabricAPI/releases/latest)
 5. You're good to go! With all dependencies installed, grab your favourite Fabric mods and
-   **just drop them in the mods folder** like you would with any Forge mods. Connector will handle loading them for you
-   with no additional steps required.
+   **just drop them in the mods folder** like you would with any NeoForge mods. Connector will handle loading them for
+   you with no additional steps required.
 
 ## 🔍 Get help
 
-If you're having trouble running a mod on Connector, join our community on [Discord](https://discord.gg/mamk7z3TKZ), ask us
+If you're having trouble running a mod on Connector, join our community on [Discord](https://discord.sinytra.org), ask us
 on [GitHub Discussions](https://github.com/Sinytra/Connector/discussions) or open an issue in this repository.
 
 Here's a few tips to follow when reporting issues:
@@ -101,15 +93,17 @@ Here's a few tips to help get your PR approved:
 ## 🛠️ Developer guide
 
 If you're a mod developer and you'd like to run Connector in your dev environment, it is possible in just a few steps.
+Used Fabric mods must be mapped to `intermediary` so that Connector can process them.
 
-1. You need to have [MixinGradle](https://github.com/SpongePowered/MixinGradle) installed for mixins to be remapped
-   properly.
-2. Fabric mods must be in `intermediary` mappings at runtime.
-
-#### Gradle Usage
+#### ModDevGradle Usage
 
 ```groovy
+plugins {
+   // Used to attach the clean mapped Minecraft artifact to run configurations
+   id 'org.sinytra.adapter.userdev' version '1.1-SNAPSHOT'
+}
 repositories {
+    // Make sure to add this to the pluginManagement.repositories block in settings.gradle as well
     maven {
         name = "Sinytra"
         url = "https://maven.su5ed.dev/releases"
@@ -117,21 +111,14 @@ repositories {
 }
 dependencies {
     // Add Connector to the launch classpath
-    minecraftLibrary fg.deobf("org.sinytra:Connector:<version>")
-    // Add FFAPI dependency (if required)
-    runtimeOnly fg.deobf("org.sinytra.fabric-api:fabric-api:<version>")
-    // Install desired Fabric mods 
-    implementation "some.fabric:mod:<version>"
-}
-// Attach clean minecraft artifact path to runs, necessary for Connector to work
-afterEvaluate {
-    def cleanArtifactJar = Objects.requireNonNull(net.minecraftforge.gradle.common.util.MavenArtifactDownloader.generate(project, "net.minecraft:joined:${project.MCP_VERSION}:srg", true), "Cannot find clean minecraft artifact")
-    minecraft.runs.configureEach {
-        property("connector.clean.path", cleanArtifactJar)
-    }
+    additionalRuntimeClasspath "org.sinytra:Connector:<version>"
+    // Add FFAPI dependency
+    runtimeOnly "org.sinytra.forgified-fabric-api:forgified-fabric-api:<version>"
+    // Install desired Fabric mods. Make sure they remain unmapped at runtime
+    runtimeOnly "some.fabric:mod:<version>"
 }
 ```
 
 ## ⚙️ Configuration
 
-All information regarding Connector's configuration options can be found [here](https://sinytra.org/docs).
+All information regarding Connector's configuration options can be found [on our website](https://sinytra.org/docs).

@@ -13,14 +13,11 @@ jobs:
           java-version: '21'
       - uses: gradle/wrapper-validation-action@v1
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
-        with:
-          gradle-home-cache-cleanup: true
-          gradle-home-cache-excludes: |
-            gradle.properties
-      - run: ./gradlew clean build --stacktrace
-      - run: ./gradlew publishToMavenLocal --stacktrace
-      - uses: actions/upload-artifact@v3
+        uses: gradle/actions/setup-gradle@v3
+      - name: Build
+        run: ./gradlew clean build publishToMavenLocal --stacktrace
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
         with:
           name: Maven Local
           path: ~/.m2/repository

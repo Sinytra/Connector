@@ -11,7 +11,7 @@ jobs:
         with:
           distribution: 'microsoft'
           java-version: '21'
-      - uses: gradle/wrapper-validation-action@v1
+      - uses: gradle/actions/wrapper-validation@v3
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
       - name: Build

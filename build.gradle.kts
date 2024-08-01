@@ -1,26 +1,16 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
-import net.neoforged.moddevgradle.dsl.InternalModelHelper
 import net.neoforged.moddevgradle.dsl.RunModel
 import java.time.LocalDateTime
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath(group = "org.yaml", name = "snakeyaml", version = "2.2")
-    }
-}
 
 plugins {
     java
     `maven-publish`
-    id("net.neoforged.moddev") version "1.0.3"
+    id("net.neoforged.moddev") version "2.0.1-beta"
     id("io.github.goooler.shadow") version "8.1.8" apply false
     id("me.modmuss50.mod-publish-plugin") version "0.5.+"
     id("net.neoforged.gradleutils") version "3.0.0"
-    id("org.sinytra.adapter.userdev") version "1.1-SNAPSHOT"
+    id("org.sinytra.adapter.userdev") version "1.2-SNAPSHOT"
 }
 
 val versionConnector: String by project
@@ -224,6 +214,9 @@ tasks {
     }
     withType<JavaCompile> {
         options.encoding = "UTF-8"
+    }
+    assemble {
+        dependsOn(fullJar)
     }
 }
 

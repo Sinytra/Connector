@@ -52,6 +52,11 @@ public class ConnectorLocator implements IDependencyLocator {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     @Override
+    public int getPriority() {
+        return LOWEST_SYSTEM_PRIORITY;
+    }
+
+    @Override
     public void scanMods(List<IModFile> loadedMods, IDiscoveryPipeline pipeline) {
         if (ConnectorEarlyLoader.hasEncounteredException()) {
             LOGGER.error("Skipping mod scan due to previously encountered error");

@@ -99,7 +99,7 @@ public class ConnectorEarlyLoader {
         }
 
         LOGGER.debug("Starting early connector loader setup");
-        ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Early Setup", 0);
+        ProgressMeter progress = StartupNotificationManager.prependProgressBar("[Connector] Early Setup", 0);
         try {
             List<String> hiddenMods = ConnectorConfig.INSTANCE.get().hiddenMods();
             // Find all connector loader mods
@@ -134,7 +134,7 @@ public class ConnectorEarlyLoader {
 
     public static void preLaunch() {
         LOGGER.debug("Running prelaunch entrypoint");
-        ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] PreLaunch", 0);
+        ProgressMeter progress = StartupNotificationManager.prependProgressBar("[Connector] PreLaunch", 0);
         try {
             // Invoke prelaunch entrypoint
             FabricLoader.getInstance().invokeEntrypoints("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);

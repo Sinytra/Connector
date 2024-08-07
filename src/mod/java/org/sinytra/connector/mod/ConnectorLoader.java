@@ -44,7 +44,7 @@ public class ConnectorLoader {
         }
 
         loading = true;
-        ProgressMeter progress = StartupNotificationManager.addProgressBar("[Connector] Loading mods", 0);
+        ProgressMeter progress = StartupNotificationManager.prependProgressBar("[Connector] Loading mods", 0);
         try {
             LazyEntityAttributes.inject();
 

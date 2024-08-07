@@ -100,7 +100,8 @@ Used Fabric mods must be mapped to `intermediary` so that Connector can process 
 ```groovy
 plugins {
    // Used to attach the clean mapped Minecraft artifact to run configurations
-   id 'org.sinytra.adapter.userdev' version '1.1-SNAPSHOT'
+   // Find the latest version at https://maven.su5ed.dev/#/releases/org/sinytra/adapter/userdev/
+   id 'org.sinytra.adapter.userdev' version '<version>'
 }
 repositories {
     // Make sure to add this to the pluginManagement.repositories block in settings.gradle as well

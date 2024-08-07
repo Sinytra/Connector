@@ -25,7 +25,8 @@ public final class TagConverter {
     private static final Pattern RAW_ORES_PATTERN = Pattern.compile("^raw_(.+?)_ores$");
     private static final String TAG_ENTRY_SPLITTER = "_(?!.*_)";
     private static final Collection<String> COMMON_TYPES = Set.of("small_dusts");
-    private static final Collection<String> COMMON_GROUP_PREFIXES = Set.of("tools", "gems");
+    private static final Collection<String> COMMON_GROUP_PREFIXES = Set.of("tools");
+    private static final Collection<String> COMMON_GROUP_PREFIXES_NO_ENTRYPATH = Set.of("gems");
     private static final Map<String, String> ALIASES = Map.of(
         "blocks", "storage_blocks",
         "raw_ores", "raw_materials"
@@ -83,7 +84,8 @@ public final class TagConverter {
                     LOGGER.debug("Found existing prefixed forge tag {}", tag);
                     return tag;
                 }
-
+            }
+            for (String prefix : COMMON_GROUP_PREFIXES_NO_ENTRYPATH) {
                 // Handle plural to singular tag names (c:diamonds -> forge:gems/diamond)
                 // This will handle existing tags, but won't be able to detect nonexisted tag names like c:rubies -> forge:gems/ruby
                 // Well, it's better than nothing I guess

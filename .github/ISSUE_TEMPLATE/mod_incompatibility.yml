@@ -42,9 +42,12 @@ body:
     id: version
     attributes:
       label: Minecraft version
-      description: What version of Minecraft are you running? Please note that only the versions listed below are supported. If you're running an outdated version, update to receive support.
+      description: |
+        What version of Minecraft are you running? Please note that only the versions listed below are supported. If you're running an outdated version, update to receive support.
+        LTS versions will only receive **critical bugfixes** and no compatibility patches will be made. 
       options:
-        - "1.20.1"
+        - "1.21.1"
+        - "1.20.1 (LTS)"
       default: 0
     validations:
       required: true

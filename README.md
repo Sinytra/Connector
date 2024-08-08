@@ -72,6 +72,14 @@ Here's a few tips to follow when reporting issues:
 Please note that providing as many details as possible is crucial to help us find and resolve the issue faster, while
 also getting you a fixed version ASAP.
 
+### Supported versions
+
+✅ **1.21** is our **primary supported version**.
+This is the one that will receive new fixes and compatibility improvements.
+
+⚠️ **1.20.1** is our **long-term-support** version and will still receive critical bugfixes.
+However, no compatibility fixes will be made.
+
 ## ⚖️ License
 
 Sinytra Connector is, and will always remain, licensed under the [MIT License](https://github.com/Sinytra/Connector/blob/master/LICENSE). All files in this repository should be

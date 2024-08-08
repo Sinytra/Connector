@@ -47,10 +47,7 @@ logger.lifecycle("Project version: $version")
 val mod: SourceSet by sourceSets.creating
 val test: SourceSet by sourceSets
 
-val shade: Configuration by configurations.creating {
-    isTransitive = false
-}
-val legacyClasspath: Configuration by configurations.creating { isTransitive = false }
+val shade: Configuration by configurations.creating
 val adapterData: Configuration by configurations.creating
 
 java {
@@ -72,7 +69,7 @@ configurations {
     }
     
     additionalRuntimeClasspath {
-        extendsFrom(legacyClasspath)
+        extendsFrom(shade)
     }
 }
 
@@ -134,10 +131,9 @@ repositories {
 
 dependencies {
     shade(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader)
-    legacyClasspath(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader, classifier = "full")
-    legacyClasspath(shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener))
-    legacyClasspath(shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool))
-    legacyClasspath(shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false })
+    shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener) { isTransitive = false }
+    shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool) { isTransitive = false }
+    shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
     adapterData(group = "org.sinytra.adapter", name = "adapter", version = versionAdapter)
 
     jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
@@ -160,10 +156,11 @@ localJarJar("modJarConfig", "org.sinytra:connector-mod", project.version.toStrin
 val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     configurations = listOf(shade)
 
-    exclude("assets/fabricloader/**")
-    exclude("META-INF/*.SF")
-    exclude("META-INF/*.RSA")
-    exclude("META-INF/maven/**")
+    exclude(
+        "assets/fabricloader/**",
+        "META-INF/*.SF", "META-INF/*.RSA",
+        "META-INF/maven/**", "META-INF/jars/**", "META-INF/jarjar/**"
+    )
     exclude("META-INF/services/net.neoforged.neoforgespi.language.IModLanguageLoader")
     exclude("ui/**")
     exclude("*.json", "*.html", "*.version")

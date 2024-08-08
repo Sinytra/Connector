@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "plugin": "org.sinytra.connector.mod.ConnectorBootstrap",
   "mixins": [
+    "AttributeSupplierBuilderMixin",
     "CommonHooksMixin",
     "PlayerListMixin",
     "ChunkGeneratorMixin",

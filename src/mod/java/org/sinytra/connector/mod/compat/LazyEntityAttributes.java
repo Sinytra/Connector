@@ -29,7 +29,7 @@ public class LazyEntityAttributes {
 
     public static void inject() {
         for (Holder<Attribute> holder : ATTRIBUTES) {
-            Holder<Attribute> lazyAttribute = PLACEHOLDERS.computeIfAbsent(holder, s -> Holder.direct(new PlaceholderAttribute()));
+            Holder<Attribute> lazyAttribute = replaceAttribute(holder);
             try {
                 DEFERRED_HOLDER_SET_VALUE.invoke(holder, lazyAttribute);
             } catch (Throwable e) {
@@ -46,6 +46,10 @@ public class LazyEntityAttributes {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    public static Holder<Attribute> replaceAttribute(Holder<Attribute> original) {
+        return PLACEHOLDERS.computeIfAbsent(original, s -> Holder.direct(new PlaceholderAttribute()));
     }
 
     public static void initializeLazyAttributes(EntityAttributeModificationEvent event) {

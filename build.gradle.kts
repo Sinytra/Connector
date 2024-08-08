@@ -224,7 +224,7 @@ publishMods {
     file.set(fullJar.flatMap { it.archiveFile })
     changelog.set(providers.environmentVariable("CHANGELOG").orElse("# $version"))
     type.set(PUBLISH_RELEASE_TYPE.orElse("alpha").map(ReleaseType::of))
-    modLoaders.add("forge")
+    modLoaders.add("neoforge")
     dryRun.set(!providers.environmentVariable("CI").isPresent)
 
     github {

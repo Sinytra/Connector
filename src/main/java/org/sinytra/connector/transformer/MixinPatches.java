@@ -151,13 +151,6 @@ public class MixinPatches {
                 })
                 .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
                 .build(),
-            // ======= GUI Rendering patches TODO Can adapter automate these?
-            Patch.builder()
-                .targetClass("net/minecraft/client/gui/Gui")
-                .targetMethod("renderPlayerHealth")
-                .targetInjectionPoint("Lnet/minecraft/client/gui/Gui;renderHearts(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/world/entity/player/Player;IIIIFIIIZ)V")
-                .modifyTarget("renderHealthLevel")
-                .build(),
             // ======= TODO Handle in adapter
             Patch.builder()
                 .targetClass("net/minecraft/world/entity/vehicle/Boat")

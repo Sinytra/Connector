@@ -19,6 +19,7 @@ val versionAdapterDefinition: String by project
 val versionAdapterRuntime: String by project
 val versionMc: String by project
 val versionNeoForge: String by project
+val versionParchmentMc: String by project
 val versionParchment: String by project
 val versionForgeAutoRenamingTool: String by project
 val versionForgifiedFabricLoader: String by project
@@ -84,7 +85,7 @@ neoForge {
 
     parchment {
         mappingsVersion = versionParchment
-        minecraftVersion = versionMc
+        minecraftVersion = versionParchmentMc
     }
 
     runs {

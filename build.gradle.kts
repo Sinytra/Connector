@@ -145,6 +145,8 @@ dependencies {
     "modCompileOnly"(sourceSets.main.get().output)
 
     additionalRuntimeClasspath(files(tasks.jar))
+
+    implementation("curse.maven:connector-extras-913445:5618470")
 }
 
 val modJar: Jar by tasks.creating(Jar::class) {

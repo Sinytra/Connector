@@ -108,6 +108,13 @@ public class MixinPatches {
                     return Patch.Result.APPLY;
                 })
                 .build(),
+            // NeoForge moves this behaviour out completely with no viable replacement, so we disable it for now
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/animal/SnowGolem", "net/minecraft/world/entity/animal/Sheep", "net/minecraft/world/entity/animal/MushroomCow")
+                .targetMethod("mobInteract")
+                .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z")
+                .disable()
+                .build(),
             // ======= Rendering patches 
             Patch.builder()
                 .targetClass("net/minecraft/client/renderer/ShaderInstance")

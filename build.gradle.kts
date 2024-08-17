@@ -19,6 +19,7 @@ val versionAdapterDefinition: String by project
 val versionAdapterRuntime: String by project
 val versionMc: String by project
 val versionNeoForge: String by project
+val versionParchmentMc: String by project
 val versionParchment: String by project
 val versionForgeAutoRenamingTool: String by project
 val versionForgifiedFabricLoader: String by project
@@ -47,10 +48,7 @@ logger.lifecycle("Project version: $version")
 val mod: SourceSet by sourceSets.creating
 val test: SourceSet by sourceSets
 
-val shade: Configuration by configurations.creating {
-    isTransitive = false
-}
-val legacyClasspath: Configuration by configurations.creating { isTransitive = false }
+val shade: Configuration by configurations.creating
 val adapterData: Configuration by configurations.creating
 
 java {
@@ -72,7 +70,7 @@ configurations {
     }
     
     additionalRuntimeClasspath {
-        extendsFrom(legacyClasspath)
+        extendsFrom(shade)
     }
 }
 
@@ -87,7 +85,7 @@ neoForge {
 
     parchment {
         mappingsVersion = versionParchment
-        minecraftVersion = versionMc
+        minecraftVersion = versionParchmentMc
     }
 
     runs {
@@ -134,10 +132,9 @@ repositories {
 
 dependencies {
     shade(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader)
-    legacyClasspath(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader, classifier = "full")
-    legacyClasspath(shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener))
-    legacyClasspath(shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool))
-    legacyClasspath(shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false })
+    shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener) { isTransitive = false }
+    shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool) { isTransitive = false }
+    shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
     adapterData(group = "org.sinytra.adapter", name = "adapter", version = versionAdapter)
 
     jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
@@ -148,6 +145,8 @@ dependencies {
     "modCompileOnly"(sourceSets.main.get().output)
 
     additionalRuntimeClasspath(files(tasks.jar))
+
+    implementation("curse.maven:connector-extras-913445:5618470")
 }
 
 val modJar: Jar by tasks.creating(Jar::class) {
@@ -160,10 +159,11 @@ localJarJar("modJarConfig", "org.sinytra:connector-mod", project.version.toStrin
 val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     configurations = listOf(shade)
 
-    exclude("assets/fabricloader/**")
-    exclude("META-INF/*.SF")
-    exclude("META-INF/*.RSA")
-    exclude("META-INF/maven/**")
+    exclude(
+        "assets/fabricloader/**",
+        "META-INF/*.SF", "META-INF/*.RSA",
+        "META-INF/maven/**", "META-INF/jars/**", "META-INF/jarjar/**"
+    )
     exclude("META-INF/services/net.neoforged.neoforgespi.language.IModLanguageLoader")
     exclude("ui/**")
     exclude("*.json", "*.html", "*.version")

@@ -11,22 +11,22 @@ logoFile="logo.png"
 authors="Su5eD"
 displayURL="https://github.com/Sinytra/Connector"
 description='''
-Connector is a translation/compatibility layer that allows running Fabric mods on MinecraftForge.
+Connector is a translation/compatibility layer that allows running Fabric mods on NeoForge.
 Its goal is to bring the two platforms closer together, saving developers time and effort maintaining their mods for
 multiple platforms at once, as well as allowing players to play all their favourite mods in one modpack.
 '''
 displayTest = 'IGNORE_ALL_VERSION' # Connector is optional for both sides
 [[mixins]]
 config="connector.mixins.json"
-[[dependencies.connectormod]]
+[[dependencies.connector]]
     modId="neoforge"
-    mandatory=true
+    type="required"
     versionRange="*"
     ordering="NONE"
     side="BOTH"
-[[dependencies.connectormod]]
+[[dependencies.connector]]
     modId="minecraft"
-    mandatory=true
+    type="required"
     versionRange="[1.21,1.22)"
     ordering="NONE"
     side="BOTH"

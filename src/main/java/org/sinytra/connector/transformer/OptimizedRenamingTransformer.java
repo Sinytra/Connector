@@ -24,6 +24,8 @@ import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.VarInsnNode;
+import org.sinytra.adapter.patch.analysis.MethodCallAnalyzer;
 import org.sinytra.adapter.patch.analysis.selector.AnnotationHandle;
 import org.sinytra.adapter.patch.analysis.selector.AnnotationValueHandle;
 import org.sinytra.adapter.patch.util.MethodQualifier;
@@ -105,20 +107,26 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
     }
 
     private void avoidAmbigousMappingRecursion(ClassNode classNode, MethodNode method) {
-        if (isOverridenMethod(classNode, method)) {
+        if (isAmbigousOverridenMethod(classNode, method)) {
             for (AbstractInsnNode insn : method.instructions) {
-                if (insn instanceof MethodInsnNode minsn && minsn.owner.equals(classNode.name) && minsn.name.equals(method.name) && minsn.desc.equals(method.desc)) {
-                    method.instructions.set(minsn, new MethodInsnNode(Opcodes.INVOKESPECIAL, classNode.superName, minsn.name, minsn.desc, minsn.itf));
+                if (insn instanceof MethodInsnNode minsn && minsn.getOpcode() == Opcodes.INVOKEVIRTUAL && minsn.owner.equals(classNode.name) && minsn.name.equals(method.name) && minsn.desc.equals(method.desc)) {
+                    List<AbstractInsnNode> insns = MethodCallAnalyzer.findMethodCallParamInsns(method, minsn);
+                    if (!insns.isEmpty() && insns.getFirst() instanceof VarInsnNode varInsn && varInsn.var == 0) {
+                        method.instructions.set(minsn, new MethodInsnNode(Opcodes.INVOKESPECIAL, classNode.superName, minsn.name, minsn.desc, minsn.itf));   
+                    }
                 }
             }
         }
     }
 
-    private boolean isOverridenMethod(ClassNode classNode, MethodNode method) {
-        return classNode.superName != null && ((MixinAwareEnhancedRemapper) this.remapper).getUpstreamProvider().getClass(classNode.superName)
-            .flatMap(m -> m.getMethod(method.name, method.desc))
-            .filter(m -> (m.getAccess() & (ACC_PRIVATE | ACC_STATIC)) == 0)
-            .isPresent();
+    private boolean isAmbigousOverridenMethod(ClassNode classNode, MethodNode method) {
+        return classNode.superName != null && this.remapper.getClass(classNode.name)
+            .map(c -> c.getMethods().stream()
+                .flatMap(Optional::stream)
+                .filter(m -> !m.getName().equals(m.getMapped()) && m.getMapped().equals(method.name) && method.desc.equals(this.remapper.mapMethodDesc(m.getDescriptor())) 
+                    && (m.getAccess() & (ACC_PRIVATE | ACC_STATIC)) == 0)
+                .count() > 1)
+            .orElse(false);
     }
 
     private void processMixinAnnotation(AnnotationNode annotation, PostProcessRemapper postProcessRemapper) {

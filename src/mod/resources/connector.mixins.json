@@ -5,9 +5,10 @@
   "compatibilityLevel": "JAVA_17",
   "plugin": "org.sinytra.connector.mod.ConnectorBootstrap",
   "mixins": [
+    "AttributeSupplierBuilderMixin",
+    "ChunkGeneratorMixin",
     "CommonHooksMixin",
     "PlayerListMixin",
-    "ChunkGeneratorMixin",
     "boot.DatagenModLoaderMixin",
     "item.IItemExtensionMixin",
     "item.ItemStackMixin",
@@ -17,9 +18,10 @@
     "recipebook.RecipeBookManagerMixin",
     "registries.DataPackRegistriesHooksAccessor",
     "registries.MappedRegistryAccessor",
+    "registries.NeoForgeRegistriesSetupAccessor",
     "registries.BuiltInRegistriesMixin",
     "registries.EntityDataSerializersMixin",
-    "registries.NeoForgeRegistriesSetupAccessor",
+    "registries.ItemBlockRenderTypesMixin",
     "registries.NeoForgeRegistriesSetupMixin",
     "registries.NetworkRegistryMixin",
     "registries.PoiTypesMixin",
@@ -27,11 +29,11 @@
   ],
   "client": [
     "boot.MinecraftMixin",
+    "client.BlockColorsMixin",
     "client.ForgeHooksClientMixin",
+    "client.ItemColorsMixin",
     "client.ItemOverridesMixin",
     "client.KeyMappingMixin",
-    "client.BlockColorsMixin",
-    "client.ItemColorsMixin",
     "client.ParticleEngineMixin"
   ],
   "server": [

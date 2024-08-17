@@ -10,14 +10,17 @@ import net.neoforged.coremod.api.ASMAPI;
 import net.neoforged.neoforgespi.coremod.ICoreMod;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import org.sinytra.adapter.patch.analysis.locals.LocalVariableLookup;
 import org.slf4j.Logger;
 
 import java.util.List;
@@ -113,12 +116,29 @@ public class ConnectorCoremods implements ICoreMod {
                 }
             }
         );
+        ITransformer<?> expandLocalVarScope = new BaseTransformer<>(
+            TargetType.METHOD,
+            ITransformer.Target.targetMethod("net.minecraft.world.entity.LivingEntity", "forceAddEffect", "(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)V"),
+            input -> {
+                LocalVariableLookup lvt = new LocalVariableLookup(input);
+                LocalVariableNode mobEffect = lvt.getByTypedOrdinal(Type.getObjectType("net/minecraft/world/effect/MobEffectInstance"), 1).orElse(null);
+                if (mobEffect != null) {
+                    mobEffect.start = lvt.getByIndex(0).start;
+                    input.instructions.insert(mobEffect.start, ASMAPI.listOf(
+                        new InsnNode(Opcodes.ACONST_NULL),
+                        new VarInsnNode(Opcodes.ASTORE, mobEffect.index)
+                    ));
+                    LOGGER.debug("Expanded local variable scope for LivingEntity#forceAddEffect index {}", mobEffect.index);
+                }
+            }
+        );
 
         return ImmutableList.<ITransformer<?>>builder()
             .add(keyMappingFieldTypeTransform, creativeModeTabConstructorTransform)
             .addAll(addedFields)
             .addAll(getFabricASMTransformers())
             .add(missingOrderingCall)
+            .add(expandLocalVarScope)
             .build();
     }
 
@@ -128,7 +148,7 @@ public class ConnectorCoremods implements ICoreMod {
             ITransformer.Target.targetClass(cls),
             input -> {
                 input.fields.add(new FieldNode(access, name, desc, null, null));
-                
+
                 LOGGER.debug("Added field {} to class {}", name, cls);
             }
         );

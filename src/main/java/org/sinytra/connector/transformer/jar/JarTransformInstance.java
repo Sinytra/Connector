@@ -179,7 +179,7 @@ public class JarTransformInstance {
     private static ClassLookup createCleanClassLookup() {
         String mcAndNeoFormVersion = FMLLoader.versionInfo().mcAndNeoFormVersion();
         if (FMLEnvironment.production) {
-            MavenCoordinate coords = new MavenCoordinate("net.minecraft", "client", "", "srg", mcAndNeoFormVersion);
+            MavenCoordinate coords = new MavenCoordinate("net.minecraft", FMLEnvironment.dist.isClient() ? "client" : "server", "", "srg", mcAndNeoFormVersion);
             Path path = LibraryFinder.findPathForMaven(coords);
             if (!Files.exists(path)) {
                 throw new ModLoadingException(ModLoadingIssue.error("fml.modloadingissue.corrupted_installation").withAffectedPath(path));

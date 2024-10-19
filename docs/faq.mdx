@@ -1,0 +1,101 @@
+---
+title: Frequently Asked Questions
+hide_meta: true
+---
+
+Below you can find a list of commonly asked questions regarding Connector and its associated mods. It's kept up-to-date
+to reflect the current state of the mod. If your question is not listed, we'll be happy to answer you on our
+[discord](https://discord.sinytra.org).
+
+## ❌️ Backports
+
+Backports to Minecraft versions older than 1.20.1 are **not planned**. Our focus is on future versions where
+compatibility will improve over time as major blockers are patched upstream, such as [Mixin](https://github.com/Sinytra/Connector/discussions/383) or transformable mc
+libraries.
+
+## ❌️ Is OptiFine compatible?
+
+OptiFine is **not compatible** with FFAPI / Connector, as is the case with many other mods, regardless of the modloader.
+Instead, we recommend using some of the available alternatives:
+- [Embeddium](https://modrinth.com/mod/embeddium) (Forge port of Sodium focused on improved compatibility)
+- [Oculus](https://modrinth.com/mod/oculus) (Forge port of Iris)
+- [Continuity](https://www.curseforge.com/minecraft/mc-mods/continuity) (Connected textures, runs on Connector)
+- [Entity Model Features](https://www.curseforge.com/minecraft/mc-mods/entity-model-features) (Custom Entity Models)
+
+## ⚠️ Can I use a Forge mod with its Fabric addons and vice versa?
+
+This largely depends on how the mod's codebase and API are structured.
+
+#### Multiloader mods
+
+Some mods use a multiloader setup in which most code is shared between platforms, including the public API.
+In these cases, the chances of proper cross-platform behavior are higher.
+
+A good example of this is [Cloth Config](https://github.com/shedaniel/cloth-config), which only contains a platform-specific classes, none of
+which are considered public API.
+
+#### Standalone ports
+
+Other mods may consist of completely independent codebases for each modloader. This may be the case if you're playing
+an unofficial port of the mod (such as [Farmer's Delight Fabric](https://www.curseforge.com/minecraft/mc-mods/farmers-delight-fabric)) or the author intended so themselves.
+This is the case for [Geckolib](https://github.com/bernie-g/geckolib), where most of the code (including APIs) is not shared between modloaders.
+
+Standalone ports usually come with worse cross-platform compatibility for mods running on Connector, as there might be
+critical differences between platform code, often leading to `ClassNotFoundException`s and `AbstractMethodError`s.
+The developers are, of course, not to blame for this. The concept of running one platform's mods on the other is still
+quite new, and most developers don't account for them.
+
+## ⚠️ Hybrid servers and mobile launchers
+
+Custom server APIs (such as Mohist, Magma, Arclight) are **not supported**. This also applies to launchers for mobile
+platforms (Pojav, FoldCraft) and pirated launchers.
+
+Such platforms provide unpredictable environmenst in which mods might not function as expected, and therefore we can't
+provide support for them. Ensuring mod compatibility is the platform's duty, just like Connector tries its best to
+achieve parity when running Fabric mods on Forge.
+
+## ℹ️ How do I know if a mod is compatible?
+
+Mod compatibility is often affected by other mods you have installed, therefore the best way to determine whether a mod
+is compatible is to test it out yourself in your modpack instance.
+
+You can check out the [Mod Compatibility Thread](https://github.com/Sinytra/Connector/discussions/12) for testing reports from other users,
+they might be helpful.
+
+## ℹ️ When is a mod going to be made compatible?
+
+It generally depends on how fixable the issue is. Some are as easy as changing the mixin injection target, while others
+need very specific patches to work. For example, Bewitchment was targetting a method that forge removes completely, so
+we had to come up with a substitute ourselves.
+
+We revisit old issues from time to time, but for those that are left sitting there right now, it's mostly because we
+couldn't find a viable fix just yet. The patches connector uses on mods are meant not to be hardcoded, so rather than
+fixing a specific mixin in a mod, we try to think of a way to detect certain patterns and adapt them to forge's code
+regardless of the mod, increasing the chances of getting other mods working in the process.
+
+## ℹ️ Reporting issues
+
+#### 🛠️ Modpack / general issues and crashes
+
+If you're having trouble running Connector, feel free to join our community on [Discord](https://discord.sinytra.org), where we'll be happy to
+help you out in the [#support](https://discord.com/channels/1141048834177388746/1141062824265793650) channel. When opening a thread, please make sure
+to provide a description of your issue and include the necessary game logs.
+
+#### 🐞 Confirmed bugs / Forge mod interference
+
+Connector bugs should be submitted on our [issue tracker](https://github.com/Sinytra/Connector/issues). Each issue is reviewed and processed equally,
+so even if we can't get to you immediately, please bear with us.
+
+Here's a few tips to follow when reporting issues:
+
+1. Make sure you are using latest available version. Look for existing issues that might've already been
+answered / fixed. Think about whether the issue is caused by Connector itself and not another mod you've installed.
+To test this, try reproducing the same issue on Fabric.
+2. Navigate to [the issues tab](https://github.com/Sinytra/Connector/issues) and open a [new issue](https://github.com/Sinytra/Connector/issues/new/choose).
+Select one of the available templates depending on the topic. Read the template carefully and thoroughly.
+Fill in the required fields. In order to increase our chances of identifying and reproducing the issue, please make sure
+to include as many details as possible.
+3. Once you're done describing the problem, submit the issue. We'll get to you as soon as we can.
+
+Please note that providing as many details as possible is crucial to help us find and resolve the issue faster, while
+also getting you a fixed version ASAP.

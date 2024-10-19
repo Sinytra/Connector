@@ -1,0 +1,56 @@
+---
+title: Introduction
+hide_meta: true
+---
+
+**Sinytra Connector** is a translation/compatibility layer that allows running [Fabric](https://fabricmc.net/) mods on [NeoForge](https://neoforged.net/).
+Its goal is to bring the two platforms closer together, saving developers time and effort maintaining their mods for multiple platforms at once,
+as well as allowing players to play all their favourite mods in one modpack.
+
+## 📦 Installation
+
+<Callout>
+    Do not download the original Fabric API, as it's substitued by the **Forgified Fabric API**.
+</Callout>
+
+Connector's installation procedure follows the standard steps used for installing Minecraft mods.
+It runs on the NeoForge mod loader and depends only on the Forgified Fabric API. If you're not familiar with this
+process, we've listed the exact steps below:
+
+1. Install NeoForge. We recommend using the latest stable version.
+2. Download the latest release of Connector and drop the jar in your mods folder.
+3. Following that, you'll want to download the [**Forgified Fabric API**](https://modrinth.com/mod/forgified-fabric-api).
+It is meant to be a direct *replacement* for the Fabric API and is not compatible with it. We'll try our best to avoid
+loading the Fabric API if it's installed automatically (e.g. by your modpack manager), but if you have the option to do
+so, don't install it.
+
+🎉 With all the steps completed, you're good to go! With all dependencies installed, grab your favourite Fabric mods
+and just **drop them in the mods folder** like you would with any NeoForge mods. Connector will handle loading them for
+you with no additional steps required.
+
+## 🔍 Help and Support
+
+<Callout variant="danger">
+    Please don't report issues encountered while using Connector to mod authors, as it only puts unnecessary strain on
+    their management.
+    Fixing mod issues is our duty alone, and we'll happily look into them for you.
+</Callout>
+
+If you're having trouble running a mod on Connector, join our community on [Discord](https://discord.sinytra.org),
+ask us on [GitHub Discussions](https://github.com/Sinytra/Connector/discussions) or open an issue on our [bug tracker](https://github.com/Sinytra/Connector/issues).
+
+Here's a few tips to follow when reporting issues:
+
+1. Make sure you are using latest available version. Look for existing issues that might've already been answered / fixed.
+Think about whether the issue is caused by Connector itself and not another mod you've installed.
+To test this, try reproducing the same issue on Fabric.
+
+2. Navigate to the [issues tab](https://github.com/Sinytra/Connector/issues) and open a [new issue](https://github.com/Sinytra/Connector/issues/new/choose).
+Select one of the available templates depending on the topic. Fill in the required fields.
+In order to increase our chances of identifying and reproducing the issue, please make sure to include as many details as possible.
+
+3. Once you're done describing the problem, submit the issue. We'll get to you as soon as we can. Please note that providing as many details as
+possible is crucial to help us find and resolve the issue faster, while also getting you a fixed version ASAP.
+
+Please note that providing as many details as possible is crucial to help us find and resolve the issue faster,
+while also getting you a fixed version ASAP.

@@ -1,0 +1,67 @@
+---
+title: Configuring Connector
+hide_meta: true
+---
+
+Connector offers multiple utility configuration options for improving mod compatibility on its platform.
+These are found in the `config/connector.json` file relative to your root minecraft directory. If the file doesn't exist,
+Connector will generate one with the default configuration options. Each of these options is explained in detail below.
+
+```json filename="connector.json"
+{
+    "version": 1,
+    "hiddenMods": [],
+    "globalModAliases": {}
+}
+```
+
+## Global Mod Aliases
+
+To improve mod compatibility, Connector provides a Global Mod Alias feature that can be used to provide alternative IDs
+for mods in the Fabric Loader.
+
+Aliases can be defined in the `globalModAliases` field of Connector's config file. This JSON object contains all of our aliases for various mods.
+Keys inside the object represent mod IDs to be aliased. The value can be either a single `string`, or an `array` in case we want to provide
+multiple aliases for one mod.
+
+<Callout>
+  Connector provides certain default aliases for popular mods to improve its user experience. These are added to the default configuration file, but
+  can be manually removed if necessary.
+</Callout>
+
+Here's a minimal configuration example:
+```json filename="connector.json"
+{
+    "globalModAliases": {
+        "cloth_config": "cloth-config2",
+        "embeddium": [
+            "sodium",
+            "magnesium"
+        ]
+    }
+}
+```
+
+## Hiding Forge mods' presence
+
+Fabric mods tend to integrate with others based on their mod ID. If you happen to install a Forge version of a mod that a Fabric mod wants to integrate
+with, it might result in a crash, as the two versions' code is different. Most of the time, mods provide toggles for integrations in their config.
+If that's not the case, your other option is hiding the Forge mod's presence from Fabric mods entirely, which might help in disabling the problematic
+integration.
+
+Inside the Connector configuration file, the `hiddenMods` field is defined as an `array` of mod IDs (`string`s).
+Forge mod IDs found in this list will be excluded from being added to Fabric Loader, resulting in their presence being hidden from Fabric mods.
+
+Here's a minimal configuration example:
+```json filename="connector.json"
+{
+    "hiddenMods": [
+        "examplemod"
+    ]
+}
+```
+
+## Dependency Overrides
+
+Connector supports Fabric Loader's [Dependency Overrides](https://fabricmc.net/wiki/tutorial:dependency_overrides) configuration file
+out of the box without any change in its behaviour. All necessary information regarding this config can be found on the Fabric Wiki.

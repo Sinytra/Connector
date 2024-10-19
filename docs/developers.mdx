@@ -1,0 +1,101 @@
+---
+title: Developers
+hide_meta: true
+---
+
+Connector provides various APIs and configuration options for developers to make it easier to bring their mod onto
+the platform.
+
+## Detecting Connector's presence
+
+You can use the APIs provided by Fabric's `FabricLoader` and FML's `ModList` to detect Connector's presence in your mods.
+
+- Connector's FML modid is `connector`.
+
+- The Forgified Fabric API uses `fabric_api` as its main mod id.
+  All of its modules follow upstream mod id's where dashes (`-`) are replaced by underscores (`_`) to comply with FML's requirements.<br/>
+  (e.g. `fabric-transfer-api-v1` -> `fabric_transfer_api_v1`)
+
+## Placeholder mods
+
+### Motivation
+
+As a developer, you may be interested in officially supporting your mod on Forge via Connector. One possibility is publishing a "Forge" labelled
+release to platforms such as CurseForge and Modrinth. Under the hood, this is still a Fabric mod jar, except it has an additional dependency added
+on Connector.
+
+While this is a clever way to trick the modpack manager into running Fabric mods on Forge, it doesn't offer any way of informing the user about the
+Connector dependency in case it is downloaded manually. The mod file is still a Fabric jar that gets ignored by FML, leaving users potentially
+confused about why the "Forge" mod they installed is not loading.
+
+Including a dummy FML mod metadata file might help resolve this issue, but at the same time, it would lead Connector to ignore the mod completely, as
+it does with all FML mod jars.
+
+### Integration
+
+To overcome this issue, Connector offers a placeholder mod feature that allows developers to safely depend on Connector and notify users of missing
+dependencies without causing issues with duplicate mod IDs. To enable this feature, include a standard FML metadata file in your Forge release mod
+file with the following lines:
+
+```toml copy filename="neoforge.mods.toml"
+[properties]
+"connector:placeholder"=true
+```
+
+This will let Connector know the mod's FML metadata only acts as a placeholder, and it won't consider the file a FML mod, proceeding to load it as a
+Fabric mod instead. You can now safely declare a dependency on Connector without having to worry about it being ignored. FML will promptly alert
+the user in case Connector is missing.
+
+```toml copy filename="neoforge.mods.toml"
+[[dependencies.examplemod]]
+modId="connector"
+mandatory=true
+versionRange="*"
+ordering="NONE"
+side="BOTH"
+```
+
+<details>
+  <summary>Show full example</summary>
+
+  ```toml {5-6,29-34} filename="neoforge.mods.toml"
+  modLoader="javafml"
+  loaderVersion="[47,)"
+  license="CC0-1.0"
+
+  [properties]
+  "connector:placeholder"=true
+
+  [[mods]]
+  modId="examplemod"
+  version="1.0.0"
+  displayName="Example Mod"
+  authors="example"
+  description='''Example Mod'''
+
+  [[dependencies.examplemod]]
+  modId="forge"
+  mandatory=true
+  versionRange="[47,)"
+  ordering="NONE"
+  side="BOTH"
+
+  [[dependencies.examplemod]]
+  modId="minecraft"
+  mandatory=true
+  versionRange="[1.20.1]"
+  ordering="NONE"
+  side="BOTH"
+
+  [[dependencies.examplemod]]
+  modId="connector"
+  mandatory=true
+  versionRange="*"
+  ordering="NONE"
+  side="BOTH"
+  ```
+</details>
+
+Here's how the resulting FML dependency error looks like:
+
+<ModAsset width="100%" title="FML Dependency Error" location="connector:placeholder_mod_dependencies" />

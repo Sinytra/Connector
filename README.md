@@ -18,7 +18,7 @@ on [NeoForge](https://neoforged.net). Its goal is to bring the two platforms clo
 developers time and effort maintaining their mods for multiple platforms at once, as well as allowing players to play
 all their favourite mods in one modpack.
 
-**📘 The official documentation is available at [sinytra.org](https://sinytra.org/docs).**
+**📘 The official documentation is available [here](https://moddedmc.org/mod/connector).**
 
 ### 🔗 Related Projects
 
@@ -130,4 +130,4 @@ dependencies {
 
 ## ⚙️ Configuration
 
-All information regarding Connector's configuration options can be found [on our website](https://sinytra.org/docs).
+All information regarding Connector's configuration options can be found [on our website](https://moddedmc.org/mod/connector).

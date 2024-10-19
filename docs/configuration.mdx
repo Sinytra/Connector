@@ -7,7 +7,7 @@ Connector offers multiple utility configuration options for improving mod compat
 These are found in the `config/connector.json` file relative to your root minecraft directory. If the file doesn't exist,
 Connector will generate one with the default configuration options. Each of these options is explained in detail below.
 
-```json filename="connector.json"
+```json title="connector.json"
 {
     "version": 1,
     "hiddenMods": [],
@@ -30,7 +30,7 @@ multiple aliases for one mod.
 </Callout>
 
 Here's a minimal configuration example:
-```json filename="connector.json"
+```json title="connector.json"
 {
     "globalModAliases": {
         "cloth_config": "cloth-config2",
@@ -53,7 +53,7 @@ Inside the Connector configuration file, the `hiddenMods` field is defined as an
 Forge mod IDs found in this list will be excluded from being added to Fabric Loader, resulting in their presence being hidden from Fabric mods.
 
 Here's a minimal configuration example:
-```json filename="connector.json"
+```json title="connector.json"
 {
     "hiddenMods": [
         "examplemod"

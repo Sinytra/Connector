@@ -27,6 +27,7 @@ import org.sinytra.connector.locator.filter.ForgeModPackageFilter;
 import org.sinytra.connector.locator.filter.SplitPackageMerger;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.util.ConnectorUtil;
+import org.sinytra.connector.util.PriorityModLoadingException;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -75,6 +76,8 @@ public class ConnectorLocator implements IDependencyLocator {
             }
 
             loadEmbeddedJars(pipeline);
+        } catch (PriorityModLoadingException e) {
+            throw e;
         } catch (ModLoadingException e) {
             // Let these pass through
             ConnectorEarlyLoader.addGenericLoadingException(e.getIssues());

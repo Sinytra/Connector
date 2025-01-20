@@ -25,6 +25,7 @@ import net.fabricmc.loader.api.metadata.version.VersionInterval;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.neoforged.fml.loading.LoadingModList;
 import net.neoforged.fml.loading.moddiscovery.ModFileInfo;
+import net.neoforged.fml.loading.moddiscovery.ModFileParser;
 import org.sinytra.connector.ConnectorEarlyLoader;
 import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.FabricUtil;
@@ -49,13 +50,13 @@ public final class FabricMixinBootstrap {
         Map<String, ModFileInfo> configToModMap = new HashMap<>();
 
         for (ModFileInfo modFile : LoadingModList.get().getModFiles()) {
-            List<String> mixinConfigs = modFile.getFile().getMixinConfigs();
+            List<ModFileParser.MixinConfig> mixinConfigs = modFile.getFile().getMixinConfigs();
             if (mixinConfigs != null) {
-                for (String config : mixinConfigs) {
-                    if (Files.exists(modFile.getFile().findResource(config))) {
-                        ModFileInfo prev = configToModMap.putIfAbsent(config, modFile);
+                for (ModFileParser.MixinConfig config : mixinConfigs) {
+                    if (Files.exists(modFile.getFile().findResource(config.config()))) {
+                        ModFileInfo prev = configToModMap.putIfAbsent(config.config(), modFile);
                         if (prev != null)
-                            LOGGER.debug("Non-unique Mixin config name {} used by the mods {} and {}", config, prev.moduleName(), modFile.moduleName());
+                            LOGGER.debug("Non-unique Mixin config name {} used by the mods {} and {}", config.config(), prev.moduleName(), modFile.moduleName());
                     }
                 }
             }
@@ -122,7 +123,7 @@ public final class FabricMixinBootstrap {
 
             if (reqIntervals.isEmpty()) throw new IllegalStateException("mod " + metadata.getId() + " is incompatible with every loader version?"); // shouldn't get there
 
-            Version minLoaderVersion = reqIntervals.get(0).getMin(); // it is sorted, to 0 has the absolute lower bound
+            Version minLoaderVersion = reqIntervals.getFirst().getMin(); // it is sorted, to 0 has the absolute lower bound
 
             if (minLoaderVersion != null) { // has a lower bound
                 for (LoaderMixinVersionEntry version : VERSIONS) {

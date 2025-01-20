@@ -21,7 +21,7 @@ config="connector.mixins.json"
 [[dependencies.connector]]
     modId="neoforge"
     type="required"
-    versionRange="*"
+    versionRange="[21.1.97,)"
     ordering="NONE"
     side="BOTH"
 [[dependencies.connector]]

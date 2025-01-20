@@ -7,6 +7,7 @@ import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import org.sinytra.adapter.patch.api.PatchAuditTrail;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.util.ConnectorConfig;
+import org.sinytra.connector.util.PriorityModLoadingException;
 import org.slf4j.Logger;
 
 import java.util.List;
@@ -41,6 +42,6 @@ public final class MixinTransformSafeguard {
             builder.append("\n");
         });
 
-        throw new ModLoadingException(ModLoadingIssue.error(builder.toString()));
+        throw new PriorityModLoadingException(ModLoadingIssue.error(builder.toString()));
     }
 }

@@ -5,6 +5,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
+import cpw.mods.jarhandling.JarContents;
+import cpw.mods.jarhandling.JarContentsBuilder;
+import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.metadata.CustomValue;
@@ -116,7 +119,8 @@ public final class JarTransformer {
         FabricModFileMetadata metadata = readModMetadata(input);
         FabricModPath path = new FabricModPath(output, metadata);
         ConnectorUtil.CacheFile cacheFile = ConnectorUtil.getCached(input.toPath(), output);
-        return new TransformableJar(input, path, cacheFile);
+        String moduleName = getModuleName(input.toPath());
+        return new TransformableJar(input, path, cacheFile, moduleName);
     }
 
     private static List<TransformedFabricModPath> transformJars(List<TransformableJar> paths, List<Path> libs, Collection<IModFile> loadedMods) {
@@ -259,6 +263,17 @@ public final class JarTransformer {
         }
     }
 
+    @Nullable
+    private static String getModuleName(Path path) {
+        try(JarContents contents = new JarContentsBuilder().paths(path).build()) {
+            JarMetadata metadata = JarMetadata.from(contents);
+            return metadata.descriptor().name();
+        } catch (IOException e) {
+            LOGGER.error("Error reading jar contents from {}", path, e);
+            return null;
+        }
+    }
+
     private JarTransformer() {}
 
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
@@ -267,7 +282,7 @@ public final class JarTransformer {
 
     public record FabricModFileMetadata(ConnectorFabricModMetadata modMetadata, Collection<String> visibleMixinConfigs, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT, boolean generated) {}
 
-    public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile) {
+    public record TransformableJar(File input, FabricModPath modPath, ConnectorUtil.CacheFile cacheFile, String moduleName) {
         public Pair<FabricModPath, PatchAuditTrail> transform(JarTransformInstance transformInstance) throws IOException {
             Files.deleteIfExists(this.modPath.path);
             PatchAuditTrail audit = transformInstance.transformJar(this.input, this.modPath.path, this.modPath.metadata());

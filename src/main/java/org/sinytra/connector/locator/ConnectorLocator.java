@@ -101,14 +101,12 @@ public class ConnectorLocator implements IDependencyLocator {
         Collection<SimpleModInfo> loadedModInfos = getPreviouslyDiscoveredMods(discoveredMods);
         Collection<IModFile> loadedModFiles = loadedModInfos.stream().map(SimpleModInfo::origin).toList();
         Collection<String> loadedModIds = loadedModInfos.stream().filter(mod -> !mod.library()).map(SimpleModInfo::modid).collect(Collectors.toUnmodifiableSet());
+        Collection<String> loadedModuleNames = loadedModInfos.stream().filter(SimpleModInfo::library).map(SimpleModInfo::moduleName).filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet());
 
         // Discover fabric mod jars
         List<JarTransformer.TransformableJar> discoveredJars = FabricModsDiscoverer.scanFabricMods()
             .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
-            .filter(jar -> {
-                ConnectorFabricModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return !shouldIgnoreMod(metadata, loadedModIds);
-            })
+            .filter(jar -> !shouldIgnoreMod(jar, loadedModIds, loadedModuleNames))
             .toList();
 
         // Discover fabric nested mod jars
@@ -116,7 +114,7 @@ public class ConnectorLocator implements IDependencyLocator {
         List<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()
             .flatMap(jar -> {
                 ConnectorFabricModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return shouldIgnoreMod(metadata, loadedModIds) ? Stream.empty() : discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds);
+                return shouldIgnoreMod(jar, loadedModIds, loadedModuleNames) ? Stream.empty() : discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds, loadedModuleNames);
             })
             .toList();
 
@@ -165,19 +163,19 @@ public class ConnectorLocator implements IDependencyLocator {
         return modFile;
     }
 
-    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, JarTransformer.TransformableJar parent, Collection<NestedJarEntry> jars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren, Collection<String> loadedModIds) {
+    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, JarTransformer.TransformableJar parent, Collection<NestedJarEntry> jars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren, Collection<String> loadedModIds, Collection<String> loadedModuleNames) {
         SecureJar secureJar = SecureJar.from(parent.input().toPath());
         return jars.stream()
             .map(entry -> secureJar.getPath(entry.getFile()))
             .filter(Files::exists)
             .flatMap(path -> {
                 JarTransformer.TransformableJar jar = uncheck(() -> prepareNestedJar(tempDir, secureJar.getPrimaryPath().getFileName().toString(), path));
-                ConnectorFabricModMetadata metadata = jar.modPath().metadata().modMetadata();
-                if (shouldIgnoreMod(metadata, loadedModIds)) {
+                if (shouldIgnoreMod(jar, loadedModIds, loadedModuleNames)) {
                     return Stream.empty();
                 }
                 parentToChildren.put(parent, jar);
-                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds));
+                ConnectorFabricModMetadata metadata = jar.modPath().metadata().modMetadata();
+                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds, loadedModuleNames));
             });
     }
 
@@ -203,7 +201,7 @@ public class ConnectorLocator implements IDependencyLocator {
                 // Add mods that are going to be excluded by FML's UniqueModListBuilder to the ignore list 
                 if (forgeMods.stream().anyMatch(SimpleModInfo::library)) {
                     ArtifactVersion artifactVersion = new DefaultArtifactVersion(jar.modPath().metadata().modMetadata().getVersion().getFriendlyString());
-                    SimpleModInfo fabricModInfo = new SimpleModInfo(id, artifactVersion, false, null);
+                    SimpleModInfo fabricModInfo = new SimpleModInfo(id, artifactVersion, false, null, null);
                     // Sort mods by version, descending
                     List<SimpleModInfo> modsByVersion = Stream.concat(Stream.of(fabricModInfo), forgeMods.stream())
                         .sorted(Comparator.comparing(SimpleModInfo::version).reversed())
@@ -226,9 +224,11 @@ public class ConnectorLocator implements IDependencyLocator {
             .toList();
     }
 
-    private static boolean shouldIgnoreMod(ConnectorFabricModMetadata metadata, Collection<String> loadedModIds) {
+    private static boolean shouldIgnoreMod(JarTransformer.TransformableJar jar, Collection<String> loadedModIds, Collection<String> loadedModuleNames) {
+        ConnectorFabricModMetadata metadata = jar.modPath().metadata().modMetadata();
         String id = metadata.getId();
-        return ConnectorUtil.DISABLED_MODS.contains(id) || loadedModIds.contains(id);
+        return ConnectorUtil.DISABLED_MODS.contains(id) || loadedModIds.contains(id)
+            || jar.modPath().metadata().generated() && loadedModuleNames.contains(jar.moduleName());
     }
 
     private static Collection<SimpleModInfo> getPreviouslyDiscoveredMods(List<IModFile> discoveredMods) {
@@ -244,10 +244,10 @@ public class ConnectorLocator implements IDependencyLocator {
                     return Stream.empty();
                 }
                 if (!modInfos.isEmpty()) {
-                    return modInfos.stream().map(modInfo -> new SimpleModInfo(modInfo.getModId(), modInfo.getVersion(), false, modFile));
+                    return modInfos.stream().map(modInfo -> new SimpleModInfo(modInfo.getModId(), modInfo.getVersion(), false, modFile, modFileInfo.moduleName()));
                 }
                 String version = modFileInfo.getFile().getSecureJar().moduleDataProvider().descriptor().version().map(ModuleDescriptor.Version::toString).orElse("0.0");
-                return Stream.of(new SimpleModInfo(modFileInfo.moduleName(), new DefaultArtifactVersion(version), true, modFile));
+                return Stream.of(new SimpleModInfo(modFileInfo.moduleName(), new DefaultArtifactVersion(version), true, modFile, modFileInfo.moduleName()));
             })
             .toList();
     }
@@ -258,5 +258,6 @@ public class ConnectorLocator implements IDependencyLocator {
         new JarInJarDependencyLocator().scanMods(List.of(modFile), pipeline);
     }
 
-    private record SimpleModInfo(String modid, ArtifactVersion version, boolean library, @Nullable IModFile origin) {}
+    private record SimpleModInfo(String modid, ArtifactVersion version, boolean library, @Nullable IModFile origin, @Nullable String moduleName) {
+    }
 }

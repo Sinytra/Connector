@@ -7,7 +7,7 @@ import java.time.LocalDateTime
 plugins {
     java
     `maven-publish`
-    id("net.neoforged.moddev") version "2.0.52-beta"
+    id("net.neoforged.moddev") version "2.0.78"
     id("io.github.goooler.shadow") version "8.1.8" apply false
     id("me.modmuss50.mod-publish-plugin") version "0.5.+"
     id("net.neoforged.gradleutils") version "3.0.0"
@@ -65,10 +65,6 @@ configurations {
     "modCompileOnly" {
         extendsFrom(shade)
     }
-
-    additionalRuntimeClasspath {
-        extendsFrom(shade)
-    }
 }
 
 println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty("java.vm.version")} (${System.getProperty("java.vendor")}), Arch: ${System.getProperty("os.arch")}")
@@ -86,6 +82,11 @@ neoForge {
     }
 
     runs {
+        configureEach {
+            additionalRuntimeClasspathConfiguration.extendsFrom(shade)
+            additionalRuntimeClasspathConfiguration.dependencies.add(dependencies.create(files(tasks.jar)))
+        }
+
         val config = Action<RunModel> {
             systemProperty("forge.logging.console.level", "debug")
             systemProperty("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE,COREMOD")
@@ -143,8 +144,6 @@ dependencies {
     }
 
     "modCompileOnly"(sourceSets.main.get().output)
-
-    additionalRuntimeClasspath(files(tasks.jar))
 
     implementation("curse.maven:connector-extras-913445:5618470")
 }

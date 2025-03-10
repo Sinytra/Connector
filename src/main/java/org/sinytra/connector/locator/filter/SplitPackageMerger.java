@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 
 public class SplitPackageMerger {
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final UnionPathFilter BASE_FILTER = (path, basePath) -> !path.startsWith("META-INF/versions");
 
     /**
      * Detect and resolve split package conflicts in jars.
@@ -120,12 +121,12 @@ public class SplitPackageMerger {
             Set<String> excludedPackages = info.excludedPackages();
             UnionPathFilter filter = !excludedPackages.isEmpty() ? new PackageTracker(Set.copyOf(excludedPackages)) : null;
             Path[] jarPaths = Stream.concat(Stream.of(info.jar().getPrimaryPath()), additionalPaths.stream()).toArray(Path[]::new);
-            output.add(new FilteredModPath(jarPaths, filter, info.metadata));
+            output.add(new FilteredModPath(jarPaths, mergeANDFilter(BASE_FILTER, filter), info.metadata));
         });
 
         // Add unprocessed paths to output
         for (FabricModPath modPath : plainPaths) {
-            output.add(new FilteredModPath(new Path[] { modPath.path() }, null, modPath.metadata()));
+            output.add(new FilteredModPath(new Path[] { modPath.path() }, BASE_FILTER, modPath.metadata()));
         }
         if (paths.size() != output.size()) {
             LOGGER.error("Expected {} paths, got {}", paths.size(), plainPaths.size());
@@ -173,6 +174,10 @@ public class SplitPackageMerger {
                 // Match any file inside the package
                 || idx > -1 && pkg.equals(path.substring(0, idx).replace('/', '.'));
         };
+    }
+
+    private static UnionPathFilter mergeANDFilter(UnionPathFilter left, @Nullable UnionPathFilter right) {
+        return (a, b) -> left.test(a, b) && (right == null || right.test(a, b));
     }
 
     /**

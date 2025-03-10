@@ -237,9 +237,9 @@ public final class JarTransformer {
                     packages.add(pkgPath);
                 }
             }
-        } catch (IOException e) {
+        } catch (Throwable t) {
             LOGGER.error("Error reading mixin config entry {} in file {}", entry.getName(), input.getAbsolutePath());
-            throw new UncheckedIOException(e);
+            throw new RuntimeException(t);
         }
     }
 

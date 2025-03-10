@@ -6,6 +6,8 @@ import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.JarContents;
 import cpw.mods.jarhandling.JarContentsBuilder;
 import cpw.mods.jarhandling.SecureJar;
+import cpw.mods.modlauncher.Launcher;
+import cpw.mods.modlauncher.api.IModuleLayerManager;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.neoforged.fml.ModLoadingException;
 import net.neoforged.fml.loading.FMLPaths;
@@ -34,12 +36,7 @@ import java.io.IOException;
 import java.lang.module.ModuleDescriptor;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -101,7 +98,13 @@ public class ConnectorLocator implements IDependencyLocator {
         Collection<SimpleModInfo> loadedModInfos = getPreviouslyDiscoveredMods(discoveredMods);
         Collection<IModFile> loadedModFiles = loadedModInfos.stream().map(SimpleModInfo::origin).toList();
         Collection<String> loadedModIds = loadedModInfos.stream().filter(mod -> !mod.library()).map(SimpleModInfo::modid).collect(Collectors.toUnmodifiableSet());
-        Collection<String> loadedModuleNames = loadedModInfos.stream().filter(SimpleModInfo::library).map(SimpleModInfo::moduleName).filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet());
+        Collection<String> loadedModuleNames = Stream.concat(
+                Launcher.INSTANCE.findLayerManager().flatMap(m -> m.getLayer(IModuleLayerManager.Layer.BOOT))
+                    .stream()
+                    .flatMap(m -> m.modules().stream())
+                    .map(Module::getName),
+                loadedModInfos.stream().filter(SimpleModInfo::library).map(SimpleModInfo::moduleName).filter(Objects::nonNull))
+            .collect(Collectors.toUnmodifiableSet());
 
         // Discover fabric mod jars
         List<JarTransformer.TransformableJar> discoveredJars = FabricModsDiscoverer.scanFabricMods()

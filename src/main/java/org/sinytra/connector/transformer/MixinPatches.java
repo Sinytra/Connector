@@ -5,10 +5,12 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
 import org.sinytra.adapter.patch.api.MixinConstants;
 import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.transformer.operation.ModifyMethodAccess;
 import org.sinytra.adapter.patch.transformer.operation.param.ParamTransformTarget;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.util.List;
 import java.util.ListIterator;
@@ -205,6 +207,21 @@ public class MixinPatches {
                 .modifyMixinType(MixinConstants.REDIRECT, builder -> builder
                     .sameTarget()
                     .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;getItem()Lnet/minecraft/world/item/Item;"))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/entity/player/Player")
+                .targetMethod("getProjectile")
+                .targetInjectionPoint("Lnet/minecraft/world/item/ProjectileWeaponItem;getAllSupportedProjectiles()Ljava/util/function/Predicate;")
+                .targetMixinType(MixinConstants.MODIFY_VAR)
+                .modifyParams(builder -> builder
+                    .remove(1))
+                .modifyInjectionPoint("Lnet/minecraft/world/item/ProjectileWeaponItem;getAllSupportedProjectiles(Lnet/minecraft/world/item/ItemStack;)Ljava/util/function/Predicate;")
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/item/MaceItem")
+                .targetMethod("getAttackDamageBonus")
+                .modifyParams(builder -> builder
+                    .replace(4, Type.getObjectType("net/minecraft/world/entity/Entity")))
                 .build()
             // ========
             /*

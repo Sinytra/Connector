@@ -113,17 +113,10 @@ public class MixinPatches {
                 .targetMethod("render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V")
                 .targetInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
                 .modifyParams(builder -> builder
-                    .insert(1, Type.getObjectType("com/mojang/blaze3d/vertex/PoseStack"))
-                    .insert(2, Type.getObjectType("net/minecraft/client/renderer/MultiBufferSource"))
-                    .insert(3, Type.INT_TYPE)
-                    .swap(2, 4)
-                    .insert(4, Type.FLOAT_TYPE)
-                    .insert(5, Type.FLOAT_TYPE)
-                    .insert(6, Type.FLOAT_TYPE)
-                    .insert(7, Type.FLOAT_TYPE)
-                    .insert(8, Type.FLOAT_TYPE)
-                    .insert(9, Type.FLOAT_TYPE)
-                    )
+                    .remove(1)
+                    .insert(2, Type.getObjectType("com/mojang/blaze3d/vertex/PoseStack"))
+                    .insert(3, Type.getObjectType("net/minecraft/client/renderer/MultiBufferSource"))
+                    .insert(4, Type.INT_TYPE))
                 .build(),
             // NeoForge moves this behaviour out completely with no viable replacement, so we disable it for now
             Patch.builder()

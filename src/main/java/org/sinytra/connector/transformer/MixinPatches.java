@@ -6,6 +6,7 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 import org.sinytra.adapter.patch.api.MixinConstants;
 import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.transformer.operation.ModifyMethodAccess;
@@ -49,8 +50,7 @@ public class MixinPatches {
             Patch.builder()
                 .targetClass("net/minecraft/client/KeyMapping")
                 .targetMethod("set")
-                .targetInjectionPoint("TAIL", "")
-                .modifyInjectionPoint("Lnet/minecraft/client/KeyMapping;setDown(Z)V")
+                .modifyInjectionPoint("INVOKE", "Lnet/minecraft/client/KeyMapping;setDown(Z)V")
                 .build(),
             Patch.builder()
                 .targetClass("net/minecraft/world/level/block/piston/PistonStructureResolver")
@@ -220,9 +220,32 @@ public class MixinPatches {
             Patch.builder()
                 .targetClass("net/minecraft/world/item/MaceItem")
                 .targetMethod("getAttackDamageBonus")
+                .targetMixinType(MixinConstants.MODIFY_RETURN_VAL)
+                .modifyMixinType(MixinConstants.MODIFY_VAR, builder -> builder
+                    .sameTarget()
+                    .putValue("ordinal", 4)
+                    .injectionPoint("STORE"))
+                .build(),
+            Patch.builder()
+                .targetClass("net/minecraft/world/item/ItemStack")
+                .targetMethod("hurtAndBreak")
+                .modifyTarget("hurtAndBreak(ILnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/entity/LivingEntity;Ljava/util/function/Consumer;)V")
                 .modifyParams(builder -> builder
-                    .replace(4, Type.getObjectType("net/minecraft/world/entity/Entity")))
-                .build()
+                    .targetType(ParamTransformTarget.ALL)
+                    .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
+                    .lvtFixer((index, insn, list) -> {
+                        if (index == 3) {
+                            list.insert(insn, new TypeInsnNode(Opcodes.CHECKCAST, "net/minecraft/server/level/ServerPlayer"));
+                        }
+                    }))
+                .modifyParams(builder -> builder
+                    .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity")))
+                .build(),
+            Patch.builder()
+                    .targetClass("net/minecraft/client/KeyMapping")
+                    .targetMethod("click")
+                    .modifyInjectionPoint("FIELD", "Lnet/minecraft/client/KeyMapping;clickCount:I")
+                    .build()
             // ========
             /*
             // Move arg modifier to the forge method, which replaces all usages of the vanilla one

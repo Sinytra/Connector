@@ -3,10 +3,14 @@ package org.sinytra.connector.transformer;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.JumpInsnNode;
+import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
+import org.objectweb.asm.tree.VarInsnNode;
 import org.sinytra.adapter.patch.api.MixinConstants;
 import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.transformer.operation.ModifyMethodAccess;
@@ -238,8 +242,19 @@ public class MixinPatches {
                             list.insert(insn, new TypeInsnNode(Opcodes.CHECKCAST, "net/minecraft/server/level/ServerPlayer"));
                         }
                     }))
-                .modifyParams(builder -> builder
-                    .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity")))
+                .transform((classNode, methodNode, methodContext, context) -> {
+                    // methodNode.desc = "(Lnet/minecraft/client/model/Model;)Lnet/minecraft/client/model/Model;";
+                    // methodNode.signature = null;
+                    InsnList insns = new InsnList();
+                    LabelNode cont = new LabelNode();
+                    insns.add(new VarInsnNode(Opcodes.ALOAD, 2));
+                    insns.add(new TypeInsnNode(Opcodes.INSTANCEOF, "net/minecraft/server/level/ServerPlayer"));
+                    insns.add(new JumpInsnNode(Opcodes.IFNE, cont));
+                    insns.add(new InsnNode(Opcodes.RETURN));
+                    insns.add(cont);
+                    methodNode.instructions.insert(insns);
+                    return Patch.Result.APPLY;
+                })
                 .build(),
             Patch.builder()
                     .targetClass("net/minecraft/client/KeyMapping")

@@ -8,6 +8,7 @@ import cpw.mods.jarhandling.JarContentsBuilder;
 import cpw.mods.jarhandling.SecureJar;
 import cpw.mods.modlauncher.Launcher;
 import cpw.mods.modlauncher.api.IModuleLayerManager;
+import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.fabricmc.loader.impl.metadata.NestedJarEntry;
 import net.neoforged.fml.ModLoadingException;
 import net.neoforged.fml.loading.FMLPaths;
@@ -16,17 +17,15 @@ import net.neoforged.fml.loading.moddiscovery.locators.JarInJarDependencyLocator
 import net.neoforged.fml.loading.moddiscovery.readers.JarModsDotTomlModFileReader;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import net.neoforged.neoforgespi.language.IModInfo;
-import net.neoforged.neoforgespi.locating.IDependencyLocator;
-import net.neoforged.neoforgespi.locating.IDiscoveryPipeline;
-import net.neoforged.neoforgespi.locating.IModFile;
-import net.neoforged.neoforgespi.locating.IncompatibleFileReporting;
-import net.neoforged.neoforgespi.locating.ModFileDiscoveryAttributes;
+import net.neoforged.neoforgespi.locating.*;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.ConnectorEarlyLoader;
 import org.sinytra.connector.locator.filter.ForgeModPackageFilter;
 import org.sinytra.connector.locator.filter.SplitPackageMerger;
+import org.sinytra.connector.locator.transform.ConnectorTransformerEnvironment;
+import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.sinytra.connector.util.PriorityModLoadingException;
@@ -43,7 +42,6 @@ import java.util.stream.Stream;
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.rethrowFunction;
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
 import static net.neoforged.fml.loading.LogMarkers.SCAN;
-import static org.sinytra.connector.transformer.jar.JarTransformer.cacheTransformableJar;
 
 public class ConnectorLocator implements IDependencyLocator {
     public static final String PLACEHOLDER_PROPERTY = "connector:placeholder";
@@ -60,13 +58,14 @@ public class ConnectorLocator implements IDependencyLocator {
             LOGGER.error("Skipping mod scan due to previously encountered error");
             return;
         }
+
         try {
-            List<IModFile> results = locateFabricMods(loadedMods);
+            LocationResult results = locateFabricMods(loadedMods);
             if (results != null) {
-                results.forEach(pipeline::addModFile);
+                results.mods().forEach(pipeline::addModFile);
 
                 // Create mod file for generated adapter mixins jar
-                Path generatedAdapterJar = JarTransformer.getGeneratedJarPath();
+                Path generatedAdapterJar = results.generatedJarPath();
                 if (Files.exists(generatedAdapterJar)) {
                     pipeline.addPath(generatedAdapterJar, ModFileDiscoveryAttributes.DEFAULT, IncompatibleFileReporting.ERROR);
                 }
@@ -90,7 +89,7 @@ public class ConnectorLocator implements IDependencyLocator {
     }
 
     @Nullable
-    private List<IModFile> locateFabricMods(List<IModFile> discoveredMods) {
+    private LocationResult locateFabricMods(List<IModFile> discoveredMods) {
         LOGGER.debug(SCAN, "Scanning mods dir {} for mods", FMLPaths.MODSDIR.get());
         Path tempDir = ConnectorUtil.CONNECTOR_FOLDER.resolve("temp");
 
@@ -106,9 +105,12 @@ public class ConnectorLocator implements IDependencyLocator {
                 loadedModInfos.stream().filter(SimpleModInfo::library).map(SimpleModInfo::moduleName).filter(Objects::nonNull))
             .collect(Collectors.toUnmodifiableSet());
 
+        TransformerEnvironment environment = new ConnectorTransformerEnvironment(loadedModFiles);
+        JarTransformer transformer = new JarTransformer(environment);
+
         // Discover fabric mod jars
         List<JarTransformer.TransformableJar> discoveredJars = FabricModsDiscoverer.scanFabricMods()
-            .map(rethrowFunction(p -> cacheTransformableJar(p.toFile())))
+            .map(rethrowFunction(p -> transformer.cacheTransformableJar(p.toFile())))
             .filter(jar -> !shouldIgnoreMod(jar, loadedModIds, loadedModuleNames))
             .toList();
 
@@ -116,8 +118,8 @@ public class ConnectorLocator implements IDependencyLocator {
         Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren = HashMultimap.create();
         List<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()
             .flatMap(jar -> {
-                ConnectorFabricModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return shouldIgnoreMod(jar, loadedModIds, loadedModuleNames) ? Stream.empty() : discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds, loadedModuleNames);
+                LoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
+                return shouldIgnoreMod(jar, loadedModIds, loadedModuleNames) ? Stream.empty() : discoverNestedJarsRecursive(transformer, tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds, loadedModuleNames);
             })
             .toList();
 
@@ -134,7 +136,7 @@ public class ConnectorLocator implements IDependencyLocator {
         List<Path> renameLibs = loadedModFiles.stream().map(modFile -> modFile.getSecureJar().getRootPath()).toList();
 
         // Run jar transformations (or get existing outputs from cache)
-        List<JarTransformer.TransformedFabricModPath> transformed = JarTransformer.transform(candidates, renameLibs, loadedModFiles);
+        List<JarTransformer.TransformedFabricModPath> transformed = transformer.transform(candidates, renameLibs);
 
         List<JarTransformer.TransformedFabricModPath> failing = transformed.stream().filter(j -> j.auditTrail() != null && j.auditTrail().hasFailingMixins()).toList();
         if (!failing.isEmpty()) {
@@ -151,7 +153,8 @@ public class ConnectorLocator implements IDependencyLocator {
         // Deal with split packages (thanks modules)
         List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed.stream().map(JarTransformer.TransformedFabricModPath::output).toList(), loadedModFiles, ignoredModFiles);
 
-        return moduleSafeJars.stream().map(ConnectorLocator::createConnectorModFile).toList();
+        List<IModFile> loadedMods = moduleSafeJars.stream().map(ConnectorLocator::createConnectorModFile).toList();
+        return new LocationResult(loadedMods, environment.getGeneratedJarPath());
     }
 
     private static IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath) {
@@ -161,28 +164,28 @@ public class ConnectorLocator implements IDependencyLocator {
         }
         ModJarMetadata modJarMetadata = new ModJarMetadata(jarContents);
         SecureJar secureJar = SecureJar.from(jarContents, modJarMetadata);
-        IModFile modFile = IModFile.create(secureJar, f -> FabricModMetadataParser.createForgeMetadata(f, modPath.metadata().modMetadata(), modPath.metadata().visibleMixinConfigs(), modPath.metadata().generated()));
+        IModFile modFile = IModFile.create(secureJar, f -> FabricModMetadataParser.createForgeMetadata(f, (ConnectorFabricModMetadata) modPath.metadata().modMetadata(), modPath.metadata().visibleMixinConfigs(), modPath.metadata().generated()));
         modJarMetadata.setModFile(modFile);
         return modFile;
     }
 
-    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(Path tempDir, JarTransformer.TransformableJar parent, Collection<NestedJarEntry> jars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren, Collection<String> loadedModIds, Collection<String> loadedModuleNames) {
+    private static Stream<JarTransformer.TransformableJar> discoverNestedJarsRecursive(JarTransformer transformer, Path tempDir, JarTransformer.TransformableJar parent, Collection<NestedJarEntry> jars, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren, Collection<String> loadedModIds, Collection<String> loadedModuleNames) {
         SecureJar secureJar = SecureJar.from(parent.input().toPath());
         return jars.stream()
             .map(entry -> secureJar.getPath(entry.getFile()))
             .filter(Files::exists)
             .flatMap(path -> {
-                JarTransformer.TransformableJar jar = uncheck(() -> prepareNestedJar(tempDir, secureJar.getPrimaryPath().getFileName().toString(), path));
+                JarTransformer.TransformableJar jar = uncheck(() -> prepareNestedJar(transformer, tempDir, secureJar.getPrimaryPath().getFileName().toString(), path));
                 if (shouldIgnoreMod(jar, loadedModIds, loadedModuleNames)) {
                     return Stream.empty();
                 }
                 parentToChildren.put(parent, jar);
-                ConnectorFabricModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds, loadedModuleNames));
+                LoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
+                return Stream.concat(Stream.of(jar), discoverNestedJarsRecursive(transformer, tempDir, jar, metadata.getJars(), parentToChildren, loadedModIds, loadedModuleNames));
             });
     }
 
-    private static JarTransformer.TransformableJar prepareNestedJar(Path tempDir, String parentName, Path path) throws IOException {
+    private static JarTransformer.TransformableJar prepareNestedJar(JarTransformer transformer, Path tempDir, String parentName, Path path) throws IOException {
         Files.createDirectories(tempDir);
 
         String parentNameWithoutExt = parentName.split("\\.(?!.*\\.)")[0];
@@ -190,7 +193,7 @@ public class ConnectorLocator implements IDependencyLocator {
         Path extracted = tempDir.resolve(parentNameWithoutExt + "$" + path.getFileName().toString());
         ConnectorUtil.cache(path, extracted, () -> Files.copy(path, extracted));
 
-        return uncheck(() -> JarTransformer.cacheTransformableJar(extracted.toFile()));
+        return uncheck(() -> transformer.cacheTransformableJar(extracted.toFile()));
     }
 
     // Removes any duplicates from located connector mods, as well as mods that are already located by FML.
@@ -228,7 +231,7 @@ public class ConnectorLocator implements IDependencyLocator {
     }
 
     private static boolean shouldIgnoreMod(JarTransformer.TransformableJar jar, Collection<String> loadedModIds, Collection<String> loadedModuleNames) {
-        ConnectorFabricModMetadata metadata = jar.modPath().metadata().modMetadata();
+        LoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
         String id = metadata.getId();
         return ConnectorUtil.DISABLED_MODS.contains(id) || loadedModIds.contains(id)
             || jar.modPath().metadata().generated() && loadedModuleNames.contains(jar.moduleName());
@@ -263,4 +266,6 @@ public class ConnectorLocator implements IDependencyLocator {
 
     private record SimpleModInfo(String modid, ArtifactVersion version, boolean library, @Nullable IModFile origin, @Nullable String moduleName) {
     }
+
+    private record LocationResult(List<IModFile> mods, Path generatedJarPath) {} 
 }

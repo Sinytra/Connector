@@ -103,6 +103,7 @@ public final class DependencyResolver {
                     Collection<JarTransformer.TransformableJar> children = parentsToChildren.containsKey(candidateJar) ? parentsToChildren.get(candidateJar) : List.of();
                     List<ModCandidate> childCandidates = createCandidatesRecursive(children, jarsToLoad, parentsToChildren, jarToCandidate);
                     List<Path> paths = parentsToChildren.containsValue(candidateJar) ? null : List.of(candidateJar.modPath().path());
+
                     ModCandidate parent = ModCandidate.createPlain(paths, candidateJar.modPath().metadata().modMetadata(), false, childCandidates);
                     for (ModCandidate childCandidate : childCandidates) {
                         childCandidate.addParent(parent);

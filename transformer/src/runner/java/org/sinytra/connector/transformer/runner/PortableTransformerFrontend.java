@@ -74,9 +74,8 @@ public class PortableTransformerFrontend {
         // Run transformation
         try {
             List<JarTransformer.TransformedFabricModPath> results = transformer.transform(allJars, resolvedClassPath);
-            JarTransformer.TransformedFabricModPath result = results.getFirst();
-
-            boolean success = result.auditTrail() == null || !result.auditTrail().hasFailingMixins();
+            boolean success = results.stream()
+                .allMatch(result -> result.auditTrail() == null || !result.auditTrail().hasFailingMixins());
             return new TransformOutput(success, primaryModid);
         } catch (Throwable t) {
             LOGGER.error("Failed to transform sources", t);

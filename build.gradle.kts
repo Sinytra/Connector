@@ -179,7 +179,8 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
 }
 
 val fullJar by tasks.registering(ShadowJar::class) {
-    from(depsJar.archiveFile.map(::zipTree),
+    from(
+        depsJar.archiveFile.map(::zipTree),
         tasks.jar.flatMap { it.archiveFile.map(::fileTree) })
     mergeServiceFiles() // Relocate services
     relocate("net.minecraftforge.fart", "reloc.net.minecraftforge.fart")
@@ -274,6 +275,9 @@ publishing {
             from(components["java"])
         }
     }
+}
+
+allprojects {
     repositories {
         val env = System.getenv()
         if (env["MAVEN_URL"] != null) {

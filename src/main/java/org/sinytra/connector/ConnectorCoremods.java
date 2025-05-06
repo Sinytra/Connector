@@ -67,15 +67,13 @@ public class ConnectorCoremods implements ICoreMod {
                 method.visitVarInsn(Opcodes.ALOAD, 5);
                 // displayItemsGenerator
                 method.visitVarInsn(Opcodes.ALOAD, 6);
-                // backgroundLocation
-                method.visitTypeInsn(Opcodes.NEW, "net/minecraft/resources/ResourceLocation");
-                method.visitInsn(Opcodes.DUP);
-                method.visitLdcInsn("textures/gui/container/creative_inventory/tab_items.png");
-                method.visitMethodInsn(Opcodes.INVOKESPECIAL, "net/minecraft/resources/ResourceLocation", "<init>", "(Ljava/lang/String;)V", false);
+                // scrollerSpriteLocation
+                method.visitInsn(Opcodes.ACONST_NULL);
                 // hasSearchBar
                 method.visitInsn(Opcodes.ICONST_0);
                 // searchBarWidth
                 method.visitLdcInsn(89);
+                // tabsImage
                 method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/world/item/CreativeModeTab$Builder", "CREATIVE_INVENTORY_TABS_IMAGE", "Lnet/minecraft/resources/ResourceLocation;"); // tabsImage
                 // labelColor
                 method.visitLdcInsn(4210752);

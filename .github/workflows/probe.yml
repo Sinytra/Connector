@@ -1,0 +1,107 @@
+name: Compatibility tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_count:
+        type: number
+        default: 1000
+        description: Number of mods to test
+        required: true
+      tag:
+        type: string
+        required: true
+        description: Target release tag
+
+env:
+  TEST_COUNT: ${{ inputs.test_count }}
+  GATHERER_IMG: ghcr.io/sinytra/probe/gatherer:latest
+
+jobs:
+  run_tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --name probe_redis
+        ports:
+          - 6379:6379
+
+    permissions:
+      contents: write
+      packages: read
+
+    steps:
+      - name: Setup env
+        run: mkdir probe
+
+      - name: Cache test data
+        uses: tespkg/actions-cache@v1
+        with:
+          accessKey: ${{ secrets.S3_ACCESS_KEY }}
+          secretKey: ${{ secrets.S3_SECRET_KEY }}
+          bucket: ${{ secrets.S3_BUCKET_NAME }}
+          use-fallback: false
+
+          key: ${{ runner.os }}-cache-${{ env.TEST_COUNT }}
+          path: |
+            probe/.setup
+            probe/mods
+            probe/candidates.json
+            probe/dump.rdb
+          restore-keys: |
+            ${{ runner.os }}-cache-
+
+      - name: Restore redis data
+        if: ${{ hashFiles('probe/dump.rdb') != '' }}
+        run: |
+          docker stop probe_redis
+          docker cp probe/dump.rdb probe_redis:/data/dump.rdb
+          docker start probe_redis
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run tests in a container
+        run: >
+          docker run --rm
+          --network host
+          -v ./probe:/probe
+          -e REDIS_URL=redis://localhost:6379/0
+          -e TEST_COUNT=${{ env.TEST_COUNT }}
+          -e FORCE_RETAKE_TESTS=true
+          -e CLEANUP_OUTPUT=true
+          ${{ env.GATHERER_IMG }}
+
+      - name: Backup redis data
+        run: |
+          docker stop probe_redis
+          docker cp probe_redis:/data/dump.rdb probe/dump.rdb
+
+      - name: Upload report
+        if: ${{ hashFiles('probe/report.md') != '' }}
+        run: cat probe/report.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: probe/results.json
+
+      - name: Uploade release assets
+        uses: softprops/action-gh-release@v2
+        if: ${{ inputs.tag != '' || github.ref_type == 'tag' }}
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: probe/results.json

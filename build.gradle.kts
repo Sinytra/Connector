@@ -8,7 +8,7 @@ plugins {
     java
     `maven-publish`
     id("net.neoforged.moddev") version "2.0.78"
-    id("io.github.goooler.shadow") version "8.1.8" apply false
+    id("com.gradleup.shadow") version "9.0.0-beta12" apply false
     id("me.modmuss50.mod-publish-plugin") version "0.5.+"
     id("net.neoforged.gradleutils") version "3.0.0"
     id("org.sinytra.adapter.userdev") version "1.2.1-SNAPSHOT"
@@ -34,7 +34,6 @@ val forgifiedFabricApiCurseForge: String by project
 val forgifiedFabricApiModrinth: String by project
 val connectorExtrasCurseForge: String by project
 val connectorExtrasModrinth: String by project
-val mixinextrasVersion: String by project
 
 val PUBLISH_RELEASE_TYPE: Provider<String> = providers.environmentVariable("PUBLISH_RELEASE_TYPE")
 
@@ -47,7 +46,6 @@ if (!PUBLISH_RELEASE_TYPE.isPresent) {
 logger.lifecycle("Project version: $version")
 
 val mod: SourceSet by sourceSets.creating
-val test: SourceSet by sourceSets
 
 val shade: Configuration by configurations.creating
 val adapterData: Configuration by configurations.creating
@@ -137,6 +135,7 @@ dependencies {
     shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool) { isTransitive = false }
     shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
     adapterData(group = "org.sinytra.adapter", name = "adapter", version = versionAdapter)
+    shade(project(":transformer")) { isTransitive = false }
 
     jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
     "modImplementation"(implementation(group = "org.sinytra.forgified-fabric-api", name = "forgified-fabric-api", version = versionForgifiedFabricApi)) {
@@ -180,7 +179,9 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
 }
 
 val fullJar by tasks.registering(ShadowJar::class) {
-    from(tasks.jar, depsJar)
+    from(
+        depsJar.archiveFile.map(::zipTree),
+        tasks.jar.flatMap { it.archiveFile.map(::zipTree) })
     mergeServiceFiles() // Relocate services
     relocate("net.minecraftforge.fart", "reloc.net.minecraftforge.fart")
     relocate("net.minecraftforge.srgutils", "reloc.net.minecraftforge.srgutils")
@@ -274,6 +275,9 @@ publishing {
             from(components["java"])
         }
     }
+}
+
+allprojects {
     repositories {
         val env = System.getenv()
         if (env["MAVEN_URL"] != null) {

@@ -21,7 +21,6 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
 
@@ -37,15 +36,11 @@ public final class ConnectorUtil {
     });
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
     public static final String MODS_TOML = "META-INF/neoforge.mods.toml";
-    public static final String AT_PATH = "META-INF/accesstransformer.cfg";
     public static final String CONNECTOR_MARKER = "connector_transformed";
     public static final String NEOFORGE_MODID = "neoforge";
-    public static final long ZIP_TIME = 318211200000L;
     public static final Path CONNECTOR_FOLDER = FMLPaths.MODSDIR.get().resolve(".connector");
     public static final String CONNECTOR_MODID = "connector";
     public static final String CONNECTOR_ISSUE_TRACKER_URL = "https://github.com/Sinytra/Connector/issues";
-    // net.minecraft.util.StringUtil
-    private static final Pattern STRIP_COLOR_PATTERN = Pattern.compile("(?i)\\u00A7[0-9A-FK-OR]");
 
     // Ugly hardcoded values
     // Never load fabric mods of these mod ids
@@ -189,10 +184,6 @@ public final class ConnectorUtil {
         return RESERVED.contains(str);
     }
 
-    public static String stripColor(String str) {
-        return str != null ? STRIP_COLOR_PATTERN.matcher(str).replaceAll("") : null;
-    }
-
     public static List<EntrypointMetadata> filterMixinExtrasEntrypoints(List<EntrypointMetadata> entrypoints) {
         return FabricLoader.getInstance().getModContainer(MIXINEXTRAS_MODID)
             .filter(mod -> mod.getMetadata().getVersion().compareTo(MIXINEXTRAS_ENTRYPOINT_VERSION) >= 0)
@@ -200,11 +191,6 @@ public final class ConnectorUtil {
                 .filter(metadata -> !DISABLED_MIXINEXTRAS_ENTRYPOINTS.contains(metadata.getValue()))
                 .toList())
             .orElse(entrypoints);
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <U> U allocateInstance(Class<U> clazz) throws InstantiationException {
-        return (U) UNSAFE.allocateInstance(clazz);
     }
 
     public static class CacheFile {

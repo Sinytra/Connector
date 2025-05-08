@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Properties>
+        <Property name="LOG_LEVEL_PATTERN">%highlight{%level}{FATAL=bright_red, ERROR=red, WARN=yellow, INFO=green, DEBUG=magenta, TRACE=bright_black}</Property>
+    </Properties>
+    <Appenders>
+        <Console name="CONSOLE">
+            <PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss}] [%t] ${LOG_LEVEL_PATTERN} %style{%logger{3}}{cyan} : %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="DEBUG">
+            <AppenderRef ref="CONSOLE"/>
+        </Root>
+    </Loggers>
+</Configuration>

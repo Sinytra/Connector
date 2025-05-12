@@ -83,6 +83,7 @@ jobs:
           -e FORCE_RETAKE_TESTS=true
           -e CLEANUP_OUTPUT=true
           ${{ env.GATHERER_IMG }}
+          run
 
       - name: Backup redis data
         run: |

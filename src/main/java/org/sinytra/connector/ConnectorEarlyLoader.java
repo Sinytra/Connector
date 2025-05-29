@@ -52,7 +52,7 @@ public class ConnectorEarlyLoader {
      * @return Whether a loading exception has been encountered up to this point in loading
      */
     public static boolean hasEncounteredException() {
-        return !LOADING_EXCEPTIONS.isEmpty() || LoadingModList.get() != null && !LoadingModList.get().getModLoadingIssues().isEmpty();
+        return !LOADING_EXCEPTIONS.isEmpty() || LoadingModList.get() != null && LoadingModList.get().hasErrors();
     }
 
     /**

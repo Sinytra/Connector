@@ -4,8 +4,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.gson.*;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.fart.api.Transformer;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.sinytra.adapter.patch.LVTOffsets;
@@ -21,6 +23,7 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -188,12 +191,79 @@ public class MixinPatchTransformer implements Transformer {
         // TODO if a mixin method is extracted, roll back the status from compute frames to apply,
         // Alternatively, change the order of patches so that extractmixin comes first
         if (patchResult != Patch.Result.PASS) {
-            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | (patchResult == Patch.Result.COMPUTE_FRAMES ? ClassWriter.COMPUTE_FRAMES : 0));
+            ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS | (patchResult == Patch.Result.COMPUTE_FRAMES ? ClassWriter.COMPUTE_FRAMES : 0)) {
+                // This method is a relative reimplementation of the super method that relies on reading transformable classes without loading them through the class provider
+                @Override
+                protected String getCommonSuperClass(String type1, String type2) {
+                    var t1Info = getClassInfo(type1);
+                    var t2Info = getClassInfo(type2);
+
+                    var t1Inh = getParents(t1Info);
+                    var t2Inh = getParents(t2Info);
+
+                    // First check if type2 inherits from type1
+                    if (t2Inh.contains(type1)) {
+                        return type1;
+                    }
+                    // Then check if type1 inherits from type2
+                    else if (t1Inh.contains(type2)) {
+                        return type2;
+                    }
+
+                    // If either is an interface and one isn't a superinterface of the other, we have to use Object
+                    if (t1Info.isInterface() || t2Info.isInterface()) {
+                        return "java/lang/Object";
+                    } else {
+                        // So find the most direct parent of type1 that is a parent of type2 too.
+                        // This vaguely resembles the last set of logic from the super method.
+                        for (var t1Parent : t1Inh) {
+                            if (t2Inh.contains(t1Parent)) {
+                                return t1Parent;
+                            }
+                        }
+
+                        // If all fails, fallback to ASM's built-in logic
+                        return super.getCommonSuperClass(type1, type2);
+                    }
+                }
+            };
             node.accept(writer);
             return ClassEntry.create(entry.getName(), entry.getTime(), writer.toByteArray());
         }
         return entry;
     }
+
+    private Set<String> getParents(ClassInfo info) {
+        var parents = new LinkedHashSet<String>();
+        if (info.superClass() != null) {
+            parents.add(info.superClass());
+            parents.addAll(getParents(getClassInfo(info.superClass())));
+        }
+        for (var itf : info.interfaces()) {
+            if (parents.add(itf)) {
+                parents.addAll(getParents(getClassInfo(itf)));
+            }
+        }
+        return parents;
+    }
+
+    private ClassInfo getClassInfo(String className) {
+        var asmNode = environment.cleanClassLookup().getClass(className);
+        if (asmNode.isPresent()) {
+            var node = asmNode.get();
+            return new ClassInfo(Modifier.isInterface(node.access), node.superName, Objects.requireNonNullElse(node.interfaces, List.of()));
+        }
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        try {
+            var clazz = Class.forName(className.replace('/', '.'), false, classLoader);
+            return new ClassInfo(clazz.isInterface(), clazz.getSuperclass() == null ? null : Type.getInternalName(clazz.getSuperclass()), Arrays.stream(clazz.getInterfaces())
+                    .map(Type::getInternalName).toList());
+        } catch (ClassNotFoundException e) {
+            throw new TypeNotPresentException(className, e);
+        }
+    }
+
+    private record ClassInfo(boolean isInterface, @Nullable String superClass, List<String> interfaces) {}
 
     @Override
     public Collection<? extends Entry> getExtras() {

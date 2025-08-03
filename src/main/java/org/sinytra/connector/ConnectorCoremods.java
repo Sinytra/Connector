@@ -145,9 +145,9 @@ public class ConnectorCoremods implements ICoreMod {
             TargetType.CLASS,
             ITransformer.Target.targetClass(cls),
             input -> {
-                // Try to find the original field with the same name and copy its access modifiers (accounting for ATs/AWs). If we cannot find it, we will use public non-final so that mods can access it.
+                // Try to find the original field with the same name and copy its access modifiers (accounting for ATs/AWs, but removing final so it can be assigned within our mixin). If we cannot find it, we will use public non-final so that mods can access it.
                 var originalAccess = input.fields.stream().filter(f -> f.name.equals(name)).findFirst().map(f -> f.access).orElse(Opcodes.ACC_PUBLIC);
-                input.fields.add(new FieldNode(originalAccess | Opcodes.ACC_SYNTHETIC, name, desc, null, null));
+                input.fields.add(new FieldNode((originalAccess & ~Opcodes.ACC_FINAL) | Opcodes.ACC_SYNTHETIC, name, desc, null, null));
 
                 LOGGER.debug("Added field {} to class {}", name, cls);
             }

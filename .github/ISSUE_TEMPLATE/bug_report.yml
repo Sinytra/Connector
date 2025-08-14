@@ -29,7 +29,6 @@ body:
       description: What version of Minecraft are you running? Please note that only the versions listed below are supported. If you're running an outdated version, update to receive support.
       options:
         - "1.21.1"
-        - "1.20.1 (LTS)"
       default: 0
     validations:
       required: true

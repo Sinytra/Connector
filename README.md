@@ -120,7 +120,7 @@ repositories {
 }
 dependencies {
     // Add Connector to the launch classpath
-    additionalRuntimeClasspath "org.sinytra:Connector:<version>"
+    additionalRuntimeClasspath "org.sinytra:connector:<version>"
     // Add FFAPI dependency
     runtimeOnly "org.sinytra.forgified-fabric-api:forgified-fabric-api:<version>"
     // Install desired Fabric mods. Make sure they remain unmapped at runtime

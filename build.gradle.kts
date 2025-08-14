@@ -168,6 +168,12 @@ val fullJar: Jar by tasks.creating(Jar::class) {
         attributes("Embedded-Dependencies-Mod" to "META-INF/jarjar/" + modJar.archiveFile.get().asFile.name)
         attributes("Fabric-Loader-Version" to versionFabricLoader.split("+")[1])
     }
+    doLast { 
+        val githubOutput = System.getenv("GITHUB_OUTPUT")
+        if (githubOutput != null) {
+            File(githubOutput).appendText("PRIMARY_ARTIFACT=${archiveFile.get().asFile.absolutePath}")
+        }
+    }
 }
 
 java {

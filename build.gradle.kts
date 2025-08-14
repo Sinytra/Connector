@@ -190,6 +190,13 @@ val fullJar by tasks.registering(ShadowJar::class) {
     relocate("net.bytebuddy", "reloc.net.bytebuddy")
     manifest.attributes(tasks.jar.get().manifest.attributes)
     archiveClassifier.set("full")
+
+    doLast { 
+        val githubOutput = System.getenv("GITHUB_OUTPUT")
+        if (githubOutput != null) {
+            File(githubOutput).appendText("PRIMARY_ARTIFACT=${archiveFile.get().asFile.absolutePath}")
+        }
+    }
 }
 
 tasks {

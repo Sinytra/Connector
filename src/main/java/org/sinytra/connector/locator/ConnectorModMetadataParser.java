@@ -2,6 +2,7 @@ package org.sinytra.connector.locator;
 
 import com.electronwill.nightconfig.core.Config;
 import com.mojang.logging.LogUtils;
+import net.fabricmc.loader.api.metadata.CustomValue;
 import org.sinytra.connector.ConnectorUtil;
 import org.sinytra.connector.loader.ConnectorLoaderModMetadata;
 import net.fabricmc.loader.api.metadata.ContactInformation;
@@ -20,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -61,6 +63,20 @@ public final class ConnectorModMetadataParser {
         modListConfig.add("displayName", metadata.getName());
         modListConfig.add("description", metadata.getDescription());
         metadata.getIconPath(-1).ifPresent(icon -> modListConfig.add("logoFile", icon));
+
+        // Ensure string is valid url
+        Predicate<String> isValidUrl = str -> {
+            if(str == null) {
+                return false;
+            }
+            try {
+                new URL(str);
+                return true;
+            } catch (MalformedURLException e) {
+                return false;
+            }
+        };
+
         ContactInformation contact = metadata.getContact();
         contact.get("homepage")
             .or(() -> contact.get("source"))
@@ -68,18 +84,22 @@ public final class ConnectorModMetadataParser {
                 .filter(m -> !m.isEmpty())
                 .map(m -> m.entrySet().iterator().next().getValue()))
             // Ensure string is valid url
-            .filter(str -> {
-                try {
-                    new URL(str);
-                    return true;
-                } catch (MalformedURLException e) {
-                    return false;
-                }
-            })
+            .filter(isValidUrl)
             .ifPresent(url -> {
                 modListConfig.add("modUrl", url);
                 modListConfig.add("displayURL", url);
             });
+        contact.get("issues")
+            .filter(isValidUrl)
+            .ifPresent(url -> modListConfig.add("issueTrackerURL",url));
+
+        // Forge's update checker compat
+        Optional.ofNullable(metadata.getCustomValues().get("forgeUpdateJSONURL"))
+            .filter(va -> va.getType() == CustomValue.CvType.STRING)
+            .map(CustomValue::getAsString)
+            .filter(isValidUrl)
+            .ifPresent(url -> modListConfig.add("updateJSONURL",url));
+
         modListConfig.add("authors", metadata.getAuthors().stream()
             .map(Person::getName)
             .collect(Collectors.joining(", ")));

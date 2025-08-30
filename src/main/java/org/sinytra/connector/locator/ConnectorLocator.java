@@ -70,8 +70,6 @@ public class ConnectorLocator implements IDependencyLocator {
                     pipeline.addPath(generatedAdapterJar, ModFileDiscoveryAttributes.DEFAULT, IncompatibleFileReporting.ERROR);
                 }
             }
-
-            loadEmbeddedJars(pipeline);
         } catch (PriorityModLoadingException e) {
             throw e;
         } catch (ModLoadingException e) {
@@ -85,6 +83,17 @@ public class ConnectorLocator implements IDependencyLocator {
         } finally {
             // Handle forge mod split packages
             ForgeModPackageFilter.filterPackages(loadedMods);
+
+            // Whatever happens load connector itself anyway.
+            // This way if there are dependency errors or others above the game is still able to display the correct error messages
+            try {
+                loadEmbeddedJars(pipeline);
+            } catch (Throwable t) {
+                // Rethrow any exception encountered
+                StartupNotificationManager.addModMessage("CONNECTOR EMBEDDED LOCATOR ERROR");
+                LOGGER.error("Connector embedded locator error", t);
+                ConnectorEarlyLoader.addGenericLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Connector embedded mod discovery failed"));
+            }
         }
     }
 

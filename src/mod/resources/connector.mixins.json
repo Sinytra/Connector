@@ -9,6 +9,7 @@
     "ChunkGeneratorMixin",
     "CommonHooksMixin",
     "PlayerListMixin",
+    "block.IBlockExtensionMixin",
     "boot.DatagenModLoaderMixin",
     "item.IItemExtensionMixin",
     "item.ItemStackMixin",

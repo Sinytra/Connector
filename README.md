@@ -8,7 +8,7 @@
   <a href="https://modrinth.com/mod/connector"><img src="https://img.shields.io/modrinth/dt/u58R1TMW?color=00AF5C&label=modrinth&style=flat&logo=modrinth"></a>
   <a href="https://github.com/Sinytra/ForgifiedFabricAPI"><img src="https://raw.githubusercontent.com/Sinytra/.github/main/badges/forgified-fabric-api-neo/compacter.svg"></a>
   <a href="https://discord.sinytra.org"><img src="https://discordapp.com/api/guilds/1141048834177388746/widget.png?style=shield"></a>
-  <a href="https://nightly.link/Sinytra/Connector/workflows/build/dev/Maven%20Local.zip"><img src="https://img.shields.io/badge/Nightly-Download-9a32f0?logo=github"></a>
+  <a href="https://nightly.link/Sinytra/Connector/workflows/build/dev/Nightly%20mod%20jar.zip"><img src="https://img.shields.io/badge/Nightly-Download-9a32f0?logo=github"></a>
 </p>
 
 ## 📖 About
@@ -18,7 +18,7 @@ on [NeoForge](https://neoforged.net). Its goal is to bring the two platforms clo
 developers time and effort maintaining their mods for multiple platforms at once, as well as allowing players to play
 all their favourite mods in one modpack.
 
-**📘 The official documentation is available at [sinytra.org](https://sinytra.org/docs).**
+**📘 The official documentation is available at [moddedmc.wiki](https://moddedmc.wiki/project/connector).**
 
 ### 🔗 Related Projects
 
@@ -130,4 +130,4 @@ dependencies {
 
 ## ⚙️ Configuration
 
-All information regarding Connector's configuration options can be found [on our website](https://sinytra.org/docs).
+All information regarding Connector's configuration options can be found [on our website](https://moddedmc.wiki/project/connector).

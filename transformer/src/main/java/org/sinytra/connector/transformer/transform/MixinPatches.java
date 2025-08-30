@@ -37,6 +37,18 @@ public class MixinPatches {
                 .targetMethod("main([Ljava/lang/String;)V")
                 .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
                 .modifyInjectionPoint("Lnet/neoforged/neoforge/server/loading/ServerModLoader;load()V")
+                .build(),
+
+            // We not only have to extract the mixin but we also have to retarget it to a method we inject
+            // as the NeoForge extension method accepts a LevelReader rather than a Level so our
+            // injected method will handle a safe cast and reordering the locals (swap the beacon pos and the block pos)
+            Patch.builder()
+                .targetClass("net/minecraft/world/level/block/entity/BeaconBlockEntity")
+                .targetMethod("tick")
+                .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/DyeColor;getTextureDiffuseColor()I")
+                .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC))
+                .extractMixin("net/neoforged/neoforge/common/extensions/IBlockExtension")
+                .modifyTarget("connector_getTextureDiffuseColor")
                 .build()
         );
     }

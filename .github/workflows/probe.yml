@@ -10,7 +10,6 @@ on:
         required: true
       tag:
         type: string
-        required: true
         description: Target release tag
 
 env:
@@ -100,7 +99,7 @@ jobs:
           name: test-results
           path: probe/results.json
 
-      - name: Uploade release assets
+      - name: Upload release assets
         uses: softprops/action-gh-release@v2
         if: ${{ inputs.tag != '' || github.ref_type == 'tag' }}
         with:

@@ -48,15 +48,14 @@ jobs:
           secretKey: ${{ secrets.S3_SECRET_KEY }}
           bucket: ${{ secrets.S3_BUCKET_NAME }}
           use-fallback: false
-
-          key: ${{ runner.os }}-cache-${{ env.TEST_COUNT }}
+          key: ${{ runner.os }}-cache
           path: |
             probe/.setup
             probe/mods
             probe/candidates.json
             probe/dump.rdb
           restore-keys: |
-            ${{ runner.os }}-cache-
+            ${{ runner.os }}-cache
 
       - name: Restore redis data
         if: ${{ hashFiles('probe/dump.rdb') != '' }}
@@ -81,6 +80,7 @@ jobs:
           -e TEST_COUNT=${{ env.TEST_COUNT }}
           -e FORCE_RETAKE_TESTS=true
           -e CLEANUP_OUTPUT=true
+          -e TOOLCHAIN_VERSION=${{ inputs.tag || github.ref_name }}
           ${{ env.GATHERER_IMG }}
           run
 

@@ -105,3 +105,7 @@ jobs:
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           files: probe/results.json
+
+      - name: Deploy to Probe web
+        run: |
+          curl -d "" -X POST ${{ secrets.PROBE_WEB_DEPLOY_HOOK }}

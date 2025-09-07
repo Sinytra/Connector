@@ -41,8 +41,8 @@ jobs:
       - name: Setup env
         run: mkdir probe
 
-      - name: Cache test data
-        uses: tespkg/actions-cache@v1
+      - name: Restore cached test data
+        uses: tespkg/actions-cache/restore@v1
         with:
           accessKey: ${{ secrets.S3_ACCESS_KEY }}
           secretKey: ${{ secrets.S3_SECRET_KEY }}
@@ -54,8 +54,6 @@ jobs:
             probe/mods
             probe/candidates.json
             probe/dump.rdb
-          restore-keys: |
-            ${{ runner.os }}-cache
 
       - name: Restore redis data
         if: ${{ hashFiles('probe/dump.rdb') != '' }}
@@ -109,3 +107,17 @@ jobs:
       - name: Deploy to Probe web
         run: |
           curl -d "" -X POST ${{ secrets.PROBE_WEB_DEPLOY_HOOK }}
+
+      - name: Save cached test data
+        uses: tespkg/actions-cache/save@v1
+        with:
+          accessKey: ${{ secrets.S3_ACCESS_KEY }}
+          secretKey: ${{ secrets.S3_SECRET_KEY }}
+          bucket: ${{ secrets.S3_BUCKET_NAME }}
+          use-fallback: false
+          key: ${{ runner.os }}-cache
+          path: |
+            probe/.setup
+            probe/mods
+            probe/candidates.json
+            probe/dump.rdb

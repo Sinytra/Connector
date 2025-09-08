@@ -191,7 +191,7 @@ val fullJar by tasks.registering(ShadowJar::class) {
     manifest.attributes(tasks.jar.get().manifest.attributes)
     archiveClassifier.set("full")
 
-    doLast { 
+    doLast {
         val githubOutput = System.getenv("GITHUB_OUTPUT")
         if (githubOutput != null) {
             File(githubOutput).appendText("PRIMARY_ARTIFACT=${archiveFile.get().asFile.absolutePath}")
@@ -285,15 +285,17 @@ publishing {
 }
 
 allprojects {
-    repositories {
-        val env = System.getenv()
-        if (env["MAVEN_URL"] != null) {
-            repositories.maven {
-                url = uri(env["MAVEN_URL"] as String)
-                if (env["MAVEN_USERNAME"] != null) {
-                    credentials {
-                        username = env["MAVEN_USERNAME"]
-                        password = env["MAVEN_PASSWORD"]
+    extensions.findByType<PublishingExtension>()?.apply {
+        repositories {
+            val env = System.getenv()
+            if (env["MAVEN_URL"] != null) {
+                repositories.maven {
+                    url = uri(env["MAVEN_URL"] as String)
+                    if (env["MAVEN_USERNAME"] != null) {
+                        credentials {
+                            username = env["MAVEN_USERNAME"]
+                            password = env["MAVEN_PASSWORD"]
+                        }
                     }
                 }
             }

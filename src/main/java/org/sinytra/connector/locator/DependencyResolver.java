@@ -13,7 +13,7 @@ import net.fabricmc.loader.api.metadata.ModMetadata;
 import net.fabricmc.loader.impl.FMLModMetadata;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.discovery.BuiltinMetadataWrapper;
-import net.fabricmc.loader.impl.discovery.ModCandidate;
+import net.fabricmc.loader.impl.discovery.ModCandidateImpl;
 import net.fabricmc.loader.impl.discovery.ModResolutionException;
 import net.fabricmc.loader.impl.discovery.ModResolver;
 import net.fabricmc.loader.impl.game.GameProvider;
@@ -53,20 +53,20 @@ public final class DependencyResolver {
     public static List<JarTransformer.TransformableJar> resolveDependencies(Collection<JarTransformer.TransformableJar> keys, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> jars, Collection<IModFile> loadedMods) {
         // Add global mod aliases
         FabricLoaderImpl.INSTANCE.aliasMods(ConnectorConfig.INSTANCE.get().globalModAliases());
-        BiMap<JarTransformer.TransformableJar, ModCandidate> jarToCandidate = HashBiMap.create();
+        BiMap<JarTransformer.TransformableJar, ModCandidateImpl> jarToCandidate = HashBiMap.create();
         // Fabric candidates
-        List<ModCandidate> candidates = createCandidatesRecursive(keys, keys, jars, jarToCandidate);
+        List<ModCandidateImpl> candidates = createCandidatesRecursive(keys, keys, jars, jarToCandidate);
         // Forge dependencies
-        Stream<ModCandidate> forgeCandidates = loadedMods.stream()
+        Stream<ModCandidateImpl> forgeCandidates = loadedMods.stream()
             .flatMap(modFile -> modFile.getModFileInfo() != null ? modFile.getModInfos().stream() : Stream.empty())
-            .map(modInfo -> ModCandidate.createPlain(List.of(modInfo.getOwningFile().getFile().getFilePath()), new BuiltinMetadataWrapper(new FMLModMetadata(modInfo)), false, List.of()));
-        Stream<ModCandidate> builtinCandidates = Stream.of(createJavaMod(), createFabricLoaderMod());
+            .map(modInfo -> ModCandidateImpl.createPlain(List.of(modInfo.getOwningFile().getFile().getFilePath()), new BuiltinMetadataWrapper(new FMLModMetadata(modInfo)), false, List.of()));
+        Stream<ModCandidateImpl> builtinCandidates = Stream.of(createJavaMod(), createFabricLoaderMod());
         // Merge
-        List<ModCandidate> allCandidates = Stream.of(candidates.stream(), forgeCandidates, builtinCandidates).flatMap(Function.identity()).toList();
+        List<ModCandidateImpl> allCandidates = Stream.of(candidates.stream(), forgeCandidates, builtinCandidates).flatMap(Function.identity()).toList();
 
         EnvType envType = FabricLoader.getInstance().getEnvironmentType();
         try {
-            List<ModCandidate> resolved = ModResolver.resolve(allCandidates, envType, Map.of());
+            List<ModCandidateImpl> resolved = ModResolver.resolve(allCandidates, envType, Map.of());
             List<JarTransformer.TransformableJar> candidateJars = resolved.stream()
                 .map(jarToCandidate.inverse()::get)
                 .filter(Objects::nonNull)
@@ -95,17 +95,17 @@ public final class DependencyResolver {
         metadata.setDependencies(mapped);
     }
 
-    private static List<ModCandidate> createCandidatesRecursive(Collection<JarTransformer.TransformableJar> candidateJars, Collection<JarTransformer.TransformableJar> jarsToLoad, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentsToChildren, Map<JarTransformer.TransformableJar, ModCandidate> jarToCandidate) {
-        List<ModCandidate> candidates = new ArrayList<>();
+    private static List<ModCandidateImpl> createCandidatesRecursive(Collection<JarTransformer.TransformableJar> candidateJars, Collection<JarTransformer.TransformableJar> jarsToLoad, Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentsToChildren, Map<JarTransformer.TransformableJar, ModCandidateImpl> jarToCandidate) {
+        List<ModCandidateImpl> candidates = new ArrayList<>();
         for (JarTransformer.TransformableJar candidateJar : candidateJars) {
             if (jarsToLoad.contains(candidateJar)) {
-                ModCandidate candidate = jarToCandidate.computeIfAbsent(candidateJar, j -> {
+                ModCandidateImpl candidate = jarToCandidate.computeIfAbsent(candidateJar, j -> {
                     Collection<JarTransformer.TransformableJar> children = parentsToChildren.containsKey(candidateJar) ? parentsToChildren.get(candidateJar) : List.of();
-                    List<ModCandidate> childCandidates = createCandidatesRecursive(children, jarsToLoad, parentsToChildren, jarToCandidate);
+                    List<ModCandidateImpl> childCandidates = createCandidatesRecursive(children, jarsToLoad, parentsToChildren, jarToCandidate);
                     List<Path> paths = parentsToChildren.containsValue(candidateJar) ? null : List.of(candidateJar.modPath().path());
 
-                    ModCandidate parent = ModCandidate.createPlain(paths, candidateJar.modPath().metadata().modMetadata(), false, childCandidates);
-                    for (ModCandidate childCandidate : childCandidates) {
+                    ModCandidateImpl parent = ModCandidateImpl.createPlain(paths, candidateJar.modPath().metadata().modMetadata(), false, childCandidates);
+                    for (ModCandidateImpl childCandidate : childCandidates) {
                         childCandidate.addParent(parent);
                     }
                     return parent;
@@ -116,16 +116,16 @@ public final class DependencyResolver {
         return candidates;
     }
 
-    private static ModCandidate createJavaMod() {
+    private static ModCandidateImpl createJavaMod() {
         ModMetadata metadata = new BuiltinModMetadata.Builder("java", System.getProperty("java.specification.version").replaceFirst("^1\\.", ""))
             .setName(System.getProperty("java.vm.name"))
             .build();
         GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(Collections.singletonList(Paths.get(System.getProperty("java.home"))), metadata);
 
-        return ModCandidate.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES.get());
+        return ModCandidateImpl.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES.get());
     }
 
-    private static ModCandidate createFabricLoaderMod() {
+    private static ModCandidateImpl createFabricLoaderMod() {
         String version = EmbeddedDependencies.getFabricLoaderVersion();
         if (version == null) {
             version = "0.0NONE";
@@ -147,7 +147,7 @@ public final class DependencyResolver {
 
         GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(Collections.singletonList(Path.of(uncheck(() -> FabricLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI()))), metadata);
 
-        return ModCandidate.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES.get());
+        return ModCandidateImpl.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES.get());
     }
 
     private static <T> T loadConfigFile(String name, Supplier<T> supplier) {

@@ -3,6 +3,7 @@ package org.sinytra.connector.locator;
 import com.electronwill.nightconfig.core.Config;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.loader.api.metadata.ContactInformation;
+import net.fabricmc.loader.api.metadata.CustomValue;
 import net.fabricmc.loader.api.metadata.Person;
 import net.neoforged.fml.loading.moddiscovery.ModFile;
 import net.neoforged.fml.loading.moddiscovery.ModFileInfo;
@@ -13,8 +14,6 @@ import net.neoforged.neoforgespi.locating.IModFile;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.slf4j.Logger;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -54,13 +53,13 @@ public final class FabricModMetadataParser {
         // Validate version string. If it's invalid, we'll let FML assign a default version instead
         if (VALID_VERSION.matcher(version).matches()) {
             modListConfig.add("version", version);
-        }
-        else {
+        } else {
             LOGGER.warn("Ignoring invalid version for mod {} in file {}", modid, modFile.getFilePath());
         }
         modListConfig.add("displayName", metadata.getName());
         modListConfig.add("description", metadata.getDescription());
         metadata.getIconPath(-1).ifPresent(icon -> modListConfig.add("logoFile", icon));
+
         ContactInformation contact = metadata.getContact();
         contact.get("homepage")
             .or(() -> contact.get("source"))
@@ -68,25 +67,26 @@ public final class FabricModMetadataParser {
                 .filter(m -> !m.isEmpty())
                 .map(m -> m.entrySet().iterator().next().getValue()))
             // Ensure string is valid url
-            .filter(str -> {
-                try {
-                    new URL(str);
-                    return true;
-                } catch (MalformedURLException e) {
-                    return false;
-                }
-            })
+            .filter(ConnectorUtil::isValidURL)
             .ifPresent(url -> {
                 modListConfig.add("modUrl", url);
                 modListConfig.add("displayURL", url);
             });
+
+        contact.get("issues")
+            .filter(ConnectorUtil::isValidURL)
+            .ifPresent(url -> modListConfig.add("issueTrackerURL", url));
+
         modListConfig.add("authors", metadata.getAuthors().stream()
             .map(Person::getName)
             .collect(Collectors.joining(", ")));
+
         modListConfig.add("credits", metadata.getContributors().stream()
             .map(Person::getName)
             .collect(Collectors.joining(", ")));
+
         config.add("mods", List.of(modListConfig));
+
         List<Config> mixins = activeMixinConfigs.stream()
             .map(str -> {
                 Config mixinConfig = modListConfig.createSubConfig();
@@ -97,12 +97,21 @@ public final class FabricModMetadataParser {
         if (!mixins.isEmpty()) {
             config.add("mixins", mixins);
         }
+
         switch (metadata.getEnvironment()) {
             case CLIENT -> config.add("displayTest", "IGNORE_ALL_VERSION");
             case SERVER -> config.add("displayTest", "IGNORE_SERVER_VERSION");
         }
 
+        // NeoForge's update checker compat
+        Optional.ofNullable(metadata.getCustomValues().get("forgeUpdateJSONURL"))
+            .filter(va -> va.getType() == CustomValue.CvType.STRING)
+            .map(CustomValue::getAsString)
+            .filter(ConnectorUtil::isValidURL)
+            .ifPresent(url -> modListConfig.add("updateJSONURL", url));
+
         IConfigurable configurable = new NightConfigWrapper(config);
-        return new ModFileInfo((ModFile) modFile, configurable, f -> {}, List.of());
+        return new ModFileInfo((ModFile) modFile, configurable, f -> {
+        }, List.of());
     }
 }

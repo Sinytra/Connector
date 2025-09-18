@@ -37,6 +37,10 @@ public class ConnectorEarlyLoader {
         return CONNECTOR_MODIDS.contains(modid);
     }
 
+    public static boolean isConnectorModClass(Class<?> cls) {
+        return cls.getModule().isNamed() && isConnectorMod(cls.getModule().getName());
+    }
+
     public static List<IModInfo> getConnectorMods() {
         return CONNECTOR_MODS;
     }

@@ -130,6 +130,17 @@ public class ConnectorCoremods implements ICoreMod {
                 }
             }
         );
+        ITransformer<ClassNode> accessTransform = new BaseTransformer<>(
+            TargetType.CLASS,
+            ITransformer.Target.targetClass("net.neoforged.neoforge.network.bundle.PacketAndPayloadAcceptor"),
+            input -> {
+                FieldNode field = input.fields.stream().filter(f -> f.name.equals("consumer")).findFirst().orElse(null);
+                if (field != null) {
+                    field.access = Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL;
+                    LOGGER.debug("Made public PacketAndPayloadAcceptor#consumer");
+                }
+            }
+        );
 
         return ImmutableList.<ITransformer<?>>builder()
             .add(keyMappingFieldTypeTransform, creativeModeTabConstructorTransform)
@@ -137,6 +148,7 @@ public class ConnectorCoremods implements ICoreMod {
             .addAll(getFabricASMTransformers())
             .add(missingOrderingCall)
             .add(expandLocalVarScope)
+            .add(accessTransform)
             .build();
     }
 

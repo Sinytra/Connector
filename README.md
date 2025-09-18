@@ -48,7 +48,7 @@ We have an official [Discord community](https://discord.gg/mamk7z3TKZ) for Conne
 
 To install Connector and its dependencies, follow the same installation steps as you would for any other mods:
 
-1. Install **Minecraft Forge**. For Minecraft 1.20.1, it is recommended to use version **`47.1.3`**.  
+1. Install **Minecraft Forge**. For Minecraft 1.20.1, it is recommended to use latest version of MinecraftForge.
 [\[Minecraft Forge website\]](https://files.minecraftforge.net)
 2. Install **Connector**. Get the latest release from one of our official distribution channels and drop the jar in your mods folder.  
 [\[CurseForge\]](https://legacy.curseforge.com/minecraft/mc-mods/sinytra-connector) [\[Modrinth\]](https://modrinth.com/mod/connector) [\[GitHub\]](https://github.com/Sinytra/Connector/releases)

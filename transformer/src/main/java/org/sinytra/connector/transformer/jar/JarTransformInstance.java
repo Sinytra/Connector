@@ -12,12 +12,6 @@ import net.minecraftforge.fart.api.Renamer;
 import net.minecraftforge.fart.internal.EnhancedRemapper;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.connector.transformer.TransformerEnvironment;
-import org.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
-import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
-import org.sinytra.connector.transformer.patch.ConnectorRefmapHolder;
-import org.sinytra.connector.transformer.patch.ReflectionRenamingTransformer;
-import org.sinytra.connector.transformer.transform.*;
 import org.sinytra.adapter.patch.LVTOffsets;
 import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.api.PatchAuditTrail;
@@ -25,6 +19,12 @@ import org.sinytra.adapter.patch.api.PatchEnvironment;
 import org.sinytra.adapter.patch.transformer.serialization.PatchSerialization;
 import org.sinytra.adapter.patch.util.provider.ClassLookup;
 import org.sinytra.adapter.patch.util.provider.MixinClassLookup;
+import org.sinytra.connector.transformer.TransformerEnvironment;
+import org.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
+import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
+import org.sinytra.connector.transformer.patch.ConnectorRefmapHolder;
+import org.sinytra.connector.transformer.patch.ReflectionRenamingTransformer;
+import org.sinytra.connector.transformer.transform.*;
 import org.slf4j.Logger;
 
 import java.io.*;
@@ -34,7 +34,9 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class JarTransformInstance {
@@ -154,6 +156,13 @@ public class JarTransformInstance {
 
         stopwatch.stop();
         LOGGER.debug(JarTransformer.TRANSFORM_MARKER, "Jar {} transformed in {} ms", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
+
+        // Silence transformation errors from mixins not present in any config file
+        Set<String> ignore = jarTrail.getFailingMixins().stream()
+            .map(c -> c.classNode().name)
+            .filter(s -> !metadata.mixinClasses().contains(s))
+            .collect(Collectors.toSet());
+        jarTrail.silenceClasses(ignore);
 
         this.auditTrail.merge(jarTrail);
         return jarTrail;

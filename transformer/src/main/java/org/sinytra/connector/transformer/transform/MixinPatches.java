@@ -7,7 +7,7 @@ import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.sinytra.adapter.patch.api.MixinConstants;
 import org.sinytra.adapter.patch.api.Patch;
-import org.sinytra.adapter.patch.transformer.operation.ModifyMethodAccess;
+import org.sinytra.adapter.patch.transformer.operation.unit.ModifyMethodAccess;
 import org.sinytra.adapter.patch.transformer.operation.param.ParamTransformTarget;
 
 import java.util.List;
@@ -217,88 +217,7 @@ public class MixinPatches {
                 .modifyMixinType(MixinConstants.REDIRECT, builder -> builder
                     .sameTarget()
                     .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;getItem()Lnet/minecraft/world/item/Item;"))
-                .build()
-            // ========
-            /*
-            // Move arg modifier to the forge method, which replaces all usages of the vanilla one
-            Patch.builder()
-                .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
-                .targetMethod("m_289609_")
-                .targetMixinType(MixinConstants.MODIFY_ARG)
-                .modifyTarget("renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
-                .build(),
-            Patch.builder()
-                .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
-                .targetMethod("m_289604_(Lnet/minecraft/world/item/ArmorMaterial;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/armortrim/ArmorTrim;Lnet/minecraft/client/model/HumanoidModel;Z)V")
-                .modifyTarget("renderTrim(Lnet/minecraft/world/item/ArmorMaterial;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/armortrim/ArmorTrim;Lnet/minecraft/client/model/Model;Z)V")
-                .transformParams(builder -> builder.replace(5, Type.getObjectType("net/minecraft/client/model/Model")))
-                .build(),
-            // For mods who wish to override HumanoidArmorLayer parts. On Fabric, the usual approach seems to be modifying the model (4th) arg of renderModel in HumanoidArmorLayer#renderArmorPiece.
-            // To make this kind of modification forge-compatible, we:
-            // 1. Replace the injection point with forge's overloaded method that takes in a ResourceLocation as its last argument
-            // 2. Set the mixin method's first parameter and return type to be Model instead of HumanoidModel. Unfortunately, forge's hook narrows down the variable's type, so we
-            //    change it in the method accordingly.
-            // 3. Add a cast check to the mixin method so that it doesn't apply to models that are not a HumanoidModel. This only applies to cases where a forge mod has modified
-            //    the model, so we don't really care about modifying it anymore.
-            Patch.builder()
-                .targetClass("net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer")
-                .targetMethod("m_117118_")
-                .targetMixinType(MixinConstants.MODIFY_ARG)
-                .targetAnnotationValues(values -> values.<Integer>getValue("index").map(handle -> handle.get() == 4).orElse(false))
-                .targetInjectionPoint("INVOKE", "Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;m_289609_(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/HumanoidModel;ZFFFLjava/lang/String;)V")
-                .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/HumanoidArmorLayer;renderModel(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/item/ArmorItem;Lnet/minecraft/client/model/Model;ZFFFLnet/minecraft/resources/ResourceLocation;)V")
-                .modifyParams(builder -> builder
-                    .targetType(ParamTransformTarget.ALL)
-                    .replace(0, Type.getObjectType("net/minecraft/client/model/Model"))
-                    .lvtFixer((index, insn, list) -> {
-                        if (index == 1) {
-                            list.insert(insn, new TypeInsnNode(Opcodes.CHECKCAST, "net/minecraft/client/model/HumanoidModel"));
-                        }
-                    }))
-                .transform((classNode, methodNode, methodContext, context) -> {
-                    methodNode.desc = "(Lnet/minecraft/client/model/Model;)Lnet/minecraft/client/model/Model;";
-                    methodNode.signature = null;
-                    InsnList insns = new InsnList();
-                    LabelNode cont = new LabelNode();
-                    insns.add(new VarInsnNode(Opcodes.ALOAD, 1));
-                    insns.add(new TypeInsnNode(Opcodes.INSTANCEOF, "net/minecraft/client/model/HumanoidModel"));
-                    insns.add(new JumpInsnNode(Opcodes.IFNE, cont));
-                    insns.add(new VarInsnNode(Opcodes.ALOAD, 1));
-                    insns.add(new InsnNode(Opcodes.ARETURN));
-                    insns.add(cont);
-                    methodNode.instructions.insert(insns);
-                    return Patch.Result.APPLY;
-                })
-                .build(),
-            // Move redirectors of Map.put to KeyMappingLookup.put
-            Patch.builder()
-                .targetClass("net/minecraft/client/KeyMapping")
-                .targetMethod("m_90854_()V")
-                .targetInjectionPoint("Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
-                .modifyInjectionPoint("Lnet/minecraftforge/client/settings/KeyMappingLookup;put(Lcom/mojang/blaze3d/platform/InputConstants$Key;Lnet/minecraft/client/KeyMapping;)V")
-                .targetMixinType(MixinConstants.REDIRECT)
-                .modifyParams(builder -> builder
-                    .replace(0, Type.getObjectType("net/minecraftforge/client/settings/KeyMappingLookup"))
-                    .replace(1, Type.getObjectType("com/mojang/blaze3d/platform/InputConstants$Key"))
-                    .replace(2, Type.getObjectType("net/minecraft/client/KeyMapping")))
-                .transform((classNode, methodNode, methodContext, patchContext) -> {
-                    for (ListIterator<AbstractInsnNode> iterator = methodNode.instructions.iterator(); iterator.hasNext(); ) {
-                        AbstractInsnNode insn = iterator.next();
-                        if (insn.getOpcode() == Opcodes.ARETURN) {
-                            methodNode.instructions.insertBefore(insn, new InsnNode(Opcodes.POP));
-                            methodNode.instructions.set(insn, new InsnNode(Opcodes.RETURN));
-                        }
-                        else if (insn instanceof MethodInsnNode minsn && minsn.name.equals("put") && minsn.desc.equals("(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")) {
-                            minsn.desc = "(Lcom/mojang/blaze3d/platform/InputConstants$Key;Lnet/minecraft/client/KeyMapping;)V";
-                            minsn.itf = false;
-                            minsn.setOpcode(Opcodes.INVOKEVIRTUAL);
-                            methodNode.instructions.insert(minsn, new InsnNode(Opcodes.ACONST_NULL));
-                        }
-                    }
-                    methodNode.desc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getArgumentTypes(methodNode.desc));
-                    return Patch.Result.APPLY;
-                })
-                .build(),*/);
+                .build());
 
         return patches.stream()
             .flatMap(p -> p instanceof List<?> lst ? lst.stream() : Stream.of(p))

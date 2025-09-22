@@ -25,7 +25,7 @@ public final class CrashReportUpgrade {
         });
         CrashReportCallables.registerCrashCallable("Sinytra Connector", () -> {
             String format = "| %-50.50s | %-30.30s | %-30.30s | %-20.20s |";
-            String version = ConnectorBootstrap.class.getModule().getDescriptor().rawVersion().orElse("<unknown>");
+            String version = ConnectorMod.getVersion();
             StringBuilder builder = new StringBuilder();
             builder.append(version);
             builder.append("\n\t\tSINYTRA CONNECTOR IS PRESENT!");

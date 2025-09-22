@@ -28,6 +28,7 @@
   "client": [
     "boot.MinecraftMixin",
     "client.BlockColorsMixin",
+    "client.DebugScreenOverlayMixin",
     "client.ForgeHooksClientMixin",
     "client.ItemColorsMixin",
     "client.ItemOverridesMixin",

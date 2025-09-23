@@ -8,6 +8,8 @@ import org.sinytra.connector.util.ConnectorUtil;
 import org.slf4j.Logger;
 
 import java.io.InputStream;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.lang.module.ModuleDescriptor;
 import java.lang.module.ModuleReference;
@@ -26,6 +28,7 @@ public class ModuleLayerMigrator {
     private static final Class<?> JAR_MODULE_REF_CLASS = uncheck(() -> Class.forName("cpw.mods.cl.JarModuleFinder$JarModuleReference"));
     private static final VarHandle REF_MODULE_PROVIDER_FIELD = uncheck(() -> ConnectorUtil.TRUSTED_LOOKUP.findVarHandle(JAR_MODULE_REF_CLASS, "jar", SecureJar.ModuleDataProvider.class));
     private static final VarHandle DESCRIPTOR_PACKAGES_FIELD = uncheck(() -> ConnectorUtil.TRUSTED_LOOKUP.findVarHandle(ModuleDescriptor.class, "packages", Set.class));
+    private static final MethodHandle IMPL_ADD_READS = uncheck(() -> ConnectorUtil.TRUSTED_LOOKUP.findVirtual(Module.class, "implAddReads", MethodType.methodType(void.class, Module.class)));
     private static final Logger LOGGER = LogUtils.getLogger();
 
     /**
@@ -68,6 +71,18 @@ public class ModuleLayerMigrator {
         } catch (Throwable t) {
             LOGGER.error("Error making module {} transformable", moduleName, t);
             return null;
+        }
+    }
+
+    public static void addReads(Set<Module> sources) {
+        try {
+            Module ourModule = ModuleLayerMigrator.class.getModule();
+
+            for (Module source : sources) {
+                IMPL_ADD_READS.invoke(source, ourModule);
+            }
+        } catch (Throwable t) {
+            LOGGER.error("Error adding reads to modules", t);
         }
     }
 

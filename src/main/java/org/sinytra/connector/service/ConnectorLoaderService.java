@@ -22,11 +22,7 @@ import org.slf4j.Logger;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
 import java.util.*;
-import java.util.function.Consumer;
-import java.util.function.IntConsumer;
-import java.util.function.IntSupplier;
-import java.util.function.LongSupplier;
-import java.util.function.Supplier;
+import java.util.function.*;
 import java.util.stream.Stream;
 
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
@@ -116,6 +112,14 @@ public class ConnectorLoaderService implements ITransformationService {
         } else {
             LOGGER.warn("Broken FML mod files found, not adding Connector locator errors");
         }
+
+        layerManager.getLayer(IModuleLayerManager.Layer.PLUGIN)
+            .map(ModuleLayer::modules)
+            .ifPresent(modules -> {
+                LOGGER.debug("Making PLUGIN modules read connector");
+                ModuleLayerMigrator.addReads(modules);
+            });
+
         return List.of(new Resource(
             IModuleLayerManager.Layer.GAME,
             Stream.of(

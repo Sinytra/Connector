@@ -21,16 +21,13 @@ import org.slf4j.Logger;
 
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
 
@@ -116,15 +113,19 @@ public class ConnectorLoaderService implements ITransformationService {
 
         if (!LoadingModList.get().hasErrors()) {
             LoadingModList.get().getModLoadingIssues().addAll(ConnectorEarlyLoader.getLoadingExceptions());
-        }
-        else {
+        } else {
             LOGGER.warn("Broken FML mod files found, not adding Connector locator errors");
         }
-        return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(
-            FabricASMFixer.provideGeneratedClassesJar(),
-            ModuleLayerMigrator.moveModule(AUTHLIB_MODULE),
-            ModuleLayerMigrator.moveModule(BRIGADIER_MODULE)
-        )));
+        return List.of(new Resource(
+            IModuleLayerManager.Layer.GAME,
+            Stream.of(
+                    FabricASMFixer.provideGeneratedClassesJar(),
+                    ModuleLayerMigrator.moveModule(AUTHLIB_MODULE),
+                    ModuleLayerMigrator.moveModule(BRIGADIER_MODULE)
+                )
+                .filter(Objects::nonNull)
+                .toList()
+        ));
     }
 
     @Override

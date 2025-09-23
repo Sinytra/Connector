@@ -66,7 +66,8 @@ public class ModuleLayerMigrator {
             LOGGER.info("Successfully made module {} transformable", moduleName);
             return new SimpleSecureJar(provider);
         } catch (Throwable t) {
-            throw new RuntimeException("Error making module %s transformable".formatted(moduleName), t);
+            LOGGER.error("Error making module {} transformable", moduleName, t);
+            return null;
         }
     }
 

@@ -107,11 +107,8 @@ public class ConnectorLoaderService implements ITransformationService {
         // Ignore default Fabric mod locator warnings
         LoadingModList.get().getModLoadingIssues().removeIf(issue -> issue.translationKey().equals("fml.modloadingissue.brokenfile.fabric"));
 
-        if (!LoadingModList.get().hasErrors()) {
-            LoadingModList.get().getModLoadingIssues().addAll(ConnectorEarlyLoader.getLoadingExceptions());
-        } else {
-            LOGGER.warn("Broken FML mod files found, not adding Connector locator errors");
-        }
+        // Add our loading errors
+        LoadingModList.get().getModLoadingIssues().addAll(ConnectorEarlyLoader.getLoadingExceptions());
 
         layerManager.getLayer(IModuleLayerManager.Layer.PLUGIN)
             .map(ModuleLayer::modules)

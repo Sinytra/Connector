@@ -1,6 +1,7 @@
 package org.sinytra.connector.transformer.jar;
 
 import com.google.common.base.Stopwatch;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
@@ -157,10 +158,11 @@ public final class JarTransformer {
 
             Set<String> refmaps = new HashSet<>();
             Set<String> mixinPackages = new HashSet<>();
+            Set<String> mixinClasses = new HashSet<>();
             for (String configName : configs) {
                 ZipEntry entry = jarFile.getEntry(configName);
                 if (entry != null) {
-                    readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages);
+                    readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages, mixinClasses);
                 }
             }
             // Find additional configs that may not be listed in mod metadata
@@ -168,12 +170,12 @@ public final class JarTransformer {
                 .forEach(entry -> {
                     String name = entry.getName();
                     if ((name.endsWith(".mixins.json") || name.startsWith("mixins.") && name.endsWith(".json")) && configs.add(name)) {
-                        readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages);
+                        readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages, mixinClasses);
                     }
                 });
             Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
             boolean generated = isGeneratedLibraryJarMetadata(manifestAttributes, metadata);
-            return new FabricModFileMetadata(metadata, Set.copyOf(configs), configs, refmaps, mixinPackages, manifestAttributes, containsAT, generated);
+            return new FabricModFileMetadata(metadata, Set.copyOf(configs), configs, refmaps, mixinPackages, mixinClasses, manifestAttributes, containsAT, generated);
         }
     }
 
@@ -186,7 +188,7 @@ public final class JarTransformer {
         return false;
     }
 
-    private static void readMixinConfigPackages(File input, JarFile jarFile, ZipEntry entry, Set<String> refmaps, Set<String> packages) {
+    private static void readMixinConfigPackages(File input, JarFile jarFile, ZipEntry entry, Set<String> refmaps, Set<String> packages, Set<String> mixinClasses) {
         try (Reader reader = new InputStreamReader(jarFile.getInputStream(entry))) {
             JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
             if (json.has("refmap")) {
@@ -198,6 +200,14 @@ public final class JarTransformer {
                 if (!pkg.isEmpty()) {
                     String pkgPath = pkg.replace('.', '/') + '/';
                     packages.add(pkgPath);
+                }
+                for (String type : List.of("mixins", "client", "server")) {
+                    if (json.has(type)) {
+                        for (JsonElement mixin : json.getAsJsonArray(type)) {
+                            String className = pkg + "." + mixin.getAsString();
+                            mixinClasses.add(className.replace('.', '/'));
+                        }
+                    }
                 }
             }
         } catch (Throwable t) {
@@ -241,7 +251,7 @@ public final class JarTransformer {
 
     public record TransformedFabricModPath(Path input, FabricModPath output, @Nullable PatchAuditTrail auditTrail) {}
 
-    public record FabricModFileMetadata(LoaderModMetadata modMetadata, Collection<String> visibleMixinConfigs, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Attributes manifestAttributes, boolean containsAT, boolean generated) {}
+    public record FabricModFileMetadata(LoaderModMetadata modMetadata, Collection<String> visibleMixinConfigs, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Set<String> mixinClasses, Attributes manifestAttributes, boolean containsAT, boolean generated) {}
 
     public record TransformableJar(File input, FabricModPath modPath, TransformerUtil.CacheFile cacheFile, String moduleName) {
         public Pair<FabricModPath, PatchAuditTrail> transform(JarTransformInstance transformInstance) throws IOException {

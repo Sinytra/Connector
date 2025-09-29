@@ -2,19 +2,24 @@ package org.sinytra.connector.transformer.jar;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
-import org.sinytra.connector.transformer.TransformerEnvironment;
-import org.sinytra.connector.transformer.transform.TransformerUtil;
+import org.objectweb.asm.tree.TypeInsnNode;
 import org.sinytra.adapter.patch.fixes.BytecodeFixerUpper;
 import org.sinytra.adapter.patch.fixes.SimpleTypeAdapter;
 import org.sinytra.adapter.patch.fixes.TypeAdapter;
 import org.sinytra.adapter.patch.util.provider.ClassLookup;
+import org.sinytra.connector.transformer.TransformerEnvironment;
+import org.sinytra.connector.transformer.transform.TransformerUtil;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.jar.Attributes;
+
+import static org.sinytra.adapter.patch.util.AdapterUtil.insnList;
 
 public class BytecodeFixerUpperFrontend {
     private static final List<TypeAdapter> FIELD_TYPE_ADAPTERS = List.of(
@@ -24,17 +29,22 @@ public class BytecodeFixerUpperFrontend {
             list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/resources/ResourceLocation", "toString", "()Ljava/lang/String;"))),
         new SimpleTypeAdapter(Type.getObjectType("net/minecraft/world/item/ItemStack"), Type.getObjectType("net/minecraft/world/item/Item"), (list, insn) ->
             list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/item/ItemStack", "getItem", "()Lnet/minecraft/world/item/Item;"))),
-//        new SimpleTypeAdapter(Type.getObjectType("java/util/List"), Type.getType("[Lnet/minecraft/world/level/storage/loot/LootPool;"), (list, insn) -> {
-//            list.insert(insn, ASMAPI.listOf(
-//                new InsnNode(Opcodes.ICONST_0),
-//                new TypeInsnNode(Opcodes.ANEWARRAY, "net/minecraft/world/level/storage/loot/LootPool"),
-//                new MethodInsnNode(Opcodes.INVOKEINTERFACE, "java/util/List", "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;", true),
-//                new TypeInsnNode(Opcodes.CHECKCAST, "[Lnet/minecraft/world/level/storage/loot/LootPool;")
-//            ));
-//        }),
-        new SimpleTypeAdapter(Type.getObjectType("net/minecraft/world/entity/Mob"), Type.getObjectType("net/minecraft/world/entity/monster/Monster"), (list, insn) -> {})
-//        new SimpleTypeAdapter(Type.getObjectType("net/minecraft/world/item/enchantment/Enchantment"), Type.getObjectType("net/minecraft/world/item/enchantment/EnchantmentCategory"), (list, insn) ->
-//            list.insert(insn, new FieldInsnNode(Opcodes.GETFIELD, "net/minecraft/world/item/enchantment/Enchantment", ASMAPI.mapField("f_44672_"), "Lnet/minecraft/world/item/enchantment/EnchantmentCategory;")))
+        new SimpleTypeAdapter(Type.getObjectType("net/minecraft/world/entity/Mob"), Type.getObjectType("net/minecraft/world/entity/monster/Monster"), (list, insn) -> {}),
+        new SimpleTypeAdapter(
+            Type.getObjectType("java/util/function/Consumer"),
+            Type.getObjectType("net/neoforged/neoforge/network/bundle/PacketAndPayloadAcceptor"),
+            (list, insn) ->
+                list.insert(insn, insnList(
+                    new TypeInsnNode(Opcodes.NEW, "net/neoforged/neoforge/network/bundle/PacketAndPayloadAcceptor"),
+                    new InsnNode(Opcodes.DUP_X1),
+                    new InsnNode(Opcodes.SWAP),
+                    new MethodInsnNode(Opcodes.INVOKESPECIAL, "net/neoforged/neoforge/network/bundle/PacketAndPayloadAcceptor", "<init>", "(Ljava/util/function/Consumer;)V")
+                ))),
+        new SimpleTypeAdapter(
+            Type.getObjectType("net/neoforged/neoforge/network/bundle/PacketAndPayloadAcceptor"),
+            Type.getObjectType("java/util/function/Consumer"),
+            (list, insn) ->
+                list.insert(insn, new FieldInsnNode(Opcodes.GETFIELD, "net/neoforged/neoforge/network/bundle/PacketAndPayloadAcceptor", "consumer", "Ljava/util/function/Consumer;")))
     );
 
     private final BytecodeFixerUpper bfu;

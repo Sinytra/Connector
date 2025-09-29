@@ -46,8 +46,6 @@ public class ConnectorLoader {
         loading = true;
         ProgressMeter progress = StartupNotificationManager.prependProgressBar("[Connector] Loading mods", 0);
         try {
-            LazyEntityAttributes.inject();
-
             // Invoke entry points
             FabricLoader loader = FabricLoader.getInstance();
             loader.invokeEntrypoints("main", ModInitializer.class, ModInitializer::onInitialize);
@@ -57,8 +55,6 @@ public class ConnectorLoader {
             else {
                 loader.invokeEntrypoints("server", DedicatedServerModInitializer.class, DedicatedServerModInitializer::onInitializeServer);
             }
-
-            LazyEntityAttributes.release();
             finishedLoading = true;
         } catch (Throwable t) {
             ConnectorEarlyLoader.addGenericLoadingException(t, "Encountered error during early mod loading");

@@ -10,6 +10,7 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.sinytra.adapter.next.PipelineLegacyMethodTransformer;
 import org.sinytra.adapter.patch.LVTOffsets;
 import org.sinytra.adapter.patch.api.*;
 import org.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
@@ -64,10 +65,12 @@ public class MixinPatchTransformer implements Transformer {
                 Patch.builder()
                     .transform(new DynamicInjectorOrdinalPatch())
                     .transform(new DynamicLVTPatch(() -> lvtOffsets))
+                    .transform(new DynamicAnonClassIndexPatch())
                     .transform(new DynamicAnonymousShadowFieldTypePatch())
                     .transform(new DynamicModifyVarAtReturnPatch())
                     .transform(new DynamicInheritedInjectionPointPatch())
                     .transform(new DynamicInjectionPointPatch())
+                    .transform(new PipelineLegacyMethodTransformer())
                     .build(),
                 Patch.interfaceBuilder()
                     .transform(new FieldTypePatchTransformer())

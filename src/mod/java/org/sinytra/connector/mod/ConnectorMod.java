@@ -57,4 +57,8 @@ public class ConnectorMod {
         URL url = ConnectorMod.class.getClassLoader().getResource(resource);
         return builder.onFileNotFound(FileNotFoundAction.copyData(url));
     }
+
+    public static String getVersion() {
+        return ConnectorBootstrap.class.getModule().getDescriptor().rawVersion().orElse("<unknown>");
+    }
 }

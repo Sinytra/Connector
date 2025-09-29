@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -149,14 +151,12 @@ public final class ConnectorUtil {
                         String cached = Files.readString(inputCache);
                         if (cached.equals(hash)) {
                             return new CacheFile(inputCache, hash, true);
-                        }
-                        else {
+                        } else {
                             Files.delete(output);
                             Files.delete(inputCache);
                         }
                     }
-                }
-                else {
+                } else {
                     Files.deleteIfExists(output);
                 }
                 return new CacheFile(inputCache, hash, false);
@@ -191,6 +191,18 @@ public final class ConnectorUtil {
                 .filter(metadata -> !DISABLED_MIXINEXTRAS_ENTRYPOINTS.contains(metadata.getValue()))
                 .toList())
             .orElse(entrypoints);
+    }
+
+    public static boolean isValidURL(String str) {
+        if (str == null) {
+            return false;
+        }
+        try {
+            new URL(str);
+            return true;
+        } catch (MalformedURLException e) {
+            return false;
+        }
     }
 
     public static class CacheFile {

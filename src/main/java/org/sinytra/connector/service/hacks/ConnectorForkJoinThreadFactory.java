@@ -21,7 +21,11 @@ public class ConnectorForkJoinThreadFactory implements ForkJoinPool.ForkJoinWork
     @Override
     public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
         ForkJoinWorkerThread thread = this.factory.newThread(pool);
-        thread.setContextClassLoader(Thread.currentThread().getContextClassLoader());
+        try {
+            thread.setContextClassLoader(Thread.currentThread().getContextClassLoader());
+        } catch (Exception e) {
+            System.out.println("Sinytra Connector: Error trying to create new thread: " + e);
+        }
         return thread;
     }
 

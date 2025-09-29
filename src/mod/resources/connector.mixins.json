@@ -13,6 +13,7 @@
     "boot.DatagenModLoaderMixin",
     "item.IItemExtensionMixin",
     "item.ItemStackMixin",
+    "network.BundlerInfoMixin",
     "network.StreamCodecMixin",
     "registries.DataPackRegistriesHooksAccessor",
     "registries.MappedRegistryAccessor",
@@ -27,6 +28,7 @@
   "client": [
     "boot.MinecraftMixin",
     "client.BlockColorsMixin",
+    "client.DebugScreenOverlayMixin",
     "client.ForgeHooksClientMixin",
     "client.ItemColorsMixin",
     "client.ItemOverridesMixin",

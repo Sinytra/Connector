@@ -37,6 +37,10 @@ public class ConnectorEarlyLoader {
         return CONNECTOR_MODIDS.contains(modid);
     }
 
+    public static boolean isConnectorModClass(Class<?> cls) {
+        return cls.getModule().isNamed() && isConnectorMod(cls.getModule().getName());
+    }
+
     public static List<IModInfo> getConnectorMods() {
         return CONNECTOR_MODS;
     }
@@ -52,7 +56,7 @@ public class ConnectorEarlyLoader {
      * @return Whether a loading exception has been encountered up to this point in loading
      */
     public static boolean hasEncounteredException() {
-        return !LOADING_EXCEPTIONS.isEmpty() || LoadingModList.get() != null && !LoadingModList.get().getModLoadingIssues().isEmpty();
+        return !LOADING_EXCEPTIONS.isEmpty() || LoadingModList.get() != null && LoadingModList.get().hasErrors();
     }
 
     /**

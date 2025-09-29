@@ -1,22 +1,26 @@
 name: 🐞 Non-Mod Bug Report
 description: Report an issue you've encountered (For mod crashes and compatibility issues, please use the "Incompatible Mod / Crash" template instead!)
-labels: [ bug ]
+type: Bug
 body:
   - type: markdown
     attributes:
-      value: "## 👋 Welcome!"
-  - type: markdown
-    attributes:
       value: |
+        > [!WARNING]
+        > **Before reporting, always check for similar existing issues on our tracker.**
+        > If your issue has already been reported, please post a comment on it instead of opening a duplicate.
+        
         ### 📋 Checklist
         Thank you for taking your time to report this bug!  
+        
         Before reporting, please ensure that:
         - You are using the **latest** available version of Connector and its dependencies
+        
         - You've installed a **minimal set of mods** required to reproduce the issue. 
           Issues with modpacks and excessive amount of mods will *not* be accepted, as they take a long time to diagnose.
           Knowing which mods are causing problems allows us to focus on fixing the issue as soon as possible.  
           If you're unsure which mods might be at fault, try using [binary search](https://www.reddit.com/r/feedthebeast/comments/evpy6r/tips_for_modpack_authors_how_to_find_misbehaving/) - removing half of installed mods
           repeatedly until the faulty mod is found.
+        
         - The issue you're experience **doesn't occur** in a Fabric environment with the same mods installed
         
         > [!WARNING]
@@ -58,8 +62,9 @@ body:
     attributes:
       label: Logs
       description: |
-        If applicable (crash, error output in console), please provide your debug.log **and** crash report
-        To upload logs, use an external paste site, such as [Github Gist](https://gist.github.com/) (recommended), [Ubuntu Pastebin](https://paste.ubuntu.com/) or [Pastebin](http://pastebin.com)
+        If applicable (crash, error output in console), please provide your debug.log **and** crash report.
+        To upload logs, use an external paste site, such as [Github Gist](https://gist.github.com/) (recommended), [Ubuntu Pastebin](https://paste.ubuntu.com/) or [Pastebin](https://pastebin.com).  
+        *Please note that we currently don't accept file uploads.*
   - type: textarea
     id: context
     attributes:

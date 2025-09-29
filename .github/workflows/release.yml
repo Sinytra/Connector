@@ -20,11 +20,11 @@ permissions:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     outputs:
       changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: FabricMC/fabric-action-scripts@v2
@@ -32,7 +32,7 @@ jobs:
         with:
           context: changelog
           workflow_id: release.yml
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v5
         with:
           distribution: 'microsoft'
           java-version: '21'
@@ -50,8 +50,8 @@ jobs:
       matrix:
         include:
           - name: Maven
-            task: publish
-            url: https://maven.su5ed.dev/releases/dev/su5ed/sinytra/Connector
+            task: publish :transformer:publish
+            url: https://maven.su5ed.dev/releases/org/sinytra/connector
           - name: GitHub
             task: publishGithub
             url: https://github.com/Sinytra/Connector/releases
@@ -63,15 +63,15 @@ jobs:
             url: https://modrinth.com/mod/connector
     name: Publish ${{ matrix.name }}
     needs: build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     environment:
       name: ${{ matrix.name }}
       url: ${{ matrix.url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v3
+      - uses: actions/setup-java@v5
         with:
           distribution: 'microsoft'
           java-version: '21'

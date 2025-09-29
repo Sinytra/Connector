@@ -291,20 +291,16 @@ publishing {
             from(components["java"])
         }
     }
-}
 
-allprojects {
-    extensions.findByType<PublishingExtension>()?.apply {
-        repositories {
-            val env = System.getenv()
-            if (env["MAVEN_URL"] != null) {
-                repositories.maven {
-                    url = uri(env["MAVEN_URL"] as String)
-                    if (env["MAVEN_USERNAME"] != null) {
-                        credentials {
-                            username = env["MAVEN_USERNAME"]
-                            password = env["MAVEN_PASSWORD"]
-                        }
+    repositories {
+        val env = System.getenv()
+        if (env["MAVEN_URL"] != null) {
+            repositories.maven {
+                url = uri(env["MAVEN_URL"] as String)
+                if (env["MAVEN_USERNAME"] != null) {
+                    credentials {
+                        username = env["MAVEN_USERNAME"]
+                        password = env["MAVEN_PASSWORD"]
                     }
                 }
             }

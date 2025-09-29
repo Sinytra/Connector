@@ -103,6 +103,21 @@ publishing {
             from(components["shadow"])
         }
     }
+
+    repositories {
+        val env = System.getenv()
+        if (env["MAVEN_URL"] != null) {
+            repositories.maven {
+                url = uri(env["MAVEN_URL"] as String)
+                if (env["MAVEN_USERNAME"] != null) {
+                    credentials {
+                        username = env["MAVEN_USERNAME"]
+                        password = env["MAVEN_PASSWORD"]
+                    }
+                }
+            }
+        }
+    }
 }
 
 class Log4JConfigTransformer(private val resourcesDir: File?) : ResourceTransformer {

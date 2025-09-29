@@ -230,12 +230,21 @@ tasks {
     }
 }
 
+val versionPattern = "(?<ver>[\\d.]+)-?(?<channel>beta)?\\.?(?<mod>\\d+)?\\+?(?<game>[\\d.]+)?(?:\\+(?<dev>dev)?-?(?<hash>.+)?)?".toRegex()
+
 publishMods {
     file.set(fullJar.flatMap { it.archiveFile })
     changelog.set(providers.environmentVariable("CHANGELOG").orElse("# $version"))
     type.set(PUBLISH_RELEASE_TYPE.orElse("alpha").map(ReleaseType::of))
     modLoaders.add("neoforge")
     dryRun.set(!providers.environmentVariable("CI").isPresent)
+    displayName.set(version.map { s ->
+        val matched = versionPattern.matchEntire(s) ?: throw IllegalArgumentException("Unexpected version format")
+        val mainVer = matched.groups["ver"]?.value ?: throw IllegalArgumentException("Missing main version")
+        val channelVer = matched.groups["channel"]?.value?.let { it + (matched.groups["mod"]?.value?.let { m -> " $m" } ?: "") } ?: ""
+        val devHash = matched.groups["hash"]?.value?.let { "(dev $it)" } ?: ""
+        "Connector $mainVer" + (if (channelVer.isNotEmpty()) " $channelVer" else "") + (if (devHash.isNotEmpty()) " $devHash" else "")
+    })
 
     github {
         accessToken.set(providers.environmentVariable("GITHUB_TOKEN"))

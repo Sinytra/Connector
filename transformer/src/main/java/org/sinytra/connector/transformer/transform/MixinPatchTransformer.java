@@ -11,7 +11,6 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.sinytra.adapter.next.PipelineLegacyMethodTransformer;
-import org.sinytra.adapter.patch.LVTOffsets;
 import org.sinytra.adapter.patch.api.*;
 import org.sinytra.adapter.patch.fixes.FieldTypePatchTransformer;
 import org.sinytra.adapter.patch.fixes.FieldTypeUsageTransformer;
@@ -37,7 +36,6 @@ public class MixinPatchTransformer implements Transformer {
     private static final List<Patch> PRIORITY_PATCHES = MixinPatches.getPriorityPatches();
     private static final List<Patch> PATCHES = MixinPatches.getPatches();
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static boolean completedSetup = false;
 
     // Applied to non-mixins
     private final List<ClassTransform> classTransforms;
@@ -47,7 +45,7 @@ public class MixinPatchTransformer implements Transformer {
     private final PatchEnvironment environment;
     private final List<? extends Patch> patches;
 
-    public MixinPatchTransformer(TransformerEnvironment runtimeEnvironment, LVTOffsets lvtOffsets, PatchEnvironment environment, List<? extends Patch> adapterPatches) {
+    public MixinPatchTransformer(TransformerEnvironment runtimeEnvironment, PatchEnvironment environment, List<? extends Patch> extraPatches) {
         this.classTransforms = List.of(
             new EnvironmentStripperTransformer(runtimeEnvironment.getEnvType()),
             new FieldTypeUsageTransformer()
@@ -59,12 +57,12 @@ public class MixinPatchTransformer implements Transformer {
         this.environment = environment;
         this.patches = ImmutableList.<Patch>builder()
             .addAll(PRIORITY_PATCHES)
-            .addAll(adapterPatches)
+            .addAll(extraPatches)
             .addAll(PATCHES)
             .add(
                 Patch.builder()
                     .transform(new DynamicInjectorOrdinalPatch())
-                    .transform(new DynamicLVTPatch(() -> lvtOffsets))
+                    .transform(new DynamicLVTPatch())
                     .transform(new DynamicAnonClassIndexPatch())
                     .transform(new DynamicAnonymousShadowFieldTypePatch())
                     .transform(new DynamicModifyVarAtReturnPatch())
@@ -159,14 +157,6 @@ public class MixinPatchTransformer implements Transformer {
             }
         }
         return classes;
-    }
-    
-    public static void completeSetup(Collection<Patch> patches) {
-        if (completedSetup) {
-            return;
-        }
-        PATCHES.addAll(patches);
-        completedSetup = true;
     }
 
     @Override

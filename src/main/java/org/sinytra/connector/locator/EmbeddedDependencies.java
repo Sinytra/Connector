@@ -28,9 +28,6 @@ public final class EmbeddedDependencies {
     // Fabric Loader upstream version included by Connector
     private static final String FABRIC_LOADER_VERSION = "Fabric-Loader-Version";
 
-    private static final String ADAPTER_DATA_PATH = "adapter_data";
-    public static final String ADAPTER_PATCH_DATA = "patch_data.json";
-    public static final String ADAPTER_LVT_OFFSETS = "lvt_offsets.json";
     // Path to the jar this class is loaded from
     private static final Path SELF_PATH = uncheck(() -> {
         URL jarLocation = ConnectorLocator.class.getProtectionDomain().getCodeSource().getLocation();
@@ -46,10 +43,6 @@ public final class EmbeddedDependencies {
         }
         return ver + "," + FMLEnvironment.dist.name().toLowerCase();
     });
-
-    public static Path getAdapterData(String path) {
-        return SELF_PATH.resolve(ADAPTER_DATA_PATH).resolve(path);
-    }
 
     @Nullable
     public static String getJarCacheVersion() {

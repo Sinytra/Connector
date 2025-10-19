@@ -11,8 +11,6 @@ import org.sinytra.adapter.patch.util.provider.ClassLookup;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Supplier;
@@ -45,10 +43,4 @@ public interface TransformerEnvironment {
     int getFabricMixinCompatibility(LoaderModMetadata metadata);
 
     String getJarCacheVersion();
-
-    void completeSetup();
-
-    URL getAdapterPatchDataURL() throws MalformedURLException;
-
-    URL getAdapterLVTDataURL() throws MalformedURLException;
 }

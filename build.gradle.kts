@@ -2,7 +2,6 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
 import net.neoforged.moddevgradle.dsl.RunModel
 import net.neoforged.moddevgradle.internal.RunGameTask
-import java.time.LocalDateTime
 
 plugins {
     java
@@ -15,7 +14,6 @@ plugins {
 }
 
 val versionConnector: String by project
-val versionAdapter: String by project
 val versionAdapterDefinition: String by project
 val versionAdapterRuntime: String by project
 val versionMc: String by project
@@ -48,7 +46,6 @@ logger.lifecycle("Project version: $version")
 val mod: SourceSet by sourceSets.creating
 
 val shade: Configuration by configurations.creating
-val adapterData: Configuration by configurations.creating
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
@@ -127,6 +124,7 @@ repositories {
             includeGroup("curse.maven")
         }
     }
+    mavenLocal()
 }
 
 dependencies {
@@ -134,7 +132,6 @@ dependencies {
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener) { isTransitive = false }
     shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool) { isTransitive = false }
     shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
-    adapterData(group = "org.sinytra.adapter", name = "adapter", version = versionAdapter)
     shade(project(":transformer")) { isTransitive = false }
 
     jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
@@ -201,10 +198,6 @@ val fullJar by tasks.registering(ShadowJar::class) {
 
 tasks {
     jar {
-        from(zipTree(provider { adapterData.singleFile })) {
-            into("adapter_data")
-            include("*.json")
-        }
         manifest {
             attributes(
                 "Specification-Title" to project.name,
@@ -213,7 +206,6 @@ tasks {
                 "Implementation-Title" to project.name,
                 "Implementation-Version" to project.version,
                 "Implementation-Vendor" to "Sinytra",
-                "Implementation-Timestamp" to LocalDateTime.now(),
                 "Automatic-Module-Name" to "org.sinytra.connector",
                 "Fabric-Loader-Version" to versionForgifiedFabricLoader.split("+")[1]
             )

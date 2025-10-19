@@ -204,8 +204,10 @@ public final class JarTransformer {
                 for (String type : List.of("mixins", "client", "server")) {
                     if (json.has(type)) {
                         for (JsonElement mixin : json.getAsJsonArray(type)) {
-                            String className = pkg + "." + mixin.getAsString();
-                            mixinClasses.add(className.replace('.', '/'));
+                            if (mixin.isJsonPrimitive()) {
+                                String className = pkg + "." + mixin.getAsString();
+                                mixinClasses.add(className.replace('.', '/'));
+                            }
                         }
                     }
                 }

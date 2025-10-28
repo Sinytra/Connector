@@ -15,7 +15,6 @@ import org.sinytra.connector.transformer.transform.TransformProgressMeter;
 import org.spongepowered.asm.mixin.FabricUtil;
 import org.spongepowered.asm.service.MixinService;
 
-import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Supplier;
@@ -107,20 +106,6 @@ public class PortableRuntimeEnvironment implements TransformerEnvironment {
     @Override
     public String getJarCacheVersion() {
         return "1.0";
-    }
-
-    @Override
-    public void completeSetup() {
-    }
-
-    @Override
-    public URL getAdapterPatchDataURL() {
-        return getClass().getResource("/patch_data.json");
-    }
-
-    @Override
-    public URL getAdapterLVTDataURL() {
-        return getClass().getResource("/lvt_offsets.json");
     }
 
     //@formatter:off

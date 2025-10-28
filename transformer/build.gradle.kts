@@ -11,7 +11,6 @@ plugins {
 group = "org.sinytra.connector"
 version = rootProject.version
 
-val versionAdapter: String by rootProject
 val versionAdapterDefinition: String by rootProject
 val versionForgeAutoRenamingTool: String by rootProject
 val versionForgifiedFabricLoader: String by rootProject
@@ -43,6 +42,7 @@ repositories {
         name = "Mojang"
         url = uri("https://libraries.minecraft.net")
     }
+    mavenLocal()
 }
 
 dependencies {
@@ -50,7 +50,6 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core")
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
     implementation("org.sinytra.adapter:definition:$versionAdapterDefinition")
-    implementation("org.sinytra.adapter:adapter:$versionAdapter")
     implementation("org.sinytra:ForgeAutoRenamingTool:$versionForgeAutoRenamingTool") {
         isTransitive = false
     }

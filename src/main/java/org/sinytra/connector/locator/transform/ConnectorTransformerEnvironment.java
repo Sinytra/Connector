@@ -1,7 +1,5 @@
 package org.sinytra.connector.locator.transform;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
@@ -34,11 +32,8 @@ import org.spongepowered.asm.launch.MixinLaunchPluginLegacy;
 import org.spongepowered.asm.service.MixinService;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
@@ -47,7 +42,6 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.zip.ZipFile;
 
-import static cpw.mods.modlauncher.api.LambdaExceptionUtils.rethrowFunction;
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
 
 public class ConnectorTransformerEnvironment implements TransformerEnvironment {
@@ -155,43 +149,6 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
     @Override
     public String getJarCacheVersion() {
         return EmbeddedDependencies.getJarCacheVersion();
-    }
-
-    @Override
-    public void completeSetup() {
-        // Injection point data extracted from coremods/method_redirector.js
-        String[] targetClasses = this.loadedModFiles.stream()
-            .filter(m -> m.getModFileInfo() != null && !m.getModInfos().isEmpty() && m.getModInfos().getFirst().getModId().equals(ConnectorUtil.NEOFORGE_MODID))
-            .map(m -> m.findResource("coremods/finalize_spawn_targets.json"))
-            .filter(Files::exists)
-            .map(rethrowFunction(path -> {
-                try (Reader reader = Files.newBufferedReader(path)) {
-                    return JsonParser.parseReader(reader);
-                }
-            }))
-            .filter(JsonElement::isJsonArray)
-            .flatMap(json -> json.getAsJsonArray().asList().stream()
-                .map(JsonElement::getAsString))
-            .toArray(String[]::new);
-        if (targetClasses.length > 0) {
-//            MixinPatchTransformer.completeSetup(List.of(
-//                Patch.builder()
-//                    .targetClass(targetClasses)
-//                    .targetInjectionPoint("m_6518_(Lnet/minecraft/world/level/ServerLevelAccessor;Lnet/minecraft/world/DifficultyInstance;Lnet/minecraft/world/entity/MobSpawnType;Lnet/minecraft/world/entity/SpawnGroupData;Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/world/entity/SpawnGroupData;")
-//                    .modifyInjectionPoint("Lnet/minecraftforge/event/ForgeEventFactory;onFinalizeSpawn(Lnet/minecraft/world/entity/Mob;Lnet/minecraft/world/level/ServerLevelAccessor;Lnet/minecraft/world/DifficultyInstance;Lnet/minecraft/world/entity/MobSpawnType;Lnet/minecraft/world/entity/SpawnGroupData;Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/world/entity/SpawnGroupData;")
-//                    .build()
-//            ));
-        }
-    }
-
-    @Override
-    public URL getAdapterPatchDataURL() throws MalformedURLException {
-        return EmbeddedDependencies.getAdapterData(EmbeddedDependencies.ADAPTER_PATCH_DATA).toUri().toURL();
-    }
-
-    @Override
-    public URL getAdapterLVTDataURL() throws MalformedURLException {
-        return EmbeddedDependencies.getAdapterData(EmbeddedDependencies.ADAPTER_LVT_OFFSETS).toUri().toURL();
     }
 
     private record FMLProgressMeter(ProgressMeter handle) implements TransformProgressMeter {

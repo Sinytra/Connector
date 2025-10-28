@@ -129,8 +129,8 @@ public class MixinPatches {
                 .build(),
             // ======= Rendering patches 
             Patch.builder()
-                .targetClass("net/minecraft/client/renderer/ShaderInstance")
-                .targetMethod("<init>")
+                .targetClass("net/minecraft/client/renderer/ShaderInstance", "net/minecraft/client/renderer/EffectInstance")
+                .targetMethod("<init>", "getOrCreate")
                 .targetInjectionPoint("Lnet/minecraft/resources/ResourceLocation;withDefaultNamespace(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;")
                 .disable()
                 .build(),

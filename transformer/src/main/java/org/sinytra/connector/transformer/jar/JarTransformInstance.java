@@ -1,10 +1,7 @@
 package org.sinytra.connector.transformer.jar;
 
 import com.google.common.base.Stopwatch;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.mojang.logging.LogUtils;
-import com.mojang.serialization.JsonOps;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.fabricmc.loader.impl.MappingResolverImpl;
 import net.minecraftforge.fart.api.ClassProvider;
@@ -12,11 +9,8 @@ import net.minecraftforge.fart.api.Renamer;
 import net.minecraftforge.fart.internal.EnhancedRemapper;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.adapter.patch.LVTOffsets;
-import org.sinytra.adapter.patch.api.Patch;
 import org.sinytra.adapter.patch.api.PatchAuditTrail;
 import org.sinytra.adapter.patch.api.PatchEnvironment;
-import org.sinytra.adapter.patch.transformer.serialization.PatchSerialization;
 import org.sinytra.adapter.patch.util.provider.ClassLookup;
 import org.sinytra.adapter.patch.util.provider.MixinClassLookup;
 import org.sinytra.connector.transformer.TransformerEnvironment;
@@ -27,8 +21,8 @@ import org.sinytra.connector.transformer.patch.ReflectionRenamingTransformer;
 import org.sinytra.connector.transformer.transform.*;
 import org.slf4j.Logger;
 
-import java.io.*;
-import java.net.URL;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -37,16 +31,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class JarTransformInstance {
     private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
-    private static final Gson GSON = new Gson();
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final MappingAwareReferenceMapper remapper;
-    private final List<? extends Patch> adapterPatches;
-    private final LVTOffsets lvtOffsetsData;
     private final BytecodeFixerUpperFrontend bfu;
     private final EnhancedRemapper enhancedRemapper;
     private final ClassLookup cleanClassLookup;
@@ -62,26 +52,6 @@ public class JarTransformInstance {
         resolver.getMap(JarTransformer.SOURCE_NAMESPACE, JarTransformer.OBF_NAMESPACE);
         this.remapper = new MappingAwareReferenceMapper(resolver.getCurrentMap(JarTransformer.SOURCE_NAMESPACE));
 
-        try {
-            URL patchDataPath = this.environment.getAdapterPatchDataURL();
-            try (Reader reader = new BufferedReader(new InputStreamReader(patchDataPath.openStream()))) {
-                JsonElement json = GSON.fromJson(reader, JsonElement.class);
-                this.adapterPatches = PatchSerialization.deserialize(json, JsonOps.INSTANCE);
-            }
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
-
-        try {
-            URL offsetDataPath = this.environment.getAdapterLVTDataURL();
-            try (Reader reader = new BufferedReader(new InputStreamReader(offsetDataPath.openStream()))) {
-                JsonElement json = GSON.fromJson(reader, JsonElement.class);
-                this.lvtOffsetsData = LVTOffsets.fromJson(json);
-            }
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
-
         IMappingFile mappingFile = FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(JarTransformer.SOURCE_NAMESPACE);
         ClassProvider intermediaryClassProvider = new OptimizedRenamingTransformer.IntermediaryClassProvider(classProvider, mappingFile, mappingFile.reverse(), s -> {});
         this.enhancedRemapper = new OptimizedRenamingTransformer.MixinAwareEnhancedRemapper(intermediaryClassProvider, mappingFile, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE), s -> {});
@@ -89,8 +59,6 @@ public class JarTransformInstance {
         this.bfu = new BytecodeFixerUpperFrontend(this.cleanClassLookup, MixinClassLookup.INSTANCE, this.environment);
         this.libs = libs;
         this.auditTrail = PatchAuditTrail.create();
-
-        this.environment.completeSetup();
     }
 
     public BytecodeFixerUpperFrontend getBfu() {
@@ -118,11 +86,10 @@ public class JarTransformInstance {
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
 
         PatchAuditTrail jarTrail = PatchAuditTrail.create();
-        List<Patch> extraPatches = Stream.concat(this.adapterPatches.stream(), AccessorRedirectTransformer.PATCHES.stream()).toList();
         ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
         int fabricLVTCompatibility = this.environment.getFabricMixinCompatibility(metadata.modMetadata());
         PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility, jarTrail);
-        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.environment, this.lvtOffsetsData, environment, extraPatches);
+        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.environment, environment, AccessorRedirectTransformer.PATCHES);
         RefmapRemapper refmapRemapper = new RefmapRemapper(refmap.files());
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())

@@ -10,6 +10,7 @@ import cpw.mods.jarhandling.JarContents;
 import cpw.mods.jarhandling.JarContentsBuilder;
 import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
+import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.metadata.CustomValue;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.fabricmc.loader.impl.metadata.ModMetadataParser;
@@ -145,12 +146,20 @@ public final class JarTransformer {
     private FabricModFileMetadata readModMetadata(File input) throws IOException {
         try (JarFile jarFile = new JarFile(input)) {
             LoaderModMetadata metadata;
+            Set<String> allConfigs;
             Set<String> configs;
             try (InputStream ins = jarFile.getInputStream(jarFile.getEntry(TransformerUtil.FABRIC_MOD_JSON))) {
                 LoaderModMetadata rawMetadata = ModMetadataParser.parseMetadata(ins, "", Collections.emptyList(), this.environment.getVersionOverrides(), this.environment.getDependencyOverrides().get(), false);
                 metadata = this.environment.wrapModMetadata(rawMetadata);
 
-                configs = new HashSet<>(metadata.getMixinConfigs(this.environment.getEnvType()));
+                Map<EnvType, Collection<String>> envMixinConfigs = Map.of(
+                    EnvType.CLIENT, metadata.getMixinConfigs(EnvType.CLIENT),
+                    EnvType.SERVER, metadata.getMixinConfigs(EnvType.SERVER)
+                );
+                allConfigs = envMixinConfigs.values().stream()
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toSet());
+                configs = new HashSet<>(envMixinConfigs.get(this.environment.getEnvType()));
             } catch (ParseMetadataException e) {
                 throw new RuntimeException(e);
             }
@@ -169,6 +178,10 @@ public final class JarTransformer {
             jarFile.stream()
                 .forEach(entry -> {
                     String name = entry.getName();
+                    // Already discovered and ignored due to env setting
+                    if (allConfigs.contains(name)) {
+                        return;
+                    }
                     if ((name.endsWith(".mixins.json") || name.startsWith("mixins.") && name.endsWith(".json")) && configs.add(name)) {
                         readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages, mixinClasses);
                     }

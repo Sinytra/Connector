@@ -20,7 +20,7 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
-import org.sinytra.adapter.patch.analysis.locals.LocalVariableLookup;
+import org.sinytra.adapter.analysis.locals.LocalVariableLookup;
 import org.slf4j.Logger;
 
 import java.util.List;

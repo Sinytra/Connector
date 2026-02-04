@@ -10,8 +10,8 @@ import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
+import org.sinytra.adapter.env.ctx.PatchResult;
 import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
-import org.sinytra.adapter.patch.api.Patch;
 import org.slf4j.Logger;
 
 import java.util.Collection;
@@ -49,8 +49,8 @@ public class FieldToMethodTransformer implements ClassNodeTransformer.ClassProce
     }
 
     @Override
-    public Patch.Result process(ClassNode node) {
-        return processClass(node) ? Patch.Result.APPLY : Patch.Result.PASS;
+    public PatchResult process(ClassNode node) {
+        return processClass(node) ? PatchResult.APPLY : PatchResult.PASS;
     }
 
     @Override

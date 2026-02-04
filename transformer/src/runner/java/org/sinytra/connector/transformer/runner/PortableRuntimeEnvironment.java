@@ -7,7 +7,7 @@ import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.fabricmc.loader.impl.metadata.VersionOverrides;
 import net.minecraftforge.fart.api.ClassProvider;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.adapter.patch.util.provider.ClassLookup;
+import org.sinytra.adapter.util.provider.ClassLookup;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.SimpleClassLookup;
 import org.sinytra.connector.transformer.runner.runtime.MixinServiceProbe;

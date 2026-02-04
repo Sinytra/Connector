@@ -74,8 +74,8 @@ public class ConnectorFabricModMetadata implements LoaderModMetadata {
     }
 
     @Override
-    public String getAccessWidener() {
-        return this.wrapped.getAccessWidener();
+    public String getClassTweaker() {
+        return this.wrapped.getClassTweaker();
     }
 
     @Override

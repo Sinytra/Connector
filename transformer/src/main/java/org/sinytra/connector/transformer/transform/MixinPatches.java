@@ -5,34 +5,32 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
-import org.sinytra.adapter.patch.api.MixinConstants;
-import org.sinytra.adapter.patch.api.Patch;
-import org.sinytra.adapter.patch.transformer.operation.unit.ModifyMethodAccess;
-import org.sinytra.adapter.patch.transformer.operation.param.ParamTransformTarget;
+import org.objectweb.asm.tree.MethodNode;
+import org.sinytra.adapter.env.ctx.PatchResult;
+import org.sinytra.adapter.env.util.MixinAnnotations;
+import org.sinytra.adapter.transform.patch.MethodPatch;
 
 import java.util.List;
-import java.util.ListIterator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@SuppressWarnings("deprecation")
 public class MixinPatches {
-    public static List<Patch> getPriorityPatches() {
+    public static List<MethodPatch> getPriorityPatches() {
         return List.of(
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/item/ItemStack")
                 .targetMethod("useOn")
                 .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;getItem()Lnet/minecraft/world/item/Item;")
                 .modifyTarget("connector_useOn")
-                .modifyInjectionPoint("RETURN", "", true)
+                .replaceInjectionPoint("RETURN", null)
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/client/Minecraft")
                 .targetMethod("<init>")
                 .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startClient(Ljava/io/File;Ljava/lang/Object;)V")
                 .modifyInjectionPoint("Ljava/lang/Thread;currentThread()Ljava/lang/Thread;")
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/server/Main")
                 .targetMethod("main([Ljava/lang/String;)V")
                 .targetInjectionPoint("Lnet/fabricmc/loader/impl/game/minecraft/Hooks;startServer(Ljava/io/File;Ljava/lang/Object;)V")
@@ -42,34 +40,40 @@ public class MixinPatches {
             // We not only have to extract the mixin but we also have to retarget it to a method we inject
             // as the NeoForge extension method accepts a LevelReader rather than a Level so our
             // injected method will handle a safe cast and reordering the locals (swap the beacon pos and the block pos)
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/level/block/entity/BeaconBlockEntity")
                 .targetMethod("tick")
                 .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/DyeColor;getTextureDiffuseColor()I")
-                .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC))
+                .modifyStatic(false)
                 .extractMixin("net/neoforged/neoforge/common/extensions/IBlockExtension")
                 .modifyTarget("connector_getTextureDiffuseColor")
                 .build()
         );
     }
 
-    public static List<Patch> getPatches() {
+    public static List<MethodPatch> getPatches() {
         final List<Object> patches = List.of(
             // ======= Necessary manual patches 
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/client/KeyMapping")
                 .targetMethod("set")
-                .targetInjectionPoint("TAIL", "")
-                .modifyInjectionPoint("Lnet/minecraft/client/KeyMapping;setDown(Z)V")
+                .targetInjectionPoint("TAIL", null)
+                .modifyInjectionPoint("INVOKE", "Lnet/minecraft/client/KeyMapping;setDown(Z)V")
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
+                .targetClass("net/minecraft/client/KeyMapping")
+                .targetMethod("click")
+                .targetInjectionPoint("TAIL", null)
+                .modifyInjectionPoint("FIELD", "Lnet/minecraft/client/KeyMapping;clickCount:I")
+                .build(),
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/level/block/piston/PistonStructureResolver")
                 .targetMethod("isSticky")
                 .modifyTarget("canStickTo(Lnet/minecraft/world/level/block/state/BlockState;)Z")
-                .modifyMethodAccess(new ModifyMethodAccess.AccessChange(false, Opcodes.ACC_STATIC)) // TODO Should be automatic
+                .modifyStatic(false) // TODO Should be automatic
                 .extractMixin("net/neoforged/neoforge/common/extensions/IBlockStateExtension")
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/entity/LivingEntity")
                 .targetMethod("baseTick")
                 .targetInjectionPoint("Lnet/minecraft/world/entity/LivingEntity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z")
@@ -77,14 +81,14 @@ public class MixinPatches {
                 .modifyInjectionPoint("Lnet/neoforged/neoforge/fluids/FluidType;isAir()Z")
                 .extractMixin("net/neoforged/neoforge/common/CommonHooks")
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/entity/LivingEntity")
                 .targetMethod("goDownInWater()V")
                 .targetConstant(-0.03999999910593033D)
                 .extractMixin("net/neoforged/neoforge/common/extensions/ILivingEntityExtension")
                 .modifyTarget("sinkInFluid(Lnet/neoforged/neoforge/fluids/FluidType;)V")
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/entity/LivingEntity")
                 .targetMethod("updateFallFlying")
                 .targetInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;hurtAndBreak(ILnet/minecraft/world/entity/LivingEntity;Ljava/util/function/Consumer;)V")
@@ -92,24 +96,19 @@ public class MixinPatches {
                 .modifyTarget("elytraFlightTick(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;I)Z")
                 .build(),
             // Move redirectors of Map.put to KeyMappingLookup.put
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/client/KeyMapping")
                 .targetMethod("resetMapping()V")
                 .targetInjectionPoint("Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
                 .modifyInjectionPoint("Lnet/minecraftforge/client/settings/KeyMappingLookup;put(Lcom/mojang/blaze3d/platform/InputConstants$Key;Lnet/minecraft/client/KeyMapping;)V")
-                .targetMixinType(MixinConstants.REDIRECT)
-                .modifyParams(builder -> builder
-                    .replace(0, Type.getObjectType("net/minecraftforge/client/settings/KeyMappingLookup"))
-                    .replace(1, Type.getObjectType("com/mojang/blaze3d/platform/InputConstants$Key"))
-                    .replace(2, Type.getObjectType("net/minecraft/client/KeyMapping")))
-                .transform((classNode, methodNode, methodContext, patchContext) -> {
-                    for (ListIterator<AbstractInsnNode> iterator = methodNode.instructions.iterator(); iterator.hasNext(); ) {
-                        AbstractInsnNode insn = iterator.next();
+                .targetMixinType(MixinAnnotations.REDIRECT)
+                .transform((context, configuration) -> {
+                    MethodNode methodNode = context.methodNode();
+                    for (AbstractInsnNode insn : methodNode.instructions) {
                         if (insn.getOpcode() == Opcodes.ARETURN) {
                             methodNode.instructions.insertBefore(insn, new InsnNode(Opcodes.POP));
                             methodNode.instructions.set(insn, new InsnNode(Opcodes.RETURN));
-                        }
-                        else if (insn instanceof MethodInsnNode minsn && minsn.name.equals("put") && minsn.desc.equals("(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")) {
+                        } else if (insn instanceof MethodInsnNode minsn && minsn.name.equals("put") && minsn.desc.equals("(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")) {
                             minsn.desc = "(Lcom/mojang/blaze3d/platform/InputConstants$Key;Lnet/minecraft/client/KeyMapping;)V";
                             minsn.itf = false;
                             minsn.setOpcode(Opcodes.INVOKEVIRTUAL);
@@ -117,51 +116,53 @@ public class MixinPatches {
                         }
                     }
                     methodNode.desc = Type.getMethodDescriptor(Type.VOID_TYPE, Type.getArgumentTypes(methodNode.desc));
-                    return Patch.Result.APPLY;
+                    return PatchResult.APPLY;
                 })
                 .build(),
             // NeoForge moves this behaviour out completely with no viable replacement, so we disable it for now
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/entity/animal/SnowGolem", "net/minecraft/world/entity/animal/Sheep", "net/minecraft/world/entity/animal/MushroomCow")
                 .targetMethod("mobInteract")
                 .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z")
                 .disable()
                 .build(),
             // ======= Rendering patches 
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/client/renderer/ShaderInstance", "net/minecraft/client/renderer/EffectInstance")
                 .targetMethod("<init>", "getOrCreate")
                 .targetInjectionPoint("Lnet/minecraft/resources/ResourceLocation;withDefaultNamespace(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;")
+                // Axiom-specific (broken) target we still want to match
+                .targetInjectionPoint("Lnet/minecraft/resources/ResourceLocation;withDefaultNamespace(Ljava/lang/String;)Lnet/minecraft/resources/Identifier;")
                 .disable()
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/client/renderer/PostChain")
                 .targetMethod("parsePassNode")
                 // TODO update these
                 .targetInjectionPoint("NEW", "net/minecraft/resources/ResourceLocation")
                 .targetInjectionPoint("NEW", "(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;")
-                .targetMixinType(MixinConstants.REDIRECT)
+                .targetMixinType(MixinAnnotations.REDIRECT)
                 .disable()
                 .build(),
             // Disable potential duplicate attempts at making shaders IDs namespace aware - Neo already does this for us.
             // Attempts at doing so again will fail.
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/client/renderer/EffectInstance")
                 .targetMethod("<init>", "getOrCreate")
                 .targetInjectionPoint("Lnet/minecraft/resources/ResourceLocation;withDefaultNamespace(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;")
-                .targetMixinType(MixinConstants.REDIRECT)
+                .targetMixinType(MixinAnnotations.REDIRECT)
                 .disable()
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/client/renderer/entity/layers/ElytraLayer")
                 .targetMethod("render(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;ILnet/minecraft/world/entity/LivingEntity;FFFFFF)V")
                 .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z")
-                .targetMixinType(MixinConstants.REDIRECT)
-                .modifyParams(builder -> builder
-                    .insert(0, Type.getObjectType("net/minecraft/client/renderer/entity/layers/ElytraLayer"))
-                    .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
-                    .targetType(ParamTransformTarget.INJECTION_POINT)
-                    .ignoreOffset())
+                .targetMixinType(MixinAnnotations.REDIRECT)
+//                .modifyParams(builder -> builder
+//                    .insert(0, Type.getObjectType("net/minecraft/client/renderer/entity/layers/ElytraLayer"))
+//                    .replace(2, Type.getObjectType("net/minecraft/world/entity/LivingEntity"))
+//                    .targetType(ParamTransformTarget.INJECTION_POINT)
+//                    .ignoreOffset())
                 .divertRedirector(adapter -> {
                     adapter.visitVarInsn(Opcodes.ALOAD, 1);
                     adapter.visitVarInsn(Opcodes.ALOAD, 2);
@@ -171,57 +172,53 @@ public class MixinPatches {
                 .modifyInjectionPoint("Lnet/minecraft/client/renderer/entity/layers/ElytraLayer;shouldRender(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z")
                 .build(),
             // ======= TODO Handle in adapter
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/entity/vehicle/Boat")
                 .targetMethod("m_38394_", "m_38393_", "m_38371_", "m_7840_")
                 .targetInjectionPoint("Lnet/minecraft/world/level/material/FluidState;is(Lnet/minecraft/tags/TagKey;)Z")
-                .targetMixinType(MixinConstants.REDIRECT)
+                .targetMixinType(MixinAnnotations.REDIRECT)
                 .modifyInjectionPoint("Lnet/minecraft/world/entity/vehicle/Boat;canBoatInFluid(Lnet/minecraft/world/level/material/FluidState;)Z")
-                .modifyParams(b -> b
-                    .targetType(ParamTransformTarget.INJECTION_POINT)
-                    .ignoreOffset()
-                    .insert(0, Type.getObjectType("net/minecraft/world/entity/vehicle/Boat"))
-                    .inline(2, i -> i.getstatic("net/minecraft/tags/FluidTags", "WATER", "Lnet/minecraft/tags/TagKey;")))
+//                .modifyParams(b -> b
+//                    .targetType(ParamTransformTarget.INJECTION_POINT)
+//                    .ignoreOffset()
+//                    .insert(0, Type.getObjectType("net/minecraft/world/entity/vehicle/Boat"))
+//                    .inline(2, i -> i.getstatic("net/minecraft/tags/FluidTags", "WATER", "Lnet/minecraft/tags/TagKey;")))
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/entity/player/Player")
                 .targetMethod("hurtCurrentlyUsedShield(F)V")
                 .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z")
-                .targetMixinType(MixinConstants.WRAP_OPERATION)
+                .targetMixinType(MixinAnnotations.WRAP_OPERATION)
                 .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canPerformAction(Lnet/minecraftforge/common/ToolAction;)Z")
-                .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraftforge/common/ToolAction")))
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/client/renderer/entity/FishingHookRenderer")
                 .targetMethod("render(Lnet/minecraft/world/entity/projectile/FishingHook;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V")
                 .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;m_150930_(Lnet/minecraft/world/item/Item;)Z")
-                .targetMixinType(MixinConstants.WRAP_OPERATION)
+                .targetMixinType(MixinAnnotations.WRAP_OPERATION)
                 .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canPerformAction(Lnet/minecraftforge/common/ToolAction;)Z")
-                .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraftforge/common/ToolAction")))
                 .build(),
-            Patch.builder()
+            MethodPatch.builder()
                 .targetClass("net/minecraft/world/level/block/PowderSnowBlock")
                 .targetMethod("canEntityWalkOnPowderSnow(Lnet/minecraft/world/entity/Entity;)Z")
                 .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z")
-                .targetMixinType(MixinConstants.WRAP_OPERATION)
+                .targetMixinType(MixinAnnotations.WRAP_OPERATION)
                 .modifyInjectionPoint("Lnet/minecraft/world/item/ItemStack;canWalkOnPowderedSnow(Lnet/minecraft/world/entity/LivingEntity;)Z")
-                .modifyParams(builder -> builder.replace(1, Type.getObjectType("net/minecraft/world/entity/LivingEntity")))
                 .build(),
-            Patch.builder() // This is the annoying instanceof CrossbowItem patch TODO see DynamicSyntheticInstanceofPatch
+            MethodPatch.builder() // This is the annoying instanceof CrossbowItem patch TODO see DynamicSyntheticInstanceofPatch
                 .targetClass("net/minecraft/client/renderer/ItemInHandRenderer")
                 .targetMethod("renderArmWithItem")
                 .targetInjectionPoint("Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z")
-                .targetMixinType(MixinConstants.MODIFY_ARG)
-                .modifyParams(builder -> builder
-                    .replace(0, Type.getObjectType("net/minecraft/world/item/ItemStack")))
-                .modifyMixinType(MixinConstants.REDIRECT, builder -> builder
-                    .sameTarget()
-                    .injectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;getItem()Lnet/minecraft/world/item/Item;"))
-                .build());
+                .targetMixinType(MixinAnnotations.MODIFY_ARG)
+                .modifyMixinType(MixinAnnotations.REDIRECT)
+                .modifyTarget("renderArmWithItem")
+                .modifyInjectionPoint("INVOKE", "Lnet/minecraft/world/item/ItemStack;getItem()Lnet/minecraft/world/item/Item;")
+                .build()
+        );
 
         return patches.stream()
             .flatMap(p -> p instanceof List<?> lst ? lst.stream() : Stream.of(p))
-            .map(o -> (Patch) o)
+            .map(o -> (MethodPatch) o)
             .collect(Collectors.toList()); // Mutable list
     }
 }

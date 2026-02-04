@@ -5,8 +5,8 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.sinytra.adapter.patch.api.Patch;
-import org.sinytra.adapter.patch.util.MethodQualifier;
+import org.sinytra.adapter.env.ctx.PatchResult;
+import org.sinytra.adapter.util.MethodQualifier;
 
 import java.util.Map;
 
@@ -20,7 +20,7 @@ public class ClassAnalysingTransformer implements ClassNodeTransformer.ClassProc
     );
 
     @Override
-    public Patch.Result process(ClassNode node) {
+    public PatchResult process(ClassNode node) {
         boolean applied = false;
         for (MethodNode method : node.methods) {
             for (AbstractInsnNode insn : method.instructions) {
@@ -35,6 +35,6 @@ public class ClassAnalysingTransformer implements ClassNodeTransformer.ClassProc
                 }
             }
         }
-        return applied ? Patch.Result.APPLY : Patch.Result.PASS;
+        return applied ? PatchResult.APPLY : PatchResult.PASS;
     }
 }

@@ -6,15 +6,15 @@ import net.neoforged.moddevgradle.internal.RunGameTask
 plugins {
     java
     `maven-publish`
-    id("net.neoforged.moddev") version "2.0.78"
-    id("com.gradleup.shadow") version "9.0.0-beta12" apply false
+    id("net.neoforged.moddev") version "2.0.140"
+    id("com.gradleup.shadow") version "9.3.1" apply false
     id("me.modmuss50.mod-publish-plugin") version "0.5.+"
-    id("net.neoforged.gradleutils") version "3.0.0"
+    id("net.neoforged.gradleutils") version "5.1.0"
     id("org.sinytra.adapter.userdev") version "1.2.1-SNAPSHOT"
 }
 
 val versionConnector: String by project
-val versionAdapterDefinition: String by project
+val versionAdapterCore: String by project
 val versionAdapterRuntime: String by project
 val versionMc: String by project
 val versionNeoForge: String by project
@@ -131,7 +131,7 @@ dependencies {
     shade(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader)
     shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener) { isTransitive = false }
     shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool) { isTransitive = false }
-    shade(group = "org.sinytra.adapter", name = "definition", version = versionAdapterDefinition) { isTransitive = false }
+    shade(group = "org.sinytra.adapter", name = "core", version = versionAdapterCore) { isTransitive = false }
     shade(project(":transformer")) { isTransitive = false }
 
     jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
@@ -141,7 +141,7 @@ dependencies {
 
     "modCompileOnly"(sourceSets.main.get().output)
 
-    implementation("curse.maven:connector-extras-913445:5618470")
+//    implementation("curse.maven:connector-extras-913445:5618470")
 }
 
 val modJar: Jar by tasks.creating(Jar::class) {

@@ -1,23 +1,15 @@
 package org.sinytra.connector.transformer.jar;
 
 import com.google.common.base.Stopwatch;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import cpw.mods.jarhandling.JarContents;
 import cpw.mods.jarhandling.JarContentsBuilder;
 import cpw.mods.jarhandling.JarMetadata;
 import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.api.metadata.CustomValue;
-import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
-import net.fabricmc.loader.impl.metadata.ModMetadataParser;
-import net.fabricmc.loader.impl.metadata.ParseMetadataException;
 import net.minecraftforge.fart.api.ClassProvider;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.adapter.patch.api.PatchAuditTrail;
+import org.sinytra.adapter.env.ctx.AuditTrail;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
 import org.sinytra.connector.transformer.transform.TransformerUtil;
@@ -26,20 +18,20 @@ import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import org.spongepowered.asm.mixin.transformer.ClassInfo;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.jar.Attributes;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
-import java.util.zip.ZipEntry;
 
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
 
@@ -47,8 +39,6 @@ public final class JarTransformer {
     public static final String SOURCE_NAMESPACE = "intermediary";
     public static final String OBF_NAMESPACE = "mojang";
     public static final Marker TRANSFORM_MARKER = MarkerFactory.getMarker("TRANSFORM");
-    private static final String LOOM_GENERATED_PROPERTY = "fabric-loom:generated";
-    private static final String LOOM_REMAP_ATTRIBUTE = "Fabric-Loom-Remap";
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final TransformerEnvironment environment;
@@ -83,7 +73,7 @@ public final class JarTransformer {
         String name = input.getName().split("\\.(?!.*\\.)")[0];
         Path output = this.environment.createCachedJarPath(name);
 
-        FabricModFileMetadata metadata = readModMetadata(input);
+        FabricModFileMetadata metadata = FabricJarReader.readModMetadata(input, this.environment);
         FabricModPath path = new FabricModPath(output, metadata);
         TransformerUtil.CacheFile cacheFile = TransformerUtil.getCached(input.toPath(), output, this.environment.getJarCacheVersion());
         String moduleName = getModuleName(input.toPath());
@@ -105,10 +95,10 @@ public final class JarTransformer {
                 initProgress.complete();
             }
             ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
-            List<Pair<File, Future<Pair<FabricModPath, PatchAuditTrail>>>> futures = paths.stream()
+            List<Pair<File, Future<Pair<FabricModPath, AuditTrail>>>> futures = paths.stream()
                 .map(jar -> {
-                    Future<Pair<FabricModPath, PatchAuditTrail>> future = executorService.submit(() -> {
-                        Pair<FabricModPath, PatchAuditTrail> pair = jar.transform(transformInstance);
+                    Future<Pair<FabricModPath, AuditTrail>> future = executorService.submit(() -> {
+                        Pair<FabricModPath, AuditTrail> pair = jar.transform(transformInstance);
                         progress.increment();
                         return pair;
                     });
@@ -122,7 +112,7 @@ public final class JarTransformer {
             List<TransformedFabricModPath> results = futures.stream()
                 .map(pair -> {
                     try {
-                        Pair<FabricModPath, PatchAuditTrail> result = pair.getSecond().get();
+                        Pair<FabricModPath, AuditTrail> result = pair.getSecond().get();
                         return new TransformedFabricModPath(pair.getFirst().toPath(), result.getFirst(), result.getSecond());
                     } catch (Throwable t) {
                         throw this.environment.onTransformationError("Error transforming file " + pair.getFirst().getName(), t);
@@ -140,94 +130,6 @@ public final class JarTransformer {
         } finally {
             cleanupEnvironment();
             progress.complete();
-        }
-    }
-
-    private FabricModFileMetadata readModMetadata(File input) throws IOException {
-        try (JarFile jarFile = new JarFile(input)) {
-            LoaderModMetadata metadata;
-            Set<String> allConfigs;
-            Set<String> configs;
-            try (InputStream ins = jarFile.getInputStream(jarFile.getEntry(TransformerUtil.FABRIC_MOD_JSON))) {
-                LoaderModMetadata rawMetadata = ModMetadataParser.parseMetadata(ins, "", Collections.emptyList(), this.environment.getVersionOverrides(), this.environment.getDependencyOverrides().get(), false);
-                metadata = this.environment.wrapModMetadata(rawMetadata);
-
-                Map<EnvType, Collection<String>> envMixinConfigs = Map.of(
-                    EnvType.CLIENT, metadata.getMixinConfigs(EnvType.CLIENT),
-                    EnvType.SERVER, metadata.getMixinConfigs(EnvType.SERVER)
-                );
-                allConfigs = envMixinConfigs.values().stream()
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toSet());
-                configs = new HashSet<>(envMixinConfigs.get(this.environment.getEnvType()));
-            } catch (ParseMetadataException e) {
-                throw new RuntimeException(e);
-            }
-            boolean containsAT = jarFile.getEntry(TransformerUtil.AT_PATH) != null;
-
-            Set<String> refmaps = new HashSet<>();
-            Set<String> mixinPackages = new HashSet<>();
-            Set<String> mixinClasses = new HashSet<>();
-            for (String configName : configs) {
-                ZipEntry entry = jarFile.getEntry(configName);
-                if (entry != null) {
-                    readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages, mixinClasses);
-                }
-            }
-            // Find additional configs that may not be listed in mod metadata
-            jarFile.stream()
-                .forEach(entry -> {
-                    String name = entry.getName();
-                    // Already discovered and ignored due to env setting
-                    if (allConfigs.contains(name)) {
-                        return;
-                    }
-                    if ((name.endsWith(".mixins.json") || name.startsWith("mixins.") && name.endsWith(".json")) && configs.add(name)) {
-                        readMixinConfigPackages(input, jarFile, entry, refmaps, mixinPackages, mixinClasses);
-                    }
-                });
-            Attributes manifestAttributes = Optional.ofNullable(jarFile.getManifest()).map(Manifest::getMainAttributes).orElseGet(Attributes::new);
-            boolean generated = isGeneratedLibraryJarMetadata(manifestAttributes, metadata);
-            return new FabricModFileMetadata(metadata, Set.copyOf(configs), configs, refmaps, mixinPackages, mixinClasses, manifestAttributes, containsAT, generated);
-        }
-    }
-
-    private static boolean isGeneratedLibraryJarMetadata(Attributes manifestAttributes, LoaderModMetadata metadata) {
-        CustomValue generatedValue = metadata.getCustomValue(LOOM_GENERATED_PROPERTY);
-        if (generatedValue != null && generatedValue.getType() == CustomValue.CvType.BOOLEAN && generatedValue.getAsBoolean()) {
-            String loomRemapAttribute = manifestAttributes.getValue(LOOM_REMAP_ATTRIBUTE);
-            return loomRemapAttribute == null || !loomRemapAttribute.equals("true");
-        }
-        return false;
-    }
-
-    private static void readMixinConfigPackages(File input, JarFile jarFile, ZipEntry entry, Set<String> refmaps, Set<String> packages, Set<String> mixinClasses) {
-        try (Reader reader = new InputStreamReader(jarFile.getInputStream(entry))) {
-            JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-            if (json.has("refmap")) {
-                String refmap = json.get("refmap").getAsString();
-                refmaps.add(refmap);
-            }
-            if (json.has("package")) {
-                String pkg = json.get("package").getAsString();
-                if (!pkg.isEmpty()) {
-                    String pkgPath = pkg.replace('.', '/') + '/';
-                    packages.add(pkgPath);
-                }
-                for (String type : List.of("mixins", "client", "server")) {
-                    if (json.has(type)) {
-                        for (JsonElement mixin : json.getAsJsonArray(type)) {
-                            if (mixin.isJsonPrimitive()) {
-                                String className = pkg + "." + mixin.getAsString();
-                                mixinClasses.add(className.replace('.', '/'));
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Throwable t) {
-            LOGGER.error("Error reading mixin config entry {} in file {}", entry.getName(), input.getAbsolutePath());
-            throw new RuntimeException(t);
         }
     }
 
@@ -264,14 +166,12 @@ public final class JarTransformer {
 
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
 
-    public record TransformedFabricModPath(Path input, FabricModPath output, @Nullable PatchAuditTrail auditTrail) {}
-
-    public record FabricModFileMetadata(LoaderModMetadata modMetadata, Collection<String> visibleMixinConfigs, Collection<String> mixinConfigs, Set<String> refmaps, Set<String> mixinPackages, Set<String> mixinClasses, Attributes manifestAttributes, boolean containsAT, boolean generated) {}
+    public record TransformedFabricModPath(Path input, FabricModPath output, @Nullable AuditTrail auditTrail) {}
 
     public record TransformableJar(File input, FabricModPath modPath, TransformerUtil.CacheFile cacheFile, String moduleName) {
-        public Pair<FabricModPath, PatchAuditTrail> transform(JarTransformInstance transformInstance) throws IOException {
+        public Pair<FabricModPath, AuditTrail> transform(JarTransformInstance transformInstance) throws IOException {
             Files.deleteIfExists(this.modPath.path);
-            PatchAuditTrail audit = transformInstance.transformJar(this.input, this.modPath.path, this.modPath.metadata());
+            AuditTrail audit = transformInstance.transformJar(this.input, this.modPath.path, this.modPath.metadata());
             this.cacheFile.save();
             return Pair.of(this.modPath, audit);
         }

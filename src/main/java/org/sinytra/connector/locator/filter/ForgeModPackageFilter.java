@@ -64,7 +64,7 @@ public final class ForgeModPackageFilter {
         UnionPathFilter merged = existing != null ? (a, b) -> existing.test(a, b) && filter.test(a, b) : filter;
 
         // Inject filter into UFS
-        UPFS_FILTER.set(ufs, merged); // TODO TEST
+        UPFS_FILTER.set(ufs, merged);
     }
 
     private static void forceRecomputeJarPackages(Jar jar) {

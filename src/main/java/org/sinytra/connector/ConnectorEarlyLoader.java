@@ -14,6 +14,7 @@ import org.sinytra.connector.util.ConnectorConfig;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.slf4j.Logger;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -25,6 +26,7 @@ public class ConnectorEarlyLoader {
     // A list of modids that use the connector language provider
     private static final Set<String> CONNECTOR_MODIDS = new HashSet<>();
     private static final List<IModInfo> CONNECTOR_MODS = new ArrayList<>();
+    private static final List<Path> CONNECTOR_MOD_PATHS = new ArrayList<>();
     // If we encounter an exception during setup/load, we store it here and throw it later during FML mod loading,
     // so that it is propagated to the forge error screen.
     private static final List<ModLoadingIssue> LOADING_EXCEPTIONS = new ArrayList<>();
@@ -90,6 +92,14 @@ public class ConnectorEarlyLoader {
         return new ModLoadingIssue(ModLoadingIssue.Severity.ERROR, message, Arrays.asList(args), keepOriginal ? original : null, null, null, null);
     }
 
+    public static void addConnectorModPath(Path path) {
+        CONNECTOR_MOD_PATHS.add(path);
+    }
+
+    public static boolean isConnectorMod(Path path) {
+        return CONNECTOR_MOD_PATHS.contains(path);
+    }
+    
     /**
      * Run initial fabric loader setup. Any exceptions thrown are ignored and re-thrown later during FML load.
      *

@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.*;
 import java.util.stream.Stream;
@@ -105,7 +106,11 @@ public class ConnectorLoaderService implements ITransformationService {
     @Override
     public List<Resource> completeScan(IModuleLayerManager layerManager) {
         // Ignore default Fabric mod locator warnings
-        LoadingModList.get().getModLoadingIssues().removeIf(issue -> issue.translationKey().equals("fml.modloadingissue.brokenfile.fabric"));
+        LoadingModList.get().getModLoadingIssues()
+            .removeIf(issue -> {
+                Path path = issue.affectedPath();
+                return ConnectorEarlyLoader.isConnectorMod(path) && issue.translationKey().startsWith("fml.modloadingissue.brokenfile.");
+            });
 
         // Add our loading errors
         LoadingModList.get().getModLoadingIssues().addAll(ConnectorEarlyLoader.getLoadingExceptions());

@@ -4,7 +4,7 @@ import com.mojang.logging.LogUtils;
 import net.neoforged.fml.ModLoadingException;
 import net.neoforged.fml.ModLoadingIssue;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
-import org.sinytra.adapter.patch.api.PatchAuditTrail;
+import org.sinytra.adapter.env.ctx.AuditTrail;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.util.ConnectorConfig;
 import org.sinytra.connector.util.PriorityModLoadingException;
@@ -35,7 +35,7 @@ public final class MixinTransformSafeguard {
 
         failing.forEach(p -> {
             builder.append("Mod file §e").append(p.input().getFileName().toString()).append("§r has failing mixins:\n");
-            for (PatchAuditTrail.Candidate failed : p.auditTrail().getFailingMixins()) {
+            for (AuditTrail.Candidate failed : p.auditTrail().getFailingMixins()) {
                 String[] parts = failed.classNode().name.split("/");
                 builder.append("- §c").append(parts[parts.length - 1]).append("§7#§3").append(failed.methodNode().name).append("§r\n");
             }

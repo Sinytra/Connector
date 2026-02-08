@@ -10,7 +10,7 @@ import cpw.mods.modlauncher.api.IModuleLayerManager;
 import cpw.mods.niofs.union.UnionPathFilter;
 import net.neoforged.neoforgespi.locating.IModFile;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.connector.transformer.jar.JarTransformer;
+import org.sinytra.connector.transformer.jar.FabricModFileMetadata;
 import org.sinytra.connector.transformer.jar.JarTransformer.FabricModPath;
 import org.slf4j.Logger;
 
@@ -148,7 +148,7 @@ public class SplitPackageMerger {
         List<Path> additionalPaths = others.stream()
             .flatMap(pair -> {
                 SecureJar sj = pair.getFirst();
-                JarTransformer.FabricModFileMetadata metadata = pair.getSecond().metadata();
+                FabricModFileMetadata metadata = pair.getSecond().metadata();
                 JarContents jarContents = new JarContentsBuilder().paths(sj.getPrimaryPath()).pathFilter(singlePackageFilter(pkg)).build();
                 SecureJar singlePackage = SecureJar.from(jarContents);
                 JarMergeInfo jarInfo = swap.computeIfAbsent(sj.name(), name -> new JarMergeInfo(sj, metadata));
@@ -187,11 +187,11 @@ public class SplitPackageMerger {
      * @param additionalPaths additional paths to include in the jar
      * @param excludedPackages packages to exlude from the jar
      */
-    private record JarMergeInfo(SecureJar jar, JarTransformer.FabricModFileMetadata metadata, Set<Path> additionalPaths, Set<String> excludedPackages) {
-        public JarMergeInfo(SecureJar jar, JarTransformer.FabricModFileMetadata metadata) {
+    private record JarMergeInfo(SecureJar jar, FabricModFileMetadata metadata, Set<Path> additionalPaths, Set<String> excludedPackages) {
+        public JarMergeInfo(SecureJar jar, FabricModFileMetadata metadata) {
             this(jar, metadata, new HashSet<>(), new HashSet<>());
         }
     }
 
-    public record FilteredModPath(Path[] paths, @Nullable UnionPathFilter filter, JarTransformer.FabricModFileMetadata metadata) {}
+    public record FilteredModPath(Path[] paths, @Nullable UnionPathFilter filter, FabricModFileMetadata metadata) {}
 }

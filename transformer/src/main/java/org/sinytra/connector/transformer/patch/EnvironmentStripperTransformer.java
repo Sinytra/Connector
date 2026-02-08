@@ -8,17 +8,18 @@ import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import org.sinytra.adapter.patch.analysis.selector.AnnotationHandle;
-import org.sinytra.adapter.patch.analysis.selector.AnnotationValueHandle;
-import org.sinytra.adapter.patch.api.ClassTransform;
-import org.sinytra.adapter.patch.api.Patch;
-import org.sinytra.adapter.patch.api.PatchContext;
+import org.sinytra.adapter.analysis.selector.AnnotationHandle;
+import org.sinytra.adapter.analysis.selector.AnnotationValueHandle;
+import org.sinytra.adapter.env.ann.ClassTarget;
+import org.sinytra.adapter.env.ctx.PatchContext;
+import org.sinytra.adapter.env.ctx.PatchResult;
+import org.sinytra.adapter.transform.ClassTransformer;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class EnvironmentStripperTransformer implements ClassTransform {
+public class EnvironmentStripperTransformer implements ClassTransformer {
     private static final String ENVIRONMENT_ANNOTATION = Type.getDescriptor(Environment.class);
     private static final String ENVIRONMENT_INTERFACE_DESCRIPTOR = Type.getDescriptor(EnvironmentInterface.class);
     private static final String ENVIRONMENT_INTERFACES_DESCRIPTOR = Type.getDescriptor(EnvironmentInterfaces.class);
@@ -31,7 +32,7 @@ public class EnvironmentStripperTransformer implements ClassTransform {
     }
 
     @Override
-    public Patch.Result apply(ClassNode classNode, @Nullable AnnotationValueHandle<?> annotation, PatchContext context) {
+    public PatchResult apply(ClassNode classNode, ClassTarget classTarget, PatchContext context) {
         boolean applied = stripEnvironmentInterface(classNode.interfaces, classNode.invisibleAnnotations);
 
         List<MethodNode> removeMethods = new ArrayList<>();
@@ -50,7 +51,7 @@ public class EnvironmentStripperTransformer implements ClassTransform {
                 applied = true;
             }
         }
-        return applied ? Patch.Result.APPLY : Patch.Result.PASS;
+        return applied ? PatchResult.APPLY : PatchResult.PASS;
     }
 
     private static List<MethodNode> getMethodLambdas(ClassNode cls, MethodNode method) {

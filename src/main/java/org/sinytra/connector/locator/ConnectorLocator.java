@@ -63,6 +63,7 @@ public class ConnectorLocator implements IDependencyLocator {
             LocationResult results = locateFabricMods(loadedMods);
             if (results != null) {
                 results.mods().forEach(pipeline::addModFile);
+                results.originalPaths().forEach(ConnectorEarlyLoader::addConnectorModPath);
 
                 // Create mod file for generated adapter mixins jar
                 Path generatedAdapterJar = results.generatedJarPath();
@@ -163,7 +164,8 @@ public class ConnectorLocator implements IDependencyLocator {
         List<SplitPackageMerger.FilteredModPath> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed.stream().map(JarTransformer.TransformedFabricModPath::output).toList(), loadedModFiles, ignoredModFiles);
 
         List<IModFile> loadedMods = moduleSafeJars.stream().map(ConnectorLocator::createConnectorModFile).toList();
-        return new LocationResult(loadedMods, environment.getGeneratedJarPath());
+        List<Path> originalPaths = transformed.stream().map(JarTransformer.TransformedFabricModPath::input).toList();
+        return new LocationResult(loadedMods, originalPaths, environment.getGeneratedJarPath());
     }
 
     private static IModFile createConnectorModFile(SplitPackageMerger.FilteredModPath modPath) {
@@ -276,5 +278,5 @@ public class ConnectorLocator implements IDependencyLocator {
     private record SimpleModInfo(String modid, ArtifactVersion version, boolean library, @Nullable IModFile origin, @Nullable String moduleName) {
     }
 
-    private record LocationResult(List<IModFile> mods, Path generatedJarPath) {} 
+    private record LocationResult(List<IModFile> mods, List<Path> originalPaths, Path generatedJarPath) {} 
 }

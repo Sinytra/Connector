@@ -5,8 +5,10 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
+import cpw.mods.jarhandling.SecureJar;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.api.VersionParsingException;
 import net.fabricmc.loader.api.metadata.ModDependency;
 import net.fabricmc.loader.api.metadata.ModMetadata;
@@ -17,28 +19,21 @@ import net.fabricmc.loader.impl.discovery.ModCandidateImpl;
 import net.fabricmc.loader.impl.discovery.ModResolutionException;
 import net.fabricmc.loader.impl.discovery.ModResolver;
 import net.fabricmc.loader.impl.game.GameProvider;
-import net.fabricmc.loader.impl.metadata.BuiltinModMetadata;
-import net.fabricmc.loader.impl.metadata.DependencyOverrides;
-import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
-import net.fabricmc.loader.impl.metadata.ModDependencyImpl;
-import net.fabricmc.loader.impl.metadata.VersionOverrides;
+import net.fabricmc.loader.impl.metadata.*;
 import net.fabricmc.loader.impl.util.version.VersionParser;
 import net.neoforged.fml.ModLoadingException;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforgespi.locating.IModFile;
+import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.ConnectorEarlyLoader;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.util.ConnectorConfig;
 import org.slf4j.Logger;
 
+import java.lang.module.ModuleDescriptor;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -46,6 +41,7 @@ import java.util.stream.Stream;
 import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
 
 public final class DependencyResolver {
+    private static final String MIXINEXTRAS_MODID = "mixinextras";
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
     public static final Supplier<DependencyOverrides> DEPENDENCY_OVERRIDES = Suppliers.memoize(() -> loadConfigFile("fabric_loader_dependencies.json", () -> new DependencyOverrides(FMLPaths.CONFIGDIR.get())));
@@ -60,7 +56,8 @@ public final class DependencyResolver {
         Stream<ModCandidateImpl> forgeCandidates = loadedMods.stream()
             .flatMap(modFile -> modFile.getModFileInfo() != null ? modFile.getModInfos().stream() : Stream.empty())
             .map(modInfo -> ModCandidateImpl.createPlain(List.of(modInfo.getOwningFile().getFile().getFilePath()), new BuiltinMetadataWrapper(new FMLModMetadata(modInfo)), false, List.of()));
-        Stream<ModCandidateImpl> builtinCandidates = Stream.of(createJavaMod(), createFabricLoaderMod());
+        Stream<ModCandidateImpl> builtinCandidates = Stream.of(createJavaMod(), createFabricLoaderMod(), createMixinExtrasMod(loadedMods))
+            .filter(Objects::nonNull);
         // Merge
         List<ModCandidateImpl> allCandidates = Stream.of(candidates.stream(), forgeCandidates, builtinCandidates).flatMap(Function.identity()).toList();
 
@@ -135,17 +132,32 @@ public final class DependencyResolver {
             final String[] components = version.split("\\.");
             version = components[0] + "." + components[1] + ".*";
         }
-        ModMetadata metadata;
 
-        try {
-            metadata = new BuiltinModMetadata.Builder("fabricloader", VersionParser.parse(version, true))
-                .setName("Fabric Loader")
-                .build();
-        } catch (VersionParsingException e) {
-            throw new RuntimeException(e);
-        }
-
+        ModMetadata metadata = new BuiltinModMetadata.Builder("fabricloader", parseVersionUnchecked(version))
+            .setName("Fabric Loader")
+            .build();
         GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(Collections.singletonList(Path.of(uncheck(() -> FabricLoader.class.getProtectionDomain().getCodeSource().getLocation().toURI()))), metadata);
+
+        return ModCandidateImpl.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES.get());
+    }
+
+    @Nullable
+    private static ModCandidateImpl createMixinExtrasMod(Collection<IModFile> loadedMods) {
+        SecureJar mixinExJar = loadedMods.stream()
+            .map(IModFile::getSecureJar)
+            .filter(j -> j.name().contains(MIXINEXTRAS_MODID))
+            .findFirst()
+            .orElse(null);
+        if (mixinExJar == null) return null;
+
+        String version = mixinExJar.moduleDataProvider().descriptor().version()
+            .map(ModuleDescriptor.Version::toString)
+            .orElse(null);
+
+        ModMetadata metadata = new BuiltinModMetadata.Builder(MIXINEXTRAS_MODID, parseVersionUnchecked(version))
+            .setName(mixinExJar.name())
+            .build();
+        GameProvider.BuiltinMod builtinMod = new GameProvider.BuiltinMod(List.of(mixinExJar.getPrimaryPath()), metadata);
 
         return ModCandidateImpl.createBuiltin(builtinMod, VERSION_OVERRIDES, DEPENDENCY_OVERRIDES.get());
     }
@@ -155,6 +167,14 @@ public final class DependencyResolver {
             return supplier.get();
         } catch (Throwable t) {
             throw new ModLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Invalid config file " + name));
+        }
+    }
+
+    private static Version parseVersionUnchecked(String str) {
+        try {
+            return VersionParser.parse(str, true);
+        } catch (VersionParsingException e) {
+            throw new RuntimeException(e);
         }
     }
 }

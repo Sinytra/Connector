@@ -1,7 +1,7 @@
 package org.sinytra.connector.transformer.patch;
 
+import org.sinytra.adapter.env.ctx.RefmapHolder;
 import org.sinytra.connector.transformer.transform.MappingAwareReferenceMapper;
-import org.sinytra.adapter.patch.api.RefmapHolder;
 
 import java.util.HashSet;
 import java.util.Map;

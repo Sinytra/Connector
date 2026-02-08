@@ -7,9 +7,9 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 import org.objectweb.asm.tree.analysis.SourceInterpreter;
 import org.objectweb.asm.tree.analysis.SourceValue;
+import org.sinytra.adapter.analysis.method.MethodAnalyzer;
+import org.sinytra.adapter.env.ctx.PatchResult;
 import org.sinytra.connector.transformer.jar.IntermediateMapping;
-import org.sinytra.adapter.patch.analysis.MethodCallAnalyzer;
-import org.sinytra.adapter.patch.api.Patch;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -25,14 +25,14 @@ public class ReflectionRenamingTransformer implements ClassNodeTransformer.Class
     }
 
     @Override
-    public Patch.Result process(ClassNode node) {
+    public PatchResult process(ClassNode node) {
         boolean applied = false;
         for (MethodNode method : node.methods) {
             ReflectionRemapperInterpreter interpreter = new ReflectionRemapperInterpreter(Opcodes.ASM9, this.mappingFile, this.flatMappings);
-            MethodCallAnalyzer.analyzeInterpretMethod(method, interpreter);
+            MethodAnalyzer.analyzeInterpretMethod(method, interpreter);
             applied |= interpreter.remapApplied();
         }
-        return applied ? Patch.Result.APPLY : Patch.Result.PASS;
+        return applied ? PatchResult.APPLY : PatchResult.PASS;
     }
 
     private static class ReflectionRemapperInterpreter extends SourceInterpreter {

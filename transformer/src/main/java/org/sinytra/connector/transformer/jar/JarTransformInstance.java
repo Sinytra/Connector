@@ -9,10 +9,10 @@ import net.minecraftforge.fart.api.Renamer;
 import net.minecraftforge.fart.internal.EnhancedRemapper;
 import net.minecraftforge.srgutils.IMappingFile;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.adapter.patch.api.PatchAuditTrail;
-import org.sinytra.adapter.patch.api.PatchEnvironment;
-import org.sinytra.adapter.patch.util.provider.ClassLookup;
-import org.sinytra.adapter.patch.util.provider.MixinClassLookup;
+import org.sinytra.adapter.env.ctx.AuditTrail;
+import org.sinytra.adapter.env.ctx.PatchEnvironment;
+import org.sinytra.adapter.util.provider.ClassLookup;
+import org.sinytra.adapter.util.provider.MixinClassLookup;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
 import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
@@ -41,7 +41,7 @@ public class JarTransformInstance {
     private final EnhancedRemapper enhancedRemapper;
     private final ClassLookup cleanClassLookup;
     private final List<Path> libs;
-    private final PatchAuditTrail auditTrail;
+    private final AuditTrail auditTrail;
     private final TransformerEnvironment environment;
 
     public JarTransformInstance(TransformerEnvironment environment, ClassProvider classProvider, List<Path> libs) {
@@ -58,7 +58,7 @@ public class JarTransformInstance {
         this.cleanClassLookup = environment.getCleanClassLookup();
         this.bfu = new BytecodeFixerUpperFrontend(this.cleanClassLookup, MixinClassLookup.INSTANCE, this.environment);
         this.libs = libs;
-        this.auditTrail = PatchAuditTrail.create();
+        this.auditTrail = AuditTrail.create();
     }
 
     public BytecodeFixerUpperFrontend getBfu() {
@@ -66,7 +66,7 @@ public class JarTransformInstance {
     }
 
     @Nullable
-    public PatchAuditTrail transformJar(File input, Path output, JarTransformer.FabricModFileMetadata metadata) throws IOException {
+    public AuditTrail transformJar(File input, Path output, FabricModFileMetadata metadata) throws IOException {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         if (metadata.generated()) {
@@ -83,34 +83,33 @@ public class JarTransformInstance {
         RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input.toPath(), metadata.refmaps(), this.remapper, this.libs);
         IMappingFile srgToIntermediary = resolver.getMap(JarTransformer.OBF_NAMESPACE, JarTransformer.SOURCE_NAMESPACE);
         IMappingFile intermediaryToSrg = resolver.getCurrentMap(JarTransformer.SOURCE_NAMESPACE);
-        AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer(srgToIntermediary);
+        AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer();
 
-        PatchAuditTrail jarTrail = PatchAuditTrail.create();
+        AuditTrail jarTrail = AuditTrail.create();
         ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
         int fabricLVTCompatibility = this.environment.getFabricMixinCompatibility(metadata.modMetadata());
         PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility, jarTrail);
-        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.environment, environment, AccessorRedirectTransformer.PATCHES);
-        RefmapRemapper refmapRemapper = new RefmapRemapper(refmap.files());
+        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.environment, environment, accessorRedirectTransformer.getPatches());
+
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())
             .add(new ClassNodeTransformer(
-                new FieldToMethodTransformer(metadata.modMetadata().getAccessWidener(), srgToIntermediary),
-                accessorRedirectTransformer,
-                new ReflectionRenamingTransformer(intermediaryToSrg, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE))
+                new FieldToMethodTransformer(metadata.modMetadata().getClassTweaker(), srgToIntermediary),
+                new ReflectionRenamingTransformer(intermediaryToSrg, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE)),
+                new ClassAnalysingTransformer()
             ))
             .add(new OptimizedRenamingTransformer(this.enhancedRemapper, false, metadata.refmaps().isEmpty()))
-            .add(new ClassNodeTransformer(new ClassAnalysingTransformer()))
             .add(patchTransformer)
-            .add(refmapRemapper)
+            .add(new ClassNodeTransformer(accessorRedirectTransformer))
+            .add(new RefmapRemapper(refmap.files()))
             .logger(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
             .ignoreJarPathPrefix("assets/", "data/");
         if (!metadata.containsAT()) {
-            builder.add(new AccessWidenerTransformer(metadata.modMetadata().getAccessWidener(), resolver, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE)));
+            builder.add(new AccessWidenerTransformer(metadata.modMetadata().getClassTweaker(), resolver, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE)));
         }
-        try (Renamer renamer = builder.build()) {
-            accessorRedirectTransformer.analyze(input, metadata.mixinPackages(), environment);
 
+        try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());
 
             try (FileSystem zipFile = FileSystems.newFileSystem(output)) {

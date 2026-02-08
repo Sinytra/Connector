@@ -41,7 +41,7 @@ public class ConnectorFabricModMetadata implements LoaderModMetadata {
      * Adjust version to accomodate Java Module System requirements
      */
     private static String normalizeVersion(String version) {
-        return version.replace("+", "");
+        return version.replace("+", "_");
     }
 
     public String getNormalizedVersion() {
@@ -74,8 +74,8 @@ public class ConnectorFabricModMetadata implements LoaderModMetadata {
     }
 
     @Override
-    public String getAccessWidener() {
-        return this.wrapped.getAccessWidener();
+    public String getClassTweaker() {
+        return this.wrapped.getClassTweaker();
     }
 
     @Override

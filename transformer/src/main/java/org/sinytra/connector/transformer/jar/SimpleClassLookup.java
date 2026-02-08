@@ -3,7 +3,7 @@ package org.sinytra.connector.transformer.jar;
 import net.minecraftforge.fart.api.ClassProvider;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
-import org.sinytra.adapter.patch.util.provider.ClassLookup;
+import org.sinytra.adapter.util.provider.ClassLookup;
 
 import java.util.Map;
 import java.util.Optional;

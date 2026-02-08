@@ -11,11 +11,11 @@ import org.objectweb.asm.*;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.tree.*;
+import org.sinytra.adapter.analysis.method.MethodCallAnalyzer;
+import org.sinytra.adapter.analysis.selector.AnnotationHandle;
+import org.sinytra.adapter.analysis.selector.AnnotationValueHandle;
+import org.sinytra.adapter.util.MethodQualifier;
 import org.sinytra.connector.transformer.jar.IntermediateMapping;
-import org.sinytra.adapter.patch.analysis.MethodCallAnalyzer;
-import org.sinytra.adapter.patch.analysis.selector.AnnotationHandle;
-import org.sinytra.adapter.patch.analysis.selector.AnnotationValueHandle;
-import org.sinytra.adapter.patch.util.MethodQualifier;
 import org.spongepowered.asm.mixin.gen.AccessorInfo;
 
 import java.io.IOException;
@@ -92,8 +92,8 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
         if (parentMethods > 1) {
             for (AbstractInsnNode insn : method.instructions) {
                 if (insn instanceof MethodInsnNode minsn && minsn.getOpcode() == Opcodes.INVOKEVIRTUAL && minsn.owner.equals(classNode.name) && minsn.name.equals(method.name) && minsn.desc.equals(method.desc)) {
-                    List<AbstractInsnNode> insns = MethodCallAnalyzer.findMethodCallParamInsns(method, minsn);
-                    if (!insns.isEmpty() && insns.getFirst() instanceof VarInsnNode varInsn && varInsn.var == 0) {
+                    List<AbstractInsnNode> insns = MethodCallAnalyzer.getMethodCallInsns(method, minsn);
+                    if (insns != null && !insns.isEmpty() && insns.getFirst() instanceof VarInsnNode varInsn && varInsn.var == 0) {
                         method.instructions.set(minsn, new MethodInsnNode(Opcodes.INVOKESPECIAL, classNode.superName, minsn.name, minsn.desc, minsn.itf));   
                     }
                 }
@@ -188,7 +188,7 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                     }
                 }
 
-                MethodQualifier qualifier = MethodQualifier.create(str).orElse(null);
+                MethodQualifier qualifier = MethodQualifier.parse(str).orElse(null);
                 if (qualifier != null && qualifier.desc() != null) {
                     String owner = qualifier.owner() != null ? this.remapper.mapDesc(qualifier.owner()) : "";
                     String name = qualifier.name() != null ? this.flatMappings.mapMethodOrDefault(qualifier.name(), qualifier.desc()) : "";

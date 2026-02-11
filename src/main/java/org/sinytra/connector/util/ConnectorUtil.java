@@ -39,7 +39,6 @@ public final class ConnectorUtil {
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
     public static final String MODS_TOML = "META-INF/neoforge.mods.toml";
     public static final String CONNECTOR_MARKER = "connector_transformed";
-    public static final String NEOFORGE_MODID = "neoforge";
     public static final Path CONNECTOR_FOLDER = FMLPaths.MODSDIR.get().resolve(".connector");
     public static final String CONNECTOR_MODID = "connector";
     public static final String CONNECTOR_ISSUE_TRACKER_URL = "https://github.com/Sinytra/Connector/issues";

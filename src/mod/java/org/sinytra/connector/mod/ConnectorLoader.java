@@ -10,7 +10,6 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.progress.ProgressMeter;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import org.sinytra.connector.ConnectorEarlyLoader;
-import org.sinytra.connector.mod.compat.LazyEntityAttributes;
 import org.sinytra.connector.mod.mixin.registries.NeoForgeRegistriesSetupAccessor;
 import org.slf4j.Logger;
 

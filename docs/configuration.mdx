@@ -11,7 +11,8 @@ Connector will generate one with the default configuration options. Each of thes
 {
     "version": 1,
     "hiddenMods": [],
-    "globalModAliases": {}
+    "globalModAliases": {},
+    "enableMixinSafeguard": true
 }
 ```
 
@@ -60,6 +61,17 @@ Here's a minimal configuration example:
     ]
 }
 ```
+
+## Mixin Safeguard
+
+If enabled, halts loading and shows a warning screen when an installed mod contains failing Mixins that Connector was
+unable to fix, preventing a hard crash. This warning will only be shown once, after mod transformation, and is enabled
+by default.
+
+<Asset location="connector:mixin_safeguard" width="694" />
+
+Disabling the warning may be useful when detected issues are false-positives, e.g. when Mixins have been disabled
+via mod config or patched by another mod.
 
 ## Dependency Overrides
 

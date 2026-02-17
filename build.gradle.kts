@@ -11,6 +11,7 @@ plugins {
     id("me.modmuss50.mod-publish-plugin") version "0.5.+"
     id("net.neoforged.gradleutils") version "5.1.0"
     id("org.sinytra.adapter.userdev") version "1.2.1-SNAPSHOT"
+    id("org.moddedmc.wiki.toolkit") version "0.4.1"
 }
 
 val versionConnector: String by project
@@ -296,6 +297,14 @@ publishing {
                     }
                 }
             }
+        }
+    }
+}
+
+wiki {
+    docs {
+        create("connector") {
+            root = file("docs")
         }
     }
 }

@@ -69,6 +69,11 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                     processMixinAnnotation(annotation, postProcessRemapper);
                 }
             }
+            if (method.invisibleAnnotations != null) {
+                for (AnnotationNode annotation : method.invisibleAnnotations) {
+                    processMixinAnnotation(annotation, postProcessRemapper);
+                }
+            }
             for (AbstractInsnNode insn : method.instructions) {
                 if (insn instanceof LdcInsnNode ldc) {
                     ldc.cst = postProcessRemapper.mapValue(ldc.cst);
@@ -141,8 +146,15 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
             });
         // If remap has been set to false during compilation, we must manually map the annotation values ourselves instead of relying on the provided refmap
         if (this.remapRefs || handle.<Boolean>getValue("remap").map(h -> !h.get()).orElse(false)) {
+            qualifyMixinMethodSelectors(handle, postProcessRemapper);
             postProcessRemapper.mapAnnotationValues(annotation.values);
         }
+    }
+
+    private static void qualifyMixinMethodSelectors(AnnotationHandle handle, PostProcessRemapper postProcessRemapper) {
+        handle.<List<String>>getValue("method")
+            .map(AnnotationValueHandle::get)
+            .ifPresent(methods -> methods.replaceAll(postProcessRemapper::qualifyMethodSelector));
     }
 
     private record PostProcessRemapper(IntermediateMapping flatMappings, Remapper remapper) {
@@ -217,6 +229,17 @@ public final class OptimizedRenamingTransformer extends RenamingTransformer {
                 }
             }
             return this.remapper.mapValue(value);
+        }
+
+        public String qualifyMethodSelector(String selector) {
+            MethodQualifier qualifier = MethodQualifier.parse(selector).orElse(null);
+            if (qualifier != null && qualifier.desc() == null && qualifier.name() != null) {
+                IntermediateMapping.MethodMapping methodMapping = this.flatMappings.getMethodMapping(qualifier.name());
+                if (methodMapping != null) {
+                    return methodMapping.mappedName() + this.remapper.mapMethodDesc(methodMapping.descriptor());
+                }
+            }
+            return selector;
         }
     }
 

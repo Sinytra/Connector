@@ -23,6 +23,8 @@ public class IntermediateMapping {
     private final Map<String, String> mappings;
     // Original + Descriptor -> Mapped
     private final Map<String, String> extendedMappings;
+    // Original -> Mapped name + original descriptor, when the original method name is unambiguous
+    private final Map<String, MethodMapping> methodMappings;
 
     public static IntermediateMapping get(String sourceNamespace) {
         IntermediateMapping existing = INTERMEDIATE_MAPPINGS_CACHE.get(sourceNamespace);
@@ -40,12 +42,25 @@ public class IntermediateMapping {
                 Map<String, String> resolved = new HashMap<>();
                 Map<String, IMappingFile.INode> buffer = new HashMap<>();
                 Map<String, String> extendedMappings = new HashMap<>();
+                Map<String, MethodMapping> methodMappings = new HashMap<>();
+                Set<String> ambiguousMethods = new HashSet<>();
                 resolver.getCurrentMap(sourceNamespace).getClasses().stream()
                     .flatMap(cls -> Stream.concat(Stream.of(cls), Stream.concat(cls.getFields().stream(), cls.getMethods().stream()))
                         .filter(node -> prefixes.stream().anyMatch(node.getOriginal()::startsWith)))
                     .forEach(node -> {
                         String original = node.getOriginal();
                         String mapped = node.getMapped();
+                        if (node instanceof IMappingFile.IMethod method && method.getDescriptor() != null) {
+                            MethodMapping methodMapping = new MethodMapping(mapped, method.getDescriptor());
+                            MethodMapping existingMethod = methodMappings.get(original);
+                            if (existingMethod == null && !ambiguousMethods.contains(original)) {
+                                methodMappings.put(original, methodMapping);
+                            }
+                            else if (!methodMapping.equals(existingMethod)) {
+                                methodMappings.remove(original);
+                                ambiguousMethods.add(original);
+                            }
+                        }
                         String mapping = resolved.get(original);
                         if (mapping != null && !mapping.equals(mapped)) {
                             resolved.remove(original);
@@ -57,7 +72,7 @@ public class IntermediateMapping {
                             buffer.put(original, node);
                         }
                     });
-                IntermediateMapping mapping = new IntermediateMapping(resolved, extendedMappings);
+                IntermediateMapping mapping = new IntermediateMapping(resolved, extendedMappings, methodMappings);
                 INTERMEDIATE_MAPPINGS_CACHE.put(sourceNamespace, mapping);
                 return mapping;
             }
@@ -76,9 +91,10 @@ public class IntermediateMapping {
         return node.getOriginal();
     }
 
-    public IntermediateMapping(Map<String, String> mappings, Map<String, String> extendedMappings) {
+    public IntermediateMapping(Map<String, String> mappings, Map<String, String> extendedMappings, Map<String, MethodMapping> methodMappings) {
         this.mappings = mappings;
         this.extendedMappings = extendedMappings;
+        this.methodMappings = methodMappings;
     }
 
     @Nullable
@@ -102,6 +118,11 @@ public class IntermediateMapping {
     }
 
     @Nullable
+    public MethodMapping getMethodMapping(String name) {
+        return this.methodMappings.get(name);
+    }
+
+    @Nullable
     public String mapMethod(String name, String desc) {
         String mapped = this.mappings.get(name);
         if (mapped == null) {
@@ -109,5 +130,8 @@ public class IntermediateMapping {
             return this.extendedMappings.get(qualifier);
         }
         return mapped;
+    }
+
+    public record MethodMapping(String mappedName, String descriptor) {
     }
 }

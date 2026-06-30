@@ -22,6 +22,7 @@ import java.util.jar.Attributes;
 import static org.sinytra.adapter.util.AdapterUtil.insnList;
 
 public class BytecodeFixerUpperFrontend {
+    // TODO 26.1 update
     private static final List<TypeAdapter> FIELD_TYPE_ADAPTERS = List.of(
         new SimpleTypeAdapter(Type.getObjectType("net/minecraft/core/Holder$Reference"), Type.getObjectType("java/lang/Object"), (list, insn) ->
             list.insert(insn, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/core/Holder$Reference", "value", "()Ljava/lang/Object;"))),

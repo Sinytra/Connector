@@ -1,0 +1,3 @@
+org.sinytra.connector.service.coremod.ConnectorClassProcessor
+org.sinytra.connector.service.coremod.ConnectorMethodProcessor
+org.sinytra.connector.service.coremod.FabricASMClassGenerator

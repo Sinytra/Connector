@@ -11,6 +11,7 @@ import org.sinytra.adapter.util.MethodQualifier;
 import java.util.Map;
 
 public class ClassAnalysingTransformer implements ClassNodeTransformer.ClassProcessor {
+    // TODO 26.1 Check & update
     private static final Map<MethodQualifier, MethodQualifier> REPLACEMENTS = Map.of(
         new MethodQualifier("Ljava/lang/Class;", "getResourceAsStream", "(Ljava/lang/String;)Ljava/io/InputStream;"),
         new MethodQualifier("org/sinytra/connector/mod/ConnectorMod", "getModResourceAsStream", "(Ljava/lang/Class;Ljava/lang/String;)Ljava/io/InputStream;"),

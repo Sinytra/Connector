@@ -1,6 +1,6 @@
 package org.sinytra.connector.transformer.runner.runtime;
 
-import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
+import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleURI;
 import org.spongepowered.asm.launch.platform.container.ContainerHandleVirtual;
 import org.spongepowered.asm.launch.platform.container.IContainerHandle;
@@ -18,7 +18,7 @@ public class MixinServiceProbe extends MixinServiceAbstract {
 
     private IClassBytecodeProvider bytecodeProvider;
 
-    public void setLoader(ILaunchPluginService.ITransformerLoader loader) {
+    public void setLoader(TransformerBytecodeProvider loader) {
         if (loader != null) {
             this.bytecodeProvider = new ProbeClassBytecodeProvider(loader);
         } else {

@@ -1,9 +1,9 @@
 package org.sinytra.connector.transformer.runner.runtime;
 
 import com.google.common.io.Resources;
-import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
+import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.transformers.MixinClassReader;
 
@@ -11,9 +11,9 @@ import java.io.IOException;
 import java.net.URL;
 
 public class ProbeClassBytecodeProvider implements IClassBytecodeProvider {
-    private final ILaunchPluginService.ITransformerLoader transformerLoader;
+    private final TransformerBytecodeProvider transformerLoader;
 
-    public ProbeClassBytecodeProvider(ILaunchPluginService.ITransformerLoader transformerLoader) {
+    public ProbeClassBytecodeProvider(TransformerBytecodeProvider transformerLoader) {
         this.transformerLoader = transformerLoader;
     }
 
@@ -39,7 +39,7 @@ public class ProbeClassBytecodeProvider implements IClassBytecodeProvider {
         byte[] classBytes;
 
         try {
-            classBytes = this.transformerLoader.buildTransformedClassNodeFor(canonicalName);
+            classBytes = this.transformerLoader.getByteCode(canonicalName);
         } catch (ClassNotFoundException ex) {
             URL url = Thread.currentThread().getContextClassLoader().getResource(internalName + ".class");
             if (url == null) {

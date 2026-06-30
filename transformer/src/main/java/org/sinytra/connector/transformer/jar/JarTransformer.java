@@ -3,13 +3,12 @@ package org.sinytra.connector.transformer.jar;
 import com.google.common.base.Stopwatch;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
-import cpw.mods.jarhandling.JarContents;
-import cpw.mods.jarhandling.JarContentsBuilder;
-import cpw.mods.jarhandling.JarMetadata;
-import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
-import net.minecraftforge.fart.api.ClassProvider;
+import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
+import net.neoforged.art.api.ClassProvider;
+import net.neoforged.fml.jarcontents.JarContents;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.env.ctx.AuditTrail;
+import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
 import org.sinytra.connector.transformer.transform.TransformerUtil;
@@ -33,11 +32,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static cpw.mods.modlauncher.api.LambdaExceptionUtils.uncheck;
+import static org.sinytra.connector.transformer.transform.TransformerUtil.uncheck;
 
 public final class JarTransformer {
-    public static final String SOURCE_NAMESPACE = "intermediary";
-    public static final String OBF_NAMESPACE = "mojang";
     public static final Marker TRANSFORM_MARKER = MarkerFactory.getMarker("TRANSFORM");
     private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -70,14 +67,19 @@ public final class JarTransformer {
     }
 
     public TransformableJar cacheTransformableJar(File input) throws IOException {
-        String name = input.getName().split("\\.(?!.*\\.)")[0];
+        JarContents contents = JarContents.ofPath(input.toPath());
+        LoaderModMetadata loaderModMetadata = MetadataReader.readModMetadata(contents);
+        FabricModFileMetadata metadata = MetadataReader.readJarMetadata(contents, Objects.requireNonNull(loaderModMetadata), this.environment);
+        return cacheTransformableJar(input, metadata, null);
+    }
+
+    public TransformableJar cacheTransformableJar(File input, FabricModFileMetadata metadata, @Nullable String nameOverride) throws IOException {
+        String name = nameOverride != null ? nameOverride : input.getName().split("\\.(?!.*\\.)")[0];
         Path output = this.environment.createCachedJarPath(name);
 
-        FabricModFileMetadata metadata = FabricJarReader.readModMetadata(input, this.environment);
         FabricModPath path = new FabricModPath(output, metadata);
-        TransformerUtil.CacheFile cacheFile = TransformerUtil.getCached(input.toPath(), output, this.environment.getJarCacheVersion());
-        String moduleName = getModuleName(input.toPath());
-        return new TransformableJar(input, path, cacheFile, moduleName);
+        TransformerUtil.CacheFile cacheFile = TransformerUtil.getCachedPath(input.toPath(), output, this.environment.getJarCacheVersion());
+        return new TransformableJar(input, path, cacheFile);
     }
 
     private List<TransformedFabricModPath> transformJars(List<TransformableJar> paths, List<Path> libs) {
@@ -88,9 +90,10 @@ public final class JarTransformer {
             JarTransformInstance transformInstance;
             try {
                 ClassProvider classProvider = this.environment.getRuntimeClassProvider(libs);
-                ILaunchPluginService.ITransformerLoader loader = name -> classProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
+                TransformerBytecodeProvider loader = name -> classProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
                 this.environment.setGlobalBytecodeLoader(loader);
-                transformInstance = new JarTransformInstance(this.environment, classProvider, libs);
+
+                transformInstance = new JarTransformInstance(this.environment);
             } finally {
                 initProgress.complete();
             }
@@ -98,6 +101,7 @@ public final class JarTransformer {
             List<Pair<File, Future<Pair<FabricModPath, AuditTrail>>>> futures = paths.stream()
                 .map(jar -> {
                     Future<Pair<FabricModPath, AuditTrail>> future = executorService.submit(() -> {
+                        Thread.currentThread().setName("TX " + jar.input.getName());
                         Pair<FabricModPath, AuditTrail> pair = jar.transform(transformInstance);
                         progress.increment();
                         return pair;
@@ -153,22 +157,11 @@ public final class JarTransformer {
         }
     }
 
-    @Nullable
-    private static String getModuleName(Path path) {
-        try(JarContents contents = new JarContentsBuilder().paths(path).build()) {
-            JarMetadata metadata = JarMetadata.from(contents);
-            return metadata.descriptor().name();
-        } catch (IOException e) {
-            LOGGER.error("Error reading jar contents from {}", path, e);
-            return null;
-        }
-    }
-
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
 
     public record TransformedFabricModPath(Path input, FabricModPath output, @Nullable AuditTrail auditTrail) {}
 
-    public record TransformableJar(File input, FabricModPath modPath, TransformerUtil.CacheFile cacheFile, String moduleName) {
+    public record TransformableJar(File input, FabricModPath modPath, TransformerUtil.CacheFile cacheFile) {
         public Pair<FabricModPath, AuditTrail> transform(JarTransformInstance transformInstance) throws IOException {
             Files.deleteIfExists(this.modPath.path);
             AuditTrail audit = transformInstance.transformJar(this.input, this.modPath.path, this.modPath.metadata());

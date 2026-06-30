@@ -1,6 +1,6 @@
 package org.sinytra.connector.transformer.patch;
 
-import net.minecraftforge.fart.api.Transformer;
+import net.neoforged.art.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;

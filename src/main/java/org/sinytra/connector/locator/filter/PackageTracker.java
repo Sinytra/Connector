@@ -17,16 +17,15 @@
  */
 package org.sinytra.connector.locator.filter;
 
-import cpw.mods.niofs.union.UnionPathFilter;
+import net.neoforged.fml.jarcontents.JarContents.PathFilter;
 
-import java.nio.file.Path;
 import java.util.Set;
 
 // Source
 // https://github.com/McModLauncher/bootstraplauncher/blob/09c1f9980369e01724d6e8842c23dcf8a53fb46d/src/main/java/cpw/mods/bootstraplauncher/BootstrapLauncher.java#L165-L179
-public record PackageTracker(Set<String> packages) implements UnionPathFilter {
+public record PackageTracker(Set<String> packages) implements PathFilter {
     @Override
-    public boolean test(final String path, final Path basePath) {
+    public boolean test(final String path) {
         // This method returns true if the given path is allowed within the JAR (filters out 'bad' paths)
 
         if (this.packages.isEmpty() || // This is the first jar, nothing is claimed yet, so allow everything

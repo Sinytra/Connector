@@ -47,6 +47,7 @@ jobs:
         run: ./gradlew clean build --stacktrace
   publish:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name: Maven

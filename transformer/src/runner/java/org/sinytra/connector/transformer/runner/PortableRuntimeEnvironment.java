@@ -1,13 +1,11 @@
 package org.sinytra.connector.transformer.runner;
 
-import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
 import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.impl.metadata.DependencyOverrides;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
-import net.fabricmc.loader.impl.metadata.VersionOverrides;
-import net.minecraftforge.fart.api.ClassProvider;
+import net.neoforged.art.api.ClassProvider;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.util.provider.ClassLookup;
+import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.SimpleClassLookup;
 import org.sinytra.connector.transformer.runner.runtime.MixinServiceProbe;
@@ -17,12 +15,8 @@ import org.spongepowered.asm.service.MixinService;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.function.Supplier;
 
 public class PortableRuntimeEnvironment implements TransformerEnvironment {
-    private static final VersionOverrides VERSION_OVERRIDES = new VersionOverrides();
-    private static final DependencyOverrides DEPENDENCY_OVERRIDES = new DependencyOverrides(Path.of("nonexistent"));
-
     private final Path outputDir;
     private final Path auditLogPath;
     private final Path cleanPath;
@@ -58,11 +52,6 @@ public class PortableRuntimeEnvironment implements TransformerEnvironment {
     }
 
     @Override
-    public LoaderModMetadata wrapModMetadata(LoaderModMetadata metadata) {
-        return metadata;
-    }
-
-    @Override
     public TransformProgressMeter createProgressMeter(String msg, int steps) {
         return new DummyProgressMeter();
     }
@@ -78,17 +67,7 @@ public class PortableRuntimeEnvironment implements TransformerEnvironment {
     }
 
     @Override
-    public VersionOverrides getVersionOverrides() {
-        return VERSION_OVERRIDES;
-    }
-
-    @Override
-    public Supplier<DependencyOverrides> getDependencyOverrides() {
-        return () -> DEPENDENCY_OVERRIDES;
-    }
-
-    @Override
-    public void setGlobalBytecodeLoader(@Nullable ILaunchPluginService.ITransformerLoader loader) {
+    public void setGlobalBytecodeLoader(@Nullable TransformerBytecodeProvider loader) {
         MixinServiceProbe service = (MixinServiceProbe) MixinService.getService();
         service.setLoader(loader);
     }

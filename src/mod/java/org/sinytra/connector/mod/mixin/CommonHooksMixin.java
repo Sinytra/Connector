@@ -33,7 +33,7 @@ public abstract class CommonHooksMixin {
         }
     }
 
-    @Inject(at = @At("TAIL"), method = "modifyAttributes", remap = false)
+    @Inject(method = "modifyAttributes", at = @At("TAIL"), remap = false)
     private static void connector$allowAttributeMixins(CallbackInfo ci, @Local Map<EntityType<? extends LivingEntity>, AttributeSupplier.Builder> modifiedMap) {
         modifiedMap.forEach((entity, attributes) -> {
             AttributeSupplier fromVanilla = DefaultAttributes.getSupplier(entity);

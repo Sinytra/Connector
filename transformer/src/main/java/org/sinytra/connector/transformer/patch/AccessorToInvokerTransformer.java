@@ -18,8 +18,9 @@ public record AccessorToInvokerTransformer(String value) implements MethodTransf
 
     @Override
     public PatchResult apply(MixinContext context, Configuration config) {
-        if (!context.methodAnnotation().matchesDesc(MixinAnnotations.ACCESSOR))
+        if (!context.methodAnnotation().matchesDesc(MixinAnnotations.ACCESSOR)) {
             return PatchResult.PASS;
+        }
 
         ClassNode classNode = context.classNode();
         MethodNode methodNode = context.methodNode();

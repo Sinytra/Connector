@@ -12,9 +12,9 @@ group = "org.sinytra.connector"
 version = rootProject.version
 
 val versionAdapterCore: String by rootProject
-val versionForgeAutoRenamingTool: String by rootProject
+val versionAutoRenamingTool: String by rootProject
 val versionForgifiedFabricLoader: String by rootProject
-val versionAccessWidener: String by rootProject
+val versionClassTweaker: String by rootProject
 
 val runner: SourceSet by sourceSets.creating {}
 val shade: Configuration by configurations.creating
@@ -42,6 +42,10 @@ repositories {
         name = "Mojang"
         url = uri("https://libraries.minecraft.net")
     }
+    maven {
+        name = "FabricMC"
+        url = uri("https://maven.fabricmc.net")
+    }
     mavenLocal()
 }
 
@@ -50,16 +54,15 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core")
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
     implementation("org.sinytra.adapter:core:$versionAdapterCore")
-    implementation("org.sinytra:ForgeAutoRenamingTool:$versionForgeAutoRenamingTool") {
+    implementation("org.sinytra:AutoRenamingTool:$versionAutoRenamingTool") {
         isTransitive = false
     }
     implementation("org.sinytra:forgified-fabric-loader:$versionForgifiedFabricLoader")
-    implementation("net.fabricmc:access-widener:$versionAccessWidener")
+    implementation("net.fabricmc:class-tweaker:$versionClassTweaker") { isTransitive = false }
 
     compileOnly("org.jetbrains:annotations:13.0")
     implementation("com.mojang:logging:1.2.7")
-    implementation("cpw.mods:modlauncher:11.0.4")
-    implementation("cpw.mods:securejarhandler:3.0.8")
+    implementation("net.neoforged.fancymodloader:loader:11.0.13") { isTransitive = false }
     implementation("net.fabricmc:sponge-mixin:0.15.2+mixin.0.8.7")
 
     "runnerImplementation"(sourceSets.main.get().output)
@@ -127,53 +130,3 @@ class Log4JConfigTransformer(private val resourcesDir: File?) : ResourceTransfor
     override fun hasTransformedResource(): Boolean = true
     override fun modifyOutputStream(os: ZipOutputStream, preserveFileTimestamps: Boolean) {}
 }
-
-/*
-    // parameter  instance
-    // parameter  item
-    // parameter  original
-  @Lcom/llamalad7/mixinextras/injector/wrapoperation/WrapOperation;(method={"useItemOn"}, at={@Lorg/spongepowered/asm/mixin/injection/At;(value="INVOKE", target="Lnet/minecraft/world/item/ItemStack;is(Lnet/minecraft/world/item/Item;)Z")})
-   L0
-    LINENUMBER 25 L0
-    ALOAD 3
-    ICONST_2
-    ANEWARRAY java/lang/Object
-    DUP
-    ICONST_0
-    ALOAD 1
-    AASTORE
-    DUP
-    ICONST_1
-    ALOAD 2
-    AASTORE
-    INVOKEINTERFACE com/llamalad7/mixinextras/injector/wrapoperation/Operation.call ([Ljava/lang/Object;)Ljava/lang/Object; (itf)
-    CHECKCAST java/lang/Boolean
-    INVOKEVIRTUAL java/lang/Boolean.booleanValue ()Z
-    IFNE L1
-    ALOAD 2
-    GETSTATIC net/minecraft/world/item/Items.SHEARS : Lnet/minecraft/world/item/Item;
-    IF_ACMPNE L2
-    ALOAD 1
-    INVOKESTATIC org/betterx/bclib/items/tool/BaseShearsItem.isShear (Lnet/minecraft/world/item/ItemStack;)Z
-    IFEQ L2
-   L1
-   FRAME SAME
-    ICONST_1
-    GOTO L3
-   L2
-   FRAME SAME
-    ICONST_0
-   L3
-   FRAME SAME1 I
-    IRETURN
-   L4
-    LOCALVARIABLE this Lorg/betterx/bclib/mixin/common/shears/PumpkinBlockMixin; L0 L4 0
-    LOCALVARIABLE instance Lnet/minecraft/world/item/ItemStack; L0 L4 1
-    LOCALVARIABLE item Lnet/minecraft/world/item/Item; L0 L4 2
-    LOCALVARIABLE original Lcom/llamalad7/mixinextras/injector/wrapoperation/Operation; L0 L4 3
-    // signature Lcom/llamalad7/mixinextras/injector/wrapoperation/Operation<Ljava/lang/Boolean;>;
-    // declaration: original extends com.llamalad7.mixinextras.injector.wrapoperation.Operation<java.lang.Boolean>
-    MAXSTACK = 5
-    MAXLOCALS = 4
-
- */

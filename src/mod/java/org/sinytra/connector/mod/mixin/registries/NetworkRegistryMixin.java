@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.ServerCommonPacketListener;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import net.neoforged.neoforge.network.registration.PayloadRegistration;
 import org.sinytra.connector.ConnectorEarlyLoader;
@@ -28,7 +28,7 @@ import java.util.Map;
 public abstract class NetworkRegistryMixin {
     @Shadow
     @Final
-    private static Map<ConnectionProtocol, Map<ResourceLocation, PayloadRegistration<?>>> PAYLOAD_REGISTRATIONS;
+    private static Map<ConnectionProtocol, Map<Identifier, PayloadRegistration<?>>> PAYLOAD_REGISTRATIONS;
 
     @Redirect(method = "register", at = @At(value = "INVOKE", target = "Ljava/lang/String;equals(Ljava/lang/Object;)Z"))
     private static boolean dontCollapseOnDefaultNamespace(String str, Object obj) {
@@ -38,7 +38,7 @@ public abstract class NetworkRegistryMixin {
     @ModifyExpressionValue(method = "isModdedPayload", at = @At(value = "INVOKE", target = "Ljava/lang/String;equals(Ljava/lang/Object;)Z"))
     private static boolean allowMinecraftModdedPayload(boolean result, CustomPacketPayload payload) {
         if (result) {
-            for (Map.Entry<ConnectionProtocol, Map<ResourceLocation, PayloadRegistration<?>>> entry : PAYLOAD_REGISTRATIONS.entrySet()) {
+            for (Map.Entry<ConnectionProtocol, Map<Identifier, PayloadRegistration<?>>> entry : PAYLOAD_REGISTRATIONS.entrySet()) {
                 if (entry.getValue().containsKey(payload.type().id())) {
                     return true;
                 }
@@ -54,7 +54,7 @@ public abstract class NetworkRegistryMixin {
     )
     private static void onCheckPacketServer(Packet<?> packet, ServerCommonPacketListener listener, CallbackInfo ci) {
         if (packet instanceof ClientboundCustomPayloadPacket customPayloadPacket) {
-            ResourceLocation id = customPayloadPacket.payload().type().id();
+            Identifier id = customPayloadPacket.payload().type().id();
             if (ConnectorEarlyLoader.isConnectorMod(id.getNamespace())
                 || ConnectorEarlyLoader.isConnectorModClass(customPayloadPacket.payload().getClass())
             ) {
@@ -70,7 +70,7 @@ public abstract class NetworkRegistryMixin {
     )
     private static void onCheckPacketClient(Packet<?> packet, ClientCommonPacketListener listener, CallbackInfo ci) {
         if (packet instanceof ServerboundCustomPayloadPacket customPayloadPacket) {
-            ResourceLocation id = customPayloadPacket.payload().type().id();
+            Identifier id = customPayloadPacket.payload().type().id();
             if (ConnectorEarlyLoader.isConnectorMod(id.getNamespace()) 
                 || ConnectorEarlyLoader.isConnectorModClass(customPayloadPacket.payload().getClass())
             ) {

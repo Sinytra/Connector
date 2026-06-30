@@ -1,6 +1,5 @@
 package org.sinytra.connector.transformer.runner.runtime;
 
-import cpw.mods.modlauncher.Launcher;
 import org.spongepowered.asm.service.IClassProvider;
 
 import java.net.URL;
@@ -24,6 +23,6 @@ public class ProbeClassProvider implements IClassProvider {
 
     @Override
     public Class<?> findAgentClass(String name, boolean initialize) throws ClassNotFoundException {
-        return Class.forName(name, initialize, Launcher.class.getClassLoader());
+        return Class.forName(name, initialize, Thread.currentThread().getContextClassLoader());
     }
 }

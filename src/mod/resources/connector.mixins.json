@@ -2,45 +2,27 @@
   "required": true,
   "minVersion": "0.8.4",
   "package": "org.sinytra.connector.mod.mixin",
-  "compatibilityLevel": "JAVA_17",
-  "plugin": "org.sinytra.connector.mod.ConnectorBootstrap",
+  "compatibilityLevel": "JAVA_25",
+  "plugin": "org.sinytra.connector.mod.ConnectorMixinPlugin",
   "mixins": [
-    "AttributeSupplierBuilderMixin",
-    "ChunkGeneratorMixin",
-    "CommonHooksMixin",
-    "PlayerListMixin",
     "block.IBlockExtensionMixin",
-    "boot.DatagenModLoaderMixin",
     "item.IItemExtensionMixin",
     "item.ItemStackMixin",
     "network.BundlerInfoMixin",
     "network.StreamCodecMixin",
     "registries.DataPackRegistriesHooksAccessor",
-    "registries.MappedRegistryAccessor",
-    "registries.NeoForgeRegistriesSetupAccessor",
-    "registries.BuiltInRegistriesMixin",
     "registries.EntityDataSerializersMixin",
-    "registries.NeoForgeRegistriesSetupMixin",
+    "registries.MappedRegistryAccessor",
     "registries.NetworkRegistryMixin",
     "registries.PoiTypesMixin",
-    "registries.RegistryDataLoaderMixin"
+    "registries.RegistryDataLoaderMixin",
+    "ChunkGeneratorMixin",
+    "CommonHooksMixin",
+    "PlayerListMixin"
   ],
   "client": [
-    "boot.MinecraftMixin",
-    "client.BlockColorsMixin",
-    "client.DebugScreenOverlayMixin",
     "client.ForgeHooksClientMixin",
-    "client.ItemColorsMixin",
-    "client.ItemOverridesMixin",
-    "client.KeyMappingMixin",
-    "client.ParticleEngineMixin",
-    "recipebook.RecipeBookCategoriesAccessor",
-    "recipebook.RecipeBookCategoriesMixin",
-    "recipebook.RecipeBookManagerMixin",
-    "registries.ItemBlockRenderTypesMixin"
-  ],
-  "server": [
-    "boot.ServerMainMixin"
+    "client.KeyMappingMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(value = ItemStack.class, priority = 500)
 public abstract class ItemStackMixin implements ItemStackExtensions {
 
-    @Inject(method = "lambda$useOn$16", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "lambda$useOn$0", at = @At("HEAD"), cancellable = true)
     private void appyUseOn(UseOnContext pContext, UseOnContext c, CallbackInfoReturnable<InteractionResult> cir) {
         InteractionResult result = connector_useOn(c);
         if (result != null) {

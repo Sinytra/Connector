@@ -11,7 +11,7 @@ import java.util.List;
 
 @Mixin(ClientHooks.class)
 public abstract class ForgeHooksClientMixin {
-    @ModifyReturnValue(method = "gatherTooltipComponents(Lnet/minecraft/world/item/ItemStack;Ljava/util/List;Ljava/util/Optional;IIILnet/minecraft/client/gui/Font;)Ljava/util/List;", at = @At("RETURN"))
+    @ModifyReturnValue(method = "gatherTooltipComponents", at = @At("RETURN"))
     private static List<ClientTooltipComponent> makeTooltipComponentListMutable(List<ClientTooltipComponent> list) {
         return new ArrayList<>(list);
     }

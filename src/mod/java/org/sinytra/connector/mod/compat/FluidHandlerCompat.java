@@ -5,8 +5,8 @@ import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
@@ -22,7 +22,7 @@ import java.util.Map;
 
 public final class FluidHandlerCompat {
     private static final Map<Fluid, FluidType> FABRIC_FLUID_TYPES = new HashMap<>();
-    private static final Map<ResourceLocation, FluidType> FABRIC_FLUID_TYPES_BY_NAME = new HashMap<>();
+    private static final Map<Identifier, FluidType> FABRIC_FLUID_TYPES_BY_NAME = new HashMap<>();
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public static void init(IEventBus bus) {
@@ -47,10 +47,12 @@ public final class FluidHandlerCompat {
             // Allow Forge mods to access Fabric fluid properties
             ResourceKey<Fluid> key = entry.getKey();
             Fluid fluid = entry.getValue();
-            if (ModList.get().getModContainerById(key.location().getNamespace()).map(c -> ConnectorEarlyLoader.isConnectorMod(c.getModId())).orElse(false)) {
+            if (ModList.get().getModContainerById(key.identifier().getNamespace())
+                .map(c -> ConnectorEarlyLoader.isConnectorMod(c.getModId())).orElse(false)
+            ) {
                 FluidType type = new FabricFluidType(FluidType.Properties.create(), fluid);
                 FABRIC_FLUID_TYPES.put(fluid, type);
-                FABRIC_FLUID_TYPES_BY_NAME.put(key.location(), type);
+                FABRIC_FLUID_TYPES_BY_NAME.put(key.identifier(), type);
             }
         }
     }

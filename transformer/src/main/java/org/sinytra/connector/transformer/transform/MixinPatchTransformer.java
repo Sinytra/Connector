@@ -2,7 +2,7 @@ package org.sinytra.connector.transformer.transform;
 
 import com.google.gson.*;
 import com.mojang.logging.LogUtils;
-import net.minecraftforge.fart.api.Transformer;
+import net.neoforged.art.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.AnnotationNode;
@@ -19,6 +19,7 @@ import org.sinytra.adapter.transform.patch.MethodPatch;
 import org.sinytra.adapter.types.FieldTypeUsageTransformer;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
+import org.sinytra.connector.transformer.patch.SimpleRefmap;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -30,7 +31,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static cpw.mods.modlauncher.api.LambdaExceptionUtils.rethrowConsumer;
+import static org.sinytra.connector.transformer.transform.TransformerUtil.rethrowConsumer;
 
 public class MixinPatchTransformer implements Transformer {
     private static final List<MethodPatch> PRIORITY_PATCHES = MixinPatches.getPriorityPatches();
@@ -51,7 +52,7 @@ public class MixinPatchTransformer implements Transformer {
             new EnvironmentStripperTransformer(runtimeEnvironment.getEnvType()),
             new FieldTypeUsageTransformer()
         );
-        
+
         List<MethodPatch> allPatches = Stream.of(PRIORITY_PATCHES, extraPatches, PATCHES)
             .<MethodPatch>flatMap(Collection::stream)
             .toList();
@@ -61,7 +62,7 @@ public class MixinPatchTransformer implements Transformer {
             .build();
     }
 
-    public void finalize(Path zipRoot, Collection<String> configs, Map<String, MappingAwareReferenceMapper.SimpleRefmap> refmapFiles, Set<String> dirtyRefmaps) throws IOException {
+    public void finalize(Path zipRoot, Collection<String> configs, Map<String, SimpleRefmap> refmapFiles, Set<String> dirtyRefmaps) throws IOException {
         Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.classGenerator().getGeneratedMixinClasses();
         if (!generatedMixinClasses.isEmpty()) {
             for (String config : configs) {
@@ -86,7 +87,7 @@ public class MixinPatchTransformer implements Transformer {
                                 if (json.has("refmap")) {
                                     String refmapName = json.get("refmap").getAsString();
                                     if (dirtyRefmaps.contains(refmapName)) {
-                                        MappingAwareReferenceMapper.SimpleRefmap refmap = refmapFiles.get(refmapName);
+                                        SimpleRefmap refmap = refmapFiles.get(refmapName);
                                         Path path = zipRoot.resolve(refmapName);
                                         if (Files.exists(path)) {
                                             String refmapString = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(refmap);

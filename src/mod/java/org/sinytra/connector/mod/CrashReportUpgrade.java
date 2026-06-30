@@ -4,12 +4,12 @@ import net.neoforged.fml.CrashReportCallables;
 import net.neoforged.neoforgespi.language.IModInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.sinytra.connector.ConnectorEarlyLoader;
-import org.sinytra.connector.util.ConnectorUtil;
 
 import java.util.List;
 import java.util.Locale;
 
 public final class CrashReportUpgrade {
+    private static final String CONNECTOR_ISSUE_TRACKER_URL = "https://github.com/Sinytra/Connector/issues";
 
     public static void registerCrashLogInfo() {
         CrashReportCallables.registerHeader(() -> {
@@ -18,7 +18,7 @@ public final class CrashReportUpgrade {
             builder.append("\n").append(StringUtils.repeat('=', 25));
             builder.append("\nSINYTRA CONNECTOR IS PRESENT!");
             builder.append("\nPlease verify issues are not caused by Connector before reporting them to mod authors.");
-            builder.append("\nIf you're unsure, file a report on Connector's issue tracker found at ").append(ConnectorUtil.CONNECTOR_ISSUE_TRACKER_URL).append(".");
+            builder.append("\nIf you're unsure, file a report on Connector's issue tracker found at ").append(CONNECTOR_ISSUE_TRACKER_URL).append(".");
             builder.append("\n").append(StringUtils.repeat('=', 25));
             builder.append("\n\n");
             return builder.toString();
@@ -30,7 +30,7 @@ public final class CrashReportUpgrade {
             builder.append(version);
             builder.append("\n\t\tSINYTRA CONNECTOR IS PRESENT!");
             builder.append("\n\t\tPlease verify issues are not caused by Connector before reporting them to mod authors. If you're unsure, file a report on Connector's issue tracker.");
-            builder.append("\n\t\tConnector's issue tracker can be found at ").append(ConnectorUtil.CONNECTOR_ISSUE_TRACKER_URL).append(".");
+            builder.append("\n\t\tConnector's issue tracker can be found at ").append(CONNECTOR_ISSUE_TRACKER_URL).append(".");
             List<IModInfo> mods = ConnectorEarlyLoader.getConnectorMods();
             if (!mods.isEmpty()) {
                 builder.append("\n\t\tInstalled Fabric mods:");

@@ -1,38 +1,36 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
-import net.neoforged.moddevgradle.dsl.RunModel
-import net.neoforged.moddevgradle.internal.RunGameTask
+import org.slf4j.event.Level
 
 plugins {
     java
     `maven-publish`
-    id("net.neoforged.moddev") version "2.0.140"
-    id("com.gradleup.shadow") version "9.3.1" apply false
-    id("me.modmuss50.mod-publish-plugin") version "0.5.+"
-    id("net.neoforged.gradleutils") version "5.1.0"
+    id("net.neoforged.moddev") version "2.0.141"
+    id("com.gradleup.shadow") version "9.4.2" apply false
+    id("me.modmuss50.mod-publish-plugin") version "2.1.1"
+    id("net.neoforged.gradleutils") version "5.1.1"
     id("org.sinytra.adapter.userdev") version "1.2.1-SNAPSHOT"
     id("org.moddedmc.wiki.toolkit") version "0.4.1"
 }
 
-val versionConnector: String by project
-val versionAdapterCore: String by project
-val versionAdapterRuntime: String by project
-val versionMc: String by project
-val versionNeoForge: String by project
-val versionParchmentMc: String by project
-val versionParchment: String by project
-val versionForgeAutoRenamingTool: String by project
-val versionForgifiedFabricLoader: String by project
-val versionAccessWidener: String by project
-val versionForgifiedFabricApi: String by project
-val curseForgeId: String by project
-val modrinthId: String by project
-val githubRepository: String by project
-val publishBranch: String by project
-val forgifiedFabricApiCurseForge: String by project
-val forgifiedFabricApiModrinth: String by project
-val connectorExtrasCurseForge: String by project
-val connectorExtrasModrinth: String by project
+val versionConnector = project.property("versionConnector") as String
+val versionLaunchpad = project.property("versionLaunchpad") as String
+val versionAdapterCore = project.property("versionAdapterCore") as String
+val versionAdapterRuntime = project.property("versionAdapterRuntime") as String
+val versionAutoRenamingTool = project.property("versionAutoRenamingTool") as String
+val versionClassTweaker = project.property("versionClassTweaker") as String
+val versionMc = project.property("versionMc") as String
+val versionNeoForge = project.property("versionNeoForge") as String
+val versionForgifiedFabricApi = project.property("versionForgifiedFabricApi") as String
+
+val curseForgeId = project.property("curseForgeId") as String
+val modrinthId = project.property("modrinthId") as String
+val githubRepository = project.property("githubRepository") as String
+val publishBranch = project.property("publishBranch") as String
+val forgifiedFabricApiCurseForge = project.property("forgifiedFabricApiCurseForge") as String
+val forgifiedFabricApiModrinth = project.property("forgifiedFabricApiModrinth") as String
+val connectorExtrasCurseForge = project.property("connectorExtrasCurseForge") as String
+val connectorExtrasModrinth = project.property("connectorExtrasModrinth") as String
 
 val PUBLISH_RELEASE_TYPE: Provider<String> = providers.environmentVariable("PUBLISH_RELEASE_TYPE")
 
@@ -44,74 +42,52 @@ if (!PUBLISH_RELEASE_TYPE.isPresent) {
 }
 logger.lifecycle("Project version: $version")
 
-val mod: SourceSet by sourceSets.creating
-
-val shade: Configuration by configurations.creating
+val mod = sourceSets.create("mod")
+val shade = configurations.create("shade")
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
     withSourcesJar()
-}
-
-configurations {
-    compileOnly {
-        extendsFrom(shade)
-    }
-
-    "modCompileOnly" {
-        extendsFrom(shade)
-    }
 }
 
 println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty("java.vm.version")} (${System.getProperty("java.vendor")}), Arch: ${System.getProperty("os.arch")}")
 neoForge {
-    // Specify the version of NeoForge to use.
     version = versionNeoForge
 
     accessTransformers {
         from(project.file("src/mod/resources/META-INF/accesstransformer.cfg"))
     }
 
-    parchment {
-        mappingsVersion = versionParchment
-        minecraftVersion = versionParchmentMc
-    }
-
     runs {
-        configureEach {
-            additionalRuntimeClasspathConfiguration.extendsFrom(shade)
-            additionalRuntimeClasspathConfiguration.dependencies.add(dependencies.create(files(tasks.jar)))
-        }
-
-        val config = Action<RunModel> {
-            systemProperty("forge.logging.console.level", "debug")
-            systemProperty("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE,COREMOD")
-            systemProperty("connector.logging.markers", "MIXINPATCH,MERGER")
-            systemProperty("mixin.debug.export", "true")
-            gameDirectory.set(layout.projectDirectory.dir("run"))
-        }
-
         create("client") {
             client()
-            config(this)
         }
 
         create("server") {
             server()
-            config(this)
+            programArgument("--nogui")
+        }
+
+        configureEach {
+            systemProperty("forge.logging.markers", "REGISTRIES,SCAN,FMLHANDSHAKE,COREMOD")
+            systemProperty("connector.logging.markers", "MIXINPATCH,MERGER")
+            systemProperty("mixin.debug.export", "true")
+
+//            logLevel = Level.DEBUG
+        }
+    }
+
+    mods {
+        create("connector") {
+            sourceSet(mod)
         }
     }
 
     addModdingDependenciesTo(mod)
-
-    mods {
-        maybeCreate("connector").apply {
-            sourceSet(mod)
-        }
-    }
 }
 
 repositories {
+    mavenLocal()
     maven {
         name = "Sinytra"
         url = uri("https://maven.su5ed.dev/releases")
@@ -120,39 +96,45 @@ repositories {
         }
     }
     maven {
+        name = "FabricMC"
+        url = uri("https://maven.fabricmc.net")
+    }
+    maven {
         url = uri("https://www.cursemaven.com")
         content {
             includeGroup("curse.maven")
         }
     }
-    mavenLocal()
 }
 
 dependencies {
-    shade(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader)
-    shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener) { isTransitive = false }
-    shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool) { isTransitive = false }
-    shade(group = "org.sinytra.adapter", name = "core", version = versionAdapterCore) { isTransitive = false }
+    shade("org.sinytra.adapter:core:$versionAdapterCore") { isTransitive = false }
+    shade("net.fabricmc:class-tweaker:$versionClassTweaker") { isTransitive = false }
+    shade("org.sinytra:AutoRenamingTool:$versionAutoRenamingTool") { isTransitive = false }
     shade(project(":transformer")) { isTransitive = false }
 
+    implementation("org.sinytra.adapter:core:$versionAdapterCore") { isTransitive = false }
+    implementation("net.fabricmc:class-tweaker:$versionClassTweaker") { isTransitive = false }
+    implementation("org.sinytra:AutoRenamingTool:$versionAutoRenamingTool") { isTransitive = false }
+    implementation(project(":transformer")) { isTransitive = false }
+
     jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
+    "modImplementation"(implementation(group = "org.sinytra.launchpad", name = "launchpad", version = versionLaunchpad))
     "modImplementation"(implementation(group = "org.sinytra.forgified-fabric-api", name = "forgified-fabric-api", version = versionForgifiedFabricApi)) {
         exclude(group = "org.sinytra", module = "forgified-fabric-loader")
     }
 
     "modCompileOnly"(sourceSets.main.get().output)
-
-//    implementation("curse.maven:connector-extras-913445:5618470")
 }
 
-val modJar: Jar by tasks.creating(Jar::class) {
+val modJar = tasks.register("modJar", Jar::class) {
     from(mod.output)
     manifest.attributes("Implementation-Version" to project.version)
     archiveClassifier.set("mod")
 }
 localJarJar("modJarConfig", "org.sinytra:connector-mod", project.version.toString(), modJar)
 
-val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
+val depsJar = tasks.register("depsJar", ShadowJar::class) {
     configurations = listOf(shade)
 
     exclude(
@@ -160,7 +142,6 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
         "META-INF/*.SF", "META-INF/*.RSA",
         "META-INF/maven/**", "META-INF/jars/**", "META-INF/jarjar/**"
     )
-    exclude("META-INF/services/net.neoforged.neoforgespi.language.IModLanguageLoader")
     exclude("ui/**")
     exclude("*.json", "*.html", "*.version")
     exclude("module-info.class")
@@ -176,16 +157,16 @@ val depsJar: ShadowJar by tasks.creating(ShadowJar::class) {
     archiveClassifier.set("deps")
 }
 
-val fullJar by tasks.registering(ShadowJar::class) {
+val fullJar = tasks.register("fullHar", ShadowJar::class) {
     from(
-        depsJar.archiveFile.map(::zipTree),
-        tasks.jar.flatMap { it.archiveFile.map(::zipTree) })
-    mergeServiceFiles() // Relocate services
-    relocate("net.minecraftforge.fart", "reloc.net.minecraftforge.fart")
-    relocate("net.minecraftforge.srgutils", "reloc.net.minecraftforge.srgutils")
-    relocate("net.fabricmc.accesswidener", "reloc.net.fabricmc.accesswidener")
-    relocate("org.sat4j", "reloc.org.sat4j")
-    relocate("net.bytebuddy", "reloc.net.bytebuddy")
+        depsJar.flatMap { it.archiveFile.map(::zipTree) },
+        tasks.jar.flatMap { it.archiveFile.map(::zipTree) }
+    )
+
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    mergeServiceFiles()
+    filesNotMatching("META-INF/services/**") { duplicatesStrategy = DuplicatesStrategy.FAIL }
+
     manifest.attributes(tasks.jar.get().manifest.attributes)
     archiveClassifier.set("full")
 
@@ -208,7 +189,6 @@ tasks {
                 "Implementation-Version" to project.version,
                 "Implementation-Vendor" to "Sinytra",
                 "Automatic-Module-Name" to "org.sinytra.connector",
-                "Fabric-Loader-Version" to versionForgifiedFabricLoader.split("+")[1]
             )
         }
     }
@@ -217,9 +197,6 @@ tasks {
     }
     assemble {
         dependsOn(fullJar)
-    }
-    withType<RunGameTask> {
-        dependsOn(jar)
     }
 }
 
@@ -240,30 +217,32 @@ publishMods {
     })
 
     github {
-        accessToken.set(providers.environmentVariable("GITHUB_TOKEN"))
-        repository.set(githubRepository)
-        commitish.set(publishBranch)
+        accessToken = providers.environmentVariable("GITHUB_TOKEN")
+        repository = githubRepository
+        commitish = publishBranch
     }
     curseforge {
-        accessToken.set(providers.environmentVariable("CURSEFORGE_TOKEN"))
-        projectId.set(curseForgeId)
+        accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+        projectId = curseForgeId
         minecraftVersions.add(versionMc)
+        client = true
+        server = true
         requires {
-            slug.set(forgifiedFabricApiCurseForge)
+            slug = forgifiedFabricApiCurseForge
         }
         optional {
-            slug.set(connectorExtrasCurseForge)
+            slug = connectorExtrasCurseForge
         }
     }
     modrinth {
-        accessToken.set(providers.environmentVariable("MODRINTH_TOKEN"))
-        projectId.set(modrinthId)
+        accessToken = providers.environmentVariable("MODRINTH_TOKEN")
+        projectId = modrinthId
         minecraftVersions.add(versionMc)
         requires {
-            id.set(forgifiedFabricApiModrinth)
+            id = forgifiedFabricApiModrinth
         }
         optional {
-            id.set(connectorExtrasModrinth)
+            id = connectorExtrasModrinth
         }
     }
 }

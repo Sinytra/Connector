@@ -1,17 +1,12 @@
 package org.sinytra.connector;
 
 import com.mojang.logging.LogUtils;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
-import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.neoforged.fml.ModLoadingIssue;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.LoadingModList;
 import net.neoforged.fml.loading.moddiscovery.ModInfo;
-import net.neoforged.fml.loading.progress.ProgressMeter;
-import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import net.neoforged.neoforgespi.language.IModInfo;
-import org.sinytra.connector.util.ConnectorConfig;
-import org.sinytra.connector.util.ConnectorUtil;
+import org.sinytra.connector.transformer.transform.TransformerUtil;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -54,15 +49,10 @@ public class ConnectorEarlyLoader {
      * @return Whether a loading exception has been encountered up to this point in loading
      */
     public static boolean hasEncounteredException() {
-        return !LOADING_EXCEPTIONS.isEmpty() || LoadingModList.get() != null && LoadingModList.get().hasErrors();
+        LoadingModList list = FMLLoader.getCurrent().getLoadingModList();
+        return list != null && list.hasErrors();
     }
 
-    /**
-     * Nicely wraps the exception message in a color coded format for easier readability.
-     * 
-     * @param t the encountered exception
-     * @param message simple error message to show
-     */
     public static void addGenericLoadingException(Throwable t, String message) {
         addGenericLoadingException(createGenericLoadingIssue(t, message));
     }
@@ -72,12 +62,7 @@ public class ConnectorEarlyLoader {
     }
 
     public static void addGenericLoadingException(List<ModLoadingIssue> issues) {
-        if (LoadingModList.get() != null) {
-            LoadingModList.get().getModLoadingIssues().addAll(issues);
-        }
-        else {
-            LOADING_EXCEPTIONS.addAll(issues);
-        }
+        LOADING_EXCEPTIONS.addAll(issues);
     }
 
     public static ModLoadingIssue createGenericLoadingIssue(Throwable original, String message) {
@@ -95,63 +80,19 @@ public class ConnectorEarlyLoader {
     public static boolean isConnectorMod(Path path) {
         return CONNECTOR_MOD_PATHS.contains(path);
     }
-    
-    /**
-     * Run initial fabric loader setup. Any exceptions thrown are ignored and re-thrown later during FML load.
-     *
-     * @see #CONNECTOR_MODIDS
-     */
-    @SuppressWarnings("unused")
+
     public static void init() {
         if (hasEncounteredException()) {
             LOGGER.error("Skipping early mod setup due to previous error");
             return;
         }
 
-        LOGGER.debug("Starting early connector loader setup");
-        ProgressMeter progress = StartupNotificationManager.prependProgressBar("[Connector] Early Setup", 0);
-        try {
-            List<String> hiddenMods = ConnectorConfig.INSTANCE.get().hiddenMods();
-            // Find all connector loader mods
-            List<ModInfo> mods = LoadingModList.get().getMods().stream()
-                .filter(mod -> {
-                    if (mod.getOwningFile().getFileProperties().containsKey(ConnectorUtil.CONNECTOR_MARKER)) {
-                        CONNECTOR_MODIDS.add(mod.getModId());
-                        CONNECTOR_MODS.add(mod);
-                        return true;
-                    }
-                    return !hiddenMods.contains(mod.getModId());
-                })
-                .toList();
-            // Propagate mods to fabric
-            FabricLoaderImpl.INSTANCE.addFmlMods(mods);
-        } catch (Throwable t) {
-            LOGGER.error("Encountered error during early mod setup", t);
-            addGenericLoadingException(t, "Encountered an error during early mod setup");
+        LoadingModList list = FMLLoader.getCurrent().getLoadingModList();
+        for (ModInfo mod : list.getMods()) {
+            if (mod.getOwningFile().getFileProperties().containsKey(TransformerUtil.METADATA_MARKER)) {
+                CONNECTOR_MODIDS.add(mod.getModId());
+                CONNECTOR_MODS.add(mod);
+            }
         }
-        progress.complete();
-    }
-
-    public static void setup() {
-        try {
-            // Setup fabric loader
-            FabricLoaderImpl.INSTANCE.setup();
-        } catch (Throwable t) {
-            LOGGER.error("Encountered an error during fabric loader setup", t);
-            addGenericLoadingException(t, "Encountered an error during fabric loader setup");
-        }
-    }
-
-    public static void preLaunch() {
-        LOGGER.debug("Running prelaunch entrypoint");
-        ProgressMeter progress = StartupNotificationManager.prependProgressBar("[Connector] PreLaunch", 0);
-        try {
-            // Invoke prelaunch entrypoint
-            FabricLoader.getInstance().invokeEntrypoints("preLaunch", PreLaunchEntrypoint.class, PreLaunchEntrypoint::onPreLaunch);
-        } catch (Throwable t) {
-            LOGGER.error("Encountered an error in prelaunch entrypoint", t);
-            addGenericLoadingException(t, "Encountered an error in prelaunch entrypoint");
-        }
-        progress.complete();
     }
 }

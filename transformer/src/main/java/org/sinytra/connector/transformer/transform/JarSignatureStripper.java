@@ -1,6 +1,6 @@
 package org.sinytra.connector.transformer.transform;
 
-import net.minecraftforge.fart.api.Transformer;
+import net.neoforged.art.api.Transformer;
 
 import java.io.*;
 import java.util.jar.Manifest;

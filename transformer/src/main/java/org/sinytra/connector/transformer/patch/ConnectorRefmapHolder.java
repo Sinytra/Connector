@@ -1,19 +1,15 @@
 package org.sinytra.connector.transformer.patch;
 
 import org.sinytra.adapter.env.ctx.RefmapHolder;
-import org.sinytra.connector.transformer.transform.MappingAwareReferenceMapper;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public class ConnectorRefmapHolder implements RefmapHolder {
-    private final MappingAwareReferenceMapper.SimpleRefmap merged;
-    private final Map<String, MappingAwareReferenceMapper.SimpleRefmap> refmapFiles;
+    private final SimpleRefmap merged;
+    private final Map<String, SimpleRefmap> refmapFiles;
     private final Set<String> dirtyRefmaps = new HashSet<>();
 
-    public ConnectorRefmapHolder(MappingAwareReferenceMapper.SimpleRefmap merged, Map<String, MappingAwareReferenceMapper.SimpleRefmap> refmapFiles) {
+    public ConnectorRefmapHolder(SimpleRefmap merged, Map<String, SimpleRefmap> refmapFiles) {
         this.merged = merged;
         this.refmapFiles = refmapFiles;
     }
@@ -24,7 +20,7 @@ public class ConnectorRefmapHolder implements RefmapHolder {
 
     @Override
     public String remap(String cls, String reference) {
-        String cleanReference = reference.replaceAll(" ", "");
+        String cleanReference = reference.replace(" ", "");
         return Optional.ofNullable(this.merged.mappings.get(cls))
             .or(() -> Optional.ofNullable(this.merged.mappings.get(cls.replace('.', '/'))))
             .map(map -> map.get(cleanReference))
@@ -41,7 +37,7 @@ public class ConnectorRefmapHolder implements RefmapHolder {
         });
     }
 
-    private boolean copyMapEntries(MappingAwareReferenceMapper.SimpleRefmap refmap, String from, String to) {
+    private boolean copyMapEntries(SimpleRefmap refmap, String from, String to) {
         boolean dirty = false;
         Map<String, String> mappingsRefs = refmap.mappings.get(from);
         if (mappingsRefs != null) {
@@ -58,4 +54,5 @@ public class ConnectorRefmapHolder implements RefmapHolder {
         }
         return dirty;
     }
+
 }

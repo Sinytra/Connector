@@ -14,7 +14,6 @@ public record FabricModFileMetadata(
     Set<String> mixinPackages,
     Set<String> mixinClasses,
     Attributes manifestAttributes,
-    boolean containsAT,
     boolean generated
 ) {
 }

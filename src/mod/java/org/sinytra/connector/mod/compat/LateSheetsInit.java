@@ -7,16 +7,16 @@ import net.minecraft.world.level.block.state.properties.WoodType;
 public class LateSheetsInit {
     public static void completeSheetsInit() {
         WoodType.values().forEach(woodType -> {
-            if (!Sheets.SIGN_MATERIALS.containsKey(woodType)) {
-                Sheets.SIGN_MATERIALS.put(woodType, Sheets.createSignMaterial(woodType));
+            if (!Sheets.SIGN_SPRITES.containsKey(woodType)) {
+                Sheets.SIGN_SPRITES.put(woodType, Sheets.createSignSprite(woodType));
             }
-            if (!Sheets.HANGING_SIGN_MATERIALS.containsKey(woodType)) {
-                Sheets.HANGING_SIGN_MATERIALS.put(woodType, Sheets.createHangingSignMaterial(woodType));
+            if (!Sheets.HANGING_SIGN_SPRITES.containsKey(woodType)) {
+                Sheets.HANGING_SIGN_SPRITES.put(woodType, Sheets.createHangingSignSprite(woodType));
             }
         });
 
-        BuiltInRegistries.DECORATED_POT_PATTERN.registryKeySet().stream()
-            .filter(key -> !Sheets.DECORATED_POT_MATERIALS.containsKey(key))
-            .forEach(key -> Sheets.DECORATED_POT_MATERIALS.put(key, Sheets.createDecoratedPotMaterial(key.location())));
+        BuiltInRegistries.DECORATED_POT_PATTERN.entrySet().stream()
+            .filter(entry -> !Sheets.DECORATED_POT_SPRITES.containsKey(entry.getKey()))
+            .forEach(entry -> Sheets.DECORATED_POT_SPRITES.put(entry.getKey(), Sheets.DECORATED_POT_MAPPER.apply(entry.getValue().assetId())));
     }
 }

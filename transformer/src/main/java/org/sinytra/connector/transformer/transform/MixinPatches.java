@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class MixinPatches {
+    // TODO 26.1 Update
     public static List<MethodPatch> getPriorityPatches() {
         return List.of(
             MethodPatch.builder()

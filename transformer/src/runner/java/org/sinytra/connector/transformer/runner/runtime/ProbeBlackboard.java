@@ -24,87 +24,54 @@
  */
 package org.sinytra.connector.transformer.runner.runtime;
 
-import cpw.mods.modlauncher.api.TypesafeMap;
 import org.spongepowered.asm.service.IGlobalPropertyService;
 import org.spongepowered.asm.service.IPropertyKey;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
-/**
- * Global property service backed by ModLauncher blackboard
- */
 public class ProbeBlackboard implements IGlobalPropertyService {
-    
-    /**
-     * Type safe property key
-     * 
-     * @param <V> value type
-     */
-    class Key<V> implements IPropertyKey {
-        
-        final TypesafeMap.Key<V> key;
-        
-        public Key(TypesafeMap owner, String name, Class<V> clazz) {
-            this.key = TypesafeMap.Key.<V>getOrCreate(owner, name, clazz);
-        }
-        
-    }
-    
-    private final Map<String, IPropertyKey> keys = new HashMap<String, IPropertyKey>(); 
+    private static final Map<String, Object> PROPERTIES = new HashMap<>();
 
-    private final TypesafeMap blackboard;
-
-    public ProbeBlackboard() {
-        this.blackboard = new TypesafeMap();
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IGlobalPropertyService#resolveKey(
-     *      java.lang.String)
-     */
     @Override
     public IPropertyKey resolveKey(String name) {
-        return this.keys.computeIfAbsent(name, key -> new Key<Object>(this.blackboard, key, Object.class));
+        return new StringKey(name);
     }
 
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IGlobalPropertyService#getProperty(
-     *      org.spongepowered.asm.service.IPropertyKey)
-     */
-    @Override
-    public <T> T getProperty(IPropertyKey key) {
-        return this.getProperty(key, null);
-    }
-
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IGlobalPropertyService#setProperty(
-     *      org.spongepowered.asm.service.IPropertyKey, java.lang.Object)
-     */
     @SuppressWarnings("unchecked")
     @Override
-    public void setProperty(IPropertyKey key, final Object value) {
-        this.blackboard.computeIfAbsent(((Key<Object>)key).key, k -> value);
+    public <T> T getProperty(IPropertyKey key) {
+        synchronized (PROPERTIES) {
+            return (T) PROPERTIES.get(getKeyName(key));
+        }
     }
 
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IGlobalPropertyService
-     *      #getPropertyString(org.spongepowered.asm.service.IPropertyKey,
-     *      java.lang.String)
-     */
     @Override
-    public String getPropertyString(IPropertyKey key, String defaultValue) {
-        return this.getProperty(key, defaultValue);
+    public void setProperty(IPropertyKey key, Object value) {
+        synchronized (PROPERTIES) {
+            PROPERTIES.put(getKeyName(key), value);
+        }
     }
 
-    /* (non-Javadoc)
-     * @see org.spongepowered.asm.service.IGlobalPropertyService#getProperty(
-     *      org.spongepowered.asm.service.IPropertyKey, java.lang.Object)
-     */
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getProperty(IPropertyKey key, T defaultValue) {
-        return this.blackboard.<T>get(((Key<T>)key).key).orElse(defaultValue);
+        synchronized (PROPERTIES) {
+            return (T) PROPERTIES.getOrDefault(getKeyName(key), defaultValue);
+        }
+    }
+
+    @Override
+    public String getPropertyString(IPropertyKey key, String defaultValue) {
+        return Objects.requireNonNullElse((String) PROPERTIES.get(getKeyName(key)), defaultValue);
+    }
+
+    private String getKeyName(IPropertyKey key) {
+        return ((StringKey) key).name();
+    }
+
+    record StringKey(String name) implements IPropertyKey {
     }
 
 }

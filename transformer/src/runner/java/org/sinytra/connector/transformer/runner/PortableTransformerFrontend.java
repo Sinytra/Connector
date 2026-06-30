@@ -2,23 +2,24 @@ package org.sinytra.connector.transformer.runner;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import cpw.mods.jarhandling.SecureJar;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
-import org.sinytra.connector.transformer.runner.discovery.JarInspector;
+import net.neoforged.fml.jarcontents.JarContents;
 import org.sinytra.connector.transformer.jar.JarTransformer;
+import org.sinytra.connector.transformer.runner.discovery.JarInspector;
 import org.sinytra.connector.transformer.runner.discovery.ProbeModDiscoverer;
 import org.sinytra.connector.transformer.transform.TransformerUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.launch.MixinBootstrap;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static cpw.mods.modlauncher.api.LambdaExceptionUtils.rethrowFunction;
+import static org.sinytra.connector.transformer.transform.TransformerUtil.rethrowFunction;
 
 public class PortableTransformerFrontend {
     private static final Logger LOGGER = LoggerFactory.getLogger(PortableTransformerFrontend.class);
@@ -64,7 +65,7 @@ public class PortableTransformerFrontend {
         Stream<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()
             .flatMap(jar -> {
                 LoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return inspector.discoverNestedJarsRecursive(jar, metadata.getJars(), parentToChildren, List.of(), List.of());
+                return inspector.discoverNestedJarsRecursive(jar, metadata.getJars(), parentToChildren);
             });
         List<JarTransformer.TransformableJar> allJars = Stream.concat(discoveredJars.stream(), discoveredNestedJars).toList();
 
@@ -83,13 +84,13 @@ public class PortableTransformerFrontend {
         }
     }
 
-    public ModPathTuple filterFabricJars(List<Path> paths) {
+    public ModPathTuple filterFabricJars(List<Path> paths) throws IOException {
         List<Path> fabricJars = new ArrayList<>();
         List<Path> otherJars = new ArrayList<>();
 
         for (Path path : paths) {
-            SecureJar jar = SecureJar.from(path);
-            if (Files.exists(jar.getPath(TransformerUtil.FABRIC_MOD_JSON))) {
+            JarContents jar = JarContents.ofPath(path);
+            if (jar.containsFile(TransformerUtil.FABRIC_MOD_JSON)) {
                 fabricJars.add(path);
             } else {
                 otherJars.add(path);

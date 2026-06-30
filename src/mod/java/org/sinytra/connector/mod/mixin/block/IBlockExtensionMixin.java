@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = IBlockExtension.class, priority = 500)
 public interface IBlockExtensionMixin {
+
     @Inject(at = @At("HEAD"), method = "getBeaconColorMultiplier")
     private void textureColorInjectionPoint(BlockState state, LevelReader levelReader, BlockPos pos, BlockPos beaconPos, CallbackInfoReturnable<Integer> cir) {
         // This mixin adds both an injection target with swapped block pos parameters (to match the vanilla local order)
@@ -28,6 +29,7 @@ public interface IBlockExtensionMixin {
         }
     }
 
+    // Called from Mixin patch
     private int connector_getTextureDiffuseColor(DyeColor color, Level level, BlockPos beaconPos, BlockPos blockPos) {
         return color.getTextureDiffuseColor();
     }

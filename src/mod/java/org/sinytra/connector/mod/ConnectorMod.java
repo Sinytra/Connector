@@ -4,44 +4,23 @@ import com.electronwill.nightconfig.core.file.FileConfigBuilder;
 import com.electronwill.nightconfig.core.file.FileNotFoundAction;
 import com.electronwill.nightconfig.core.file.GenericBuilder;
 import com.mojang.logging.LogUtils;
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import org.sinytra.connector.api.Constants;
 import org.sinytra.connector.mod.compat.FluidHandlerCompat;
-import org.sinytra.connector.mod.compat.FluidHandlerCompatClient;
-import org.sinytra.connector.mod.compat.LazyEntityAttributes;
-import org.sinytra.connector.util.ConnectorUtil;
 import org.slf4j.Logger;
 
 import java.io.InputStream;
 import java.net.URL;
 
-@Mod(ConnectorUtil.CONNECTOR_MODID)
-public class ConnectorMod {
+@Mod(Constants.CONNECTOR_MODID)
+public class 
+ConnectorMod {
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    private static boolean clientLoadComplete;
-
     public ConnectorMod(IEventBus bus) {
-        ModList modList = ModList.get();
-
-        bus.addListener(ConnectorMod::onClientSetup);
-        bus.addListener(FluidHandlerCompatClient::onRegisterClientExtensions);
+//        bus.addListener(FluidHandlerCompatClient::onRegisterClientExtensions); TODO
         FluidHandlerCompat.init(bus);
-
-        if (modList.isLoaded("fabric_object_builder_api_v1")) {
-            bus.addListener(EventPriority.HIGHEST, LazyEntityAttributes::initializeLazyAttributes);
-        }
-    }
-
-    public static boolean isClientLoadComplete() {
-        return clientLoadComplete;
-    }
-
-    private static void onClientSetup(FMLClientSetupEvent event) {
-        clientLoadComplete = true;
     }
 
     // Injected into mod code by ClassAnalysingTransformer
@@ -59,6 +38,6 @@ public class ConnectorMod {
     }
 
     public static String getVersion() {
-        return ConnectorBootstrap.class.getModule().getDescriptor().rawVersion().orElse("<unknown>");
+        return ConnectorMixinPlugin.class.getModule().getDescriptor().rawVersion().orElse("<unknown>");
     }
 }

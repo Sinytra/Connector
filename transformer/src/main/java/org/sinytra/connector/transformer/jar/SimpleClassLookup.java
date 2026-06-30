@@ -1,6 +1,6 @@
 package org.sinytra.connector.transformer.jar;
 
-import net.minecraftforge.fart.api.ClassProvider;
+import net.neoforged.art.api.ClassProvider;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.tree.ClassNode;
 import org.sinytra.adapter.util.provider.ClassLookup;

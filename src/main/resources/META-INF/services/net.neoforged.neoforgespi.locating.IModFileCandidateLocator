@@ -1,1 +1,1 @@
-org.sinytra.connector.locator.ConnectorEarlyLocatorBootstrap
+org.sinytra.connector.service.ModuleLayerMigrator

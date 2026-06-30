@@ -2,12 +2,7 @@ package org.sinytra.connector.transformer.jar;
 
 import com.google.common.base.Stopwatch;
 import com.mojang.logging.LogUtils;
-import net.fabricmc.loader.impl.FabricLoaderImpl;
-import net.fabricmc.loader.impl.MappingResolverImpl;
-import net.minecraftforge.fart.api.ClassProvider;
-import net.minecraftforge.fart.api.Renamer;
-import net.minecraftforge.fart.internal.EnhancedRemapper;
-import net.minecraftforge.srgutils.IMappingFile;
+import net.neoforged.art.api.Renamer;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.env.ctx.AuditTrail;
 import org.sinytra.adapter.env.ctx.PatchEnvironment;
@@ -17,7 +12,8 @@ import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
 import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import org.sinytra.connector.transformer.patch.ConnectorRefmapHolder;
-import org.sinytra.connector.transformer.patch.ReflectionRenamingTransformer;
+import org.sinytra.connector.transformer.patch.RefmapStorage;
+import org.sinytra.connector.transformer.patch.RefmapStorage.RefmapFiles;
 import org.sinytra.connector.transformer.transform.*;
 import org.slf4j.Logger;
 
@@ -27,37 +23,23 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class JarTransformInstance {
-    private static final String FABRIC_MAPPING_NAMESPACE = "Fabric-Mapping-Namespace";
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private final MappingAwareReferenceMapper remapper;
     private final BytecodeFixerUpperFrontend bfu;
-    private final EnhancedRemapper enhancedRemapper;
     private final ClassLookup cleanClassLookup;
-    private final List<Path> libs;
     private final AuditTrail auditTrail;
     private final TransformerEnvironment environment;
 
-    public JarTransformInstance(TransformerEnvironment environment, ClassProvider classProvider, List<Path> libs) {
+    public JarTransformInstance(TransformerEnvironment environment) {
         this.environment = environment;
 
-        MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
-        resolver.getMap(JarTransformer.OBF_NAMESPACE, JarTransformer.SOURCE_NAMESPACE);
-        resolver.getMap(JarTransformer.SOURCE_NAMESPACE, JarTransformer.OBF_NAMESPACE);
-        this.remapper = new MappingAwareReferenceMapper(resolver.getCurrentMap(JarTransformer.SOURCE_NAMESPACE));
-
-        IMappingFile mappingFile = FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(JarTransformer.SOURCE_NAMESPACE);
-        ClassProvider intermediaryClassProvider = new OptimizedRenamingTransformer.IntermediaryClassProvider(classProvider, mappingFile, mappingFile.reverse(), s -> {});
-        this.enhancedRemapper = new OptimizedRenamingTransformer.MixinAwareEnhancedRemapper(intermediaryClassProvider, mappingFile, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE), s -> {});
         this.cleanClassLookup = environment.getCleanClassLookup();
         this.bfu = new BytecodeFixerUpperFrontend(this.cleanClassLookup, MixinClassLookup.INSTANCE, this.environment);
-        this.libs = libs;
         this.auditTrail = AuditTrail.create();
     }
 
@@ -74,15 +56,7 @@ public class JarTransformInstance {
             return null;
         }
 
-        String jarMapping = metadata.manifestAttributes().getValue(FABRIC_MAPPING_NAMESPACE);
-        if (jarMapping != null && !jarMapping.equals(JarTransformer.SOURCE_NAMESPACE)) {
-            LOGGER.error("Found transformable jar with unsupported mapping {}, currently only {} is supported", jarMapping, JarTransformer.SOURCE_NAMESPACE);
-        }
-
-        MappingResolverImpl resolver = FabricLoaderImpl.INSTANCE.getMappingResolver();
-        RefmapRemapper.RefmapFiles refmap = RefmapRemapper.processRefmaps(input.toPath(), metadata.refmaps(), this.remapper, this.libs);
-        IMappingFile srgToIntermediary = resolver.getMap(JarTransformer.OBF_NAMESPACE, JarTransformer.SOURCE_NAMESPACE);
-        IMappingFile intermediaryToSrg = resolver.getCurrentMap(JarTransformer.SOURCE_NAMESPACE);
+        RefmapFiles refmap = RefmapStorage.processRefmaps(input.toPath(), metadata.refmaps());
         AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer();
 
         AuditTrail jarTrail = AuditTrail.create();
@@ -93,21 +67,16 @@ public class JarTransformInstance {
 
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())
+            .add(new FabricMetadataTransformer())
             .add(new ClassNodeTransformer(
-                new FieldToMethodTransformer(metadata.modMetadata().getClassTweaker(), srgToIntermediary),
-                new ReflectionRenamingTransformer(intermediaryToSrg, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE)),
+                new FieldToMethodTransformer(metadata.modMetadata().getClassTweaker()),
                 new ClassAnalysingTransformer()
             ))
-            .add(new OptimizedRenamingTransformer(this.enhancedRemapper, false, metadata.refmaps().isEmpty()))
             .add(patchTransformer)
             .add(new ClassNodeTransformer(accessorRedirectTransformer))
-            .add(new RefmapRemapper(refmap.files()))
             .logger(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
             .ignoreJarPathPrefix("assets/", "data/");
-        if (!metadata.containsAT()) {
-            builder.add(new AccessWidenerTransformer(metadata.modMetadata().getClassTweaker(), resolver, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE)));
-        }
 
         try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());

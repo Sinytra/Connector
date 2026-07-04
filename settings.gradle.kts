@@ -15,7 +15,7 @@ pluginManagement {
         }
         maven {
             name = "NeoForged"
-            url = uri("https://maven.neoforged.net")
+            url = uri("https://maven.neoforged.net/releases")
         }
         maven {
             name = "Parchment"

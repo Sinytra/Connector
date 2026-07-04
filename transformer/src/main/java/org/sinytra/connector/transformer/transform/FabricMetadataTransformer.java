@@ -12,7 +12,7 @@ import java.util.*;
 
 public class FabricMetadataTransformer implements Transformer {
     public static final FabricMetadataTransformer INSTANCE = new FabricMetadataTransformer();
-    
+
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String NORMALIZER_SUFFIX = "_nojpms";
 
@@ -47,20 +47,21 @@ public class FabricMetadataTransformer implements Transformer {
         return entry;
     }
 
+    public static String normalizeModId(String modId) {
+        return modId.replace('-', '_');
+    }
+
     private static void processMetadata(JsonObject json) {
         String modId = json.get("id").getAsString();
+        String version = json.get("version").getAsString();
 
         // Adjust modid to accomodate JPMS requirements
-        String jpmsModId = modId.replace('-', '_');
+        String jpmsModId = normalizeModId(modId);
         // If modid is amongst reserved keywords, add a suffix
         String normalModId = TransformerUtil.isJavaReservedKeyword(jpmsModId) ? jpmsModId + NORMALIZER_SUFFIX : jpmsModId;
 
-        String version = json.get("version").getAsString();
-        // Adjust version to accomodate JPMS requirements
-        String normalVersion = version.replace("+", "_");
-
         json.addProperty("id", normalModId);
-        json.addProperty("version", normalVersion);
+        json.addProperty("version", version);
 
         JsonArray provides = Objects.requireNonNullElseGet(json.getAsJsonArray("provides"), JsonArray::new);
         if (!normalModId.equals(modId)) {

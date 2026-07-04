@@ -26,6 +26,7 @@ import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformableJar;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformedFabricModPath;
 import org.sinytra.connector.transformer.jar.MetadataReader;
+import org.sinytra.connector.transformer.transform.FabricMetadataTransformer;
 import org.sinytra.connector.util.PriorityModLoadingException;
 import org.sinytra.launchpad.service.FabricModJsonFileReader;
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.sinytra.connector.transformer.transform.TransformerUtil.uncheck;
@@ -89,14 +91,19 @@ public class ConnectorLocator implements IDependencyLocator {
         TransformerEnvironment environment = new ConnectorTransformerEnvironment(findCoremodsLibarary(discoveredAllMods));
         JarTransformer transformer = new JarTransformer(environment);
 
-        List<IModFile> interest = discoveredAllMods.stream()
-            .filter(m -> m.getModFileInfo() instanceof StubModFileInfo)
-            .toList();
-        List<TransformableJar> candidates = buildCandiates(interest, environment, transformer);
-
         // Get all existing mods
         Collection<SimpleModInfo> loadedModInfos = getPreviouslyDiscoveredMods(discoveredNeoMods);
+        Collection<String> loadedModIds = loadedModInfos.stream()
+            .filter(mod -> !mod.library())
+            .map(SimpleModInfo::modid)
+            .collect(Collectors.toUnmodifiableSet());
         Collection<IModFile> loadedModFiles = loadedModInfos.stream().map(SimpleModInfo::origin).toList();
+
+        List<IModFile> interest = discoveredAllMods.stream()
+            .filter(m -> m.getModFileInfo() instanceof StubModFileInfo)
+            .filter(m -> shouldLoadMod(m, loadedModIds))
+            .toList();
+        List<TransformableJar> candidates = buildCandiates(interest, environment, transformer);
 
         // Collect mods that are (likely) going to be excluded by FML's UniqueModListBuilder. Exclude them from global split package filtering
         Collection<? super IModFile> ignoredModFiles = new ArrayList<>();
@@ -122,7 +129,11 @@ public class ConnectorLocator implements IDependencyLocator {
         }
 
         // Deal with split packages (thanks modules
-        List<FilteredPaths> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed.stream().map(TransformedFabricModPath::output).toList(), loadedModFiles, ignoredModFiles);
+        List<FilteredPaths> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(
+            transformed.stream().map(TransformedFabricModPath::output).toList(),
+            loadedModFiles,
+            ignoredModFiles
+        );
 
         List<IModFile> loadedMods = moduleSafeJars.stream()
             .map(out -> {
@@ -229,6 +240,13 @@ public class ConnectorLocator implements IDependencyLocator {
             .toList();
     }
 
+    private static boolean shouldLoadMod(IModFile modFile, Collection<String> loadedNeoMods) {
+        LoaderModMetadata metadata = ((StubModFileInfo) modFile.getModFileInfo()).metadata();
+        // Skip loading mods that already have a native neo equivalent loaded
+        String neoModId = FabricMetadataTransformer.normalizeModId(metadata.getId());
+        return !loadedNeoMods.contains(neoModId);
+    }
+
     @Nullable
     private static IModFile findCoremodsLibarary(List<IModFile> mods) {
         return mods.stream()
@@ -268,5 +286,6 @@ public class ConnectorLocator implements IDependencyLocator {
     private record LocationResult(List<IModFile> mods, List<Path> originalPaths, Path generatedJarPath) {
     }
 
-    private record ComparableModFile(IModFile file, Version version, int nestingLevel) {}
+    private record ComparableModFile(IModFile file, Version version, int nestingLevel) {
+    }
 }

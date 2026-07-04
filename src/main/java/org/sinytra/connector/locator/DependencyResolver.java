@@ -85,6 +85,12 @@ public final class DependencyResolver {
                 if (aliases.keys().contains(dep.getModId()) || aliases.values().contains(dep.getModId())) {
                     return dep.getKind() == ModDependency.Kind.BREAKS ? null : uncheck(() -> new ModDependencyImpl(dep.getKind(), dep.getModId(), List.of("*")));
                 }
+
+                // Ignore fabric loader dep version
+                if (dep.getModId().equals("fabricloader")) {
+                    return null;
+                }
+
                 return dep;
             })
             .filter(Objects::nonNull)

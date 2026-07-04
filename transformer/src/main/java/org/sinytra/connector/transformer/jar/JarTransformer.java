@@ -12,6 +12,7 @@ import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
 import org.sinytra.connector.transformer.transform.TransformerUtil;
+import org.sinytra.connector.transformer.transform.TransformerUtil.CacheFile;
 import org.slf4j.Logger;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
@@ -161,7 +162,7 @@ public final class JarTransformer {
 
     public record TransformedFabricModPath(Path input, FabricModPath output, @Nullable AuditTrail auditTrail) {}
 
-    public record TransformableJar(File input, FabricModPath modPath, TransformerUtil.CacheFile cacheFile) {
+    public record TransformableJar(File input, FabricModPath modPath, CacheFile cacheFile) {
         public Pair<FabricModPath, AuditTrail> transform(JarTransformInstance transformInstance) throws IOException {
             Files.deleteIfExists(this.modPath.path);
             AuditTrail audit = transformInstance.transformJar(this.input, this.modPath.path, this.modPath.metadata());

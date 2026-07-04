@@ -14,8 +14,7 @@ import java.io.InputStream;
 import java.net.URL;
 
 @Mod(Constants.CONNECTOR_MODID)
-public class 
-ConnectorMod {
+public class ConnectorMod {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public ConnectorMod(IEventBus bus) {

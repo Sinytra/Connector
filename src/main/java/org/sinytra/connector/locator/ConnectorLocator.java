@@ -24,6 +24,7 @@ import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.FabricModFileMetadata;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformableJar;
+import org.sinytra.connector.transformer.jar.JarTransformer.TransformedFabricModPath;
 import org.sinytra.connector.transformer.jar.MetadataReader;
 import org.sinytra.connector.util.PriorityModLoadingException;
 import org.sinytra.launchpad.service.FabricModJsonFileReader;
@@ -76,7 +77,7 @@ public class ConnectorLocator implements IDependencyLocator {
             // Rethrow other exceptions
             StartupNotificationManager.addModMessage("CONNECTOR LOCATOR ERROR");
             LOGGER.error("Connector locator error", t);
-            ConnectorEarlyLoader.addGenericLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Fabric mod discovery failed"));
+            throw new ModLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Fabric mod discovery failed"));
         } finally {
             // Handle forge mod split packages
 //            ForgeModPackageFilter.filterPackages(loadedMods); TODO
@@ -111,9 +112,9 @@ public class ConnectorLocator implements IDependencyLocator {
             .toList();
 
         // Run jar transformations (or get existing outputs from cache)
-        List<JarTransformer.TransformedFabricModPath> transformed = transformer.transform(uniqueJars, renameLibs);
+        List<TransformedFabricModPath> transformed = transformer.transform(uniqueJars, renameLibs);
 
-        List<JarTransformer.TransformedFabricModPath> failing = transformed.stream()
+        List<TransformedFabricModPath> failing = transformed.stream()
             .filter(j -> j.auditTrail() != null && j.auditTrail().hasFailingMixins())
             .toList();
         if (!failing.isEmpty()) {
@@ -121,15 +122,18 @@ public class ConnectorLocator implements IDependencyLocator {
         }
 
         // Deal with split packages (thanks modules
-        List<FilteredPaths> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed.stream().map(JarTransformer.TransformedFabricModPath::output).toList(), loadedModFiles, ignoredModFiles);
+        List<FilteredPaths> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(transformed.stream().map(TransformedFabricModPath::output).toList(), loadedModFiles, ignoredModFiles);
 
         List<IModFile> loadedMods = moduleSafeJars.stream()
             .map(out -> {
                 JarContents contents = uncheck(() -> JarContents.ofFilteredPaths(out.paths()));
-                return FabricModJsonFileReader.createModFile(contents, ModFileDiscoveryAttributes.DEFAULT);
+                IModFile mf = FabricModJsonFileReader.createModFile(contents, ModFileDiscoveryAttributes.DEFAULT);
+                return Objects.requireNonNull(mf, "Invalid mod file");
             })
             .toList();
-        List<Path> originalPaths = transformed.stream().map(JarTransformer.TransformedFabricModPath::input).toList();
+        List<Path> originalPaths = transformed.stream()
+            .map(JarTransformer.TransformedFabricModPath::input)
+            .toList();
         return new LocationResult(loadedMods, originalPaths, environment.getGeneratedJarPath());
     }
 

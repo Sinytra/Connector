@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.fml.loading.FMLLoader;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.transformer.transform.TransformerUtil;
@@ -32,6 +33,9 @@ public final class ConnectorUtil {
     });
 
     private static final Supplier<String> JAR_CACHE_VERSION = Suppliers.memoize(() -> {
+        if (!FMLLoader.getCurrent().isProduction()) {
+            return "__dev__";
+        }
         String ver = ConnectorUtil.class.getPackage().getImplementationVersion();
         if (ver == null) {
             LOGGER.error("Missing Connector jar version, disabling transformer caching");

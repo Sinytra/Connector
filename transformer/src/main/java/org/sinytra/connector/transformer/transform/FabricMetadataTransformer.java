@@ -11,6 +11,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class FabricMetadataTransformer implements Transformer {
+    public static final FabricMetadataTransformer INSTANCE = new FabricMetadataTransformer();
+    
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String NORMALIZER_SUFFIX = "_nojpms";
 

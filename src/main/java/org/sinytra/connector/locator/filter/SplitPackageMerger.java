@@ -6,6 +6,7 @@ import net.neoforged.fml.jarcontents.JarContents;
 import net.neoforged.fml.jarcontents.JarContents.FilteredPath;
 import net.neoforged.fml.jarcontents.JarContents.PathFilter;
 import net.neoforged.fml.jarmoduleinfo.JarModuleInfo;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforgespi.locating.IModFile;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.transformer.jar.FabricModFileMetadata;
@@ -90,9 +91,15 @@ public class SplitPackageMerger {
         Set<String> existingPackages = new HashSet<>();
         for (IModFile modFile : existing) {
             if (!ignoredModFiles.contains(modFile)) {
-                Set<String> packages = JarModuleInfo.scanModulePackages(modFile.getContents());
+                Set<String> packages = JarModuleInfo.from(modFile.getContents()).createDescriptor(modFile.getContents()).packages();
                 existingPackages.addAll(packages);
             }
+        }
+        
+        // Find existing packages on the classpath
+        for (ClassLoader cl = FMLLoader.getCurrent().getCurrentClassLoader(); cl != null; cl = cl.getParent()) {
+            Module module = cl.getUnnamedModule();
+            existingPackages.addAll(module.getPackages());
         }
 
         // Remove existing classpath packages

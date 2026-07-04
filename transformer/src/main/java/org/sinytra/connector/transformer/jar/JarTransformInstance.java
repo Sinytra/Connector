@@ -3,6 +3,7 @@ package org.sinytra.connector.transformer.jar;
 import com.google.common.base.Stopwatch;
 import com.mojang.logging.LogUtils;
 import net.neoforged.art.api.Renamer;
+import net.neoforged.art.api.Transformer.ResourceEntry;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.env.ctx.AuditTrail;
 import org.sinytra.adapter.env.ctx.PatchEnvironment;
@@ -19,10 +20,12 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -67,7 +70,7 @@ public class JarTransformInstance {
 
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())
-            .add(new FabricMetadataTransformer())
+            .add(FabricMetadataTransformer.INSTANCE)
             .add(new ClassNodeTransformer(
                 new FieldToMethodTransformer(metadata.modMetadata().getClassTweaker()),
                 new ClassAnalysingTransformer()
@@ -105,6 +108,17 @@ public class JarTransformInstance {
 
     private static void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
         Files.copy(input.toPath(), output);
+
+        try (FileSystem fs = FileSystems.newFileSystem(output)) {
+            Path path = fs.getPath(TransformerUtil.FABRIC_MOD_JSON);
+            byte[] data = Files.readAllBytes(path);
+            ResourceEntry entry = ResourceEntry.create(TransformerUtil.FABRIC_MOD_JSON, 0, data);
+            ResourceEntry processed = Objects.requireNonNull(FabricMetadataTransformer.INSTANCE.process(entry), "Failed to process FMJ entry");
+            Files.write(path, processed.getData());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Error patching generated jar file", e);
+        }
+        
         stopwatch.stop();
         LOGGER.debug(JarTransformer.TRANSFORM_MARKER, "Skipping transformation of jar {} after {} ms as it contains generated metadata, assuming it's a java library", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
     }

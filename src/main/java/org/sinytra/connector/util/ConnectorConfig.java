@@ -27,7 +27,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-// TODO 26.1 global mod aliases
 public record ConnectorConfig(int version, List<String> hiddenMods, Multimap<String, String> globalModAliases, boolean enableMixinSafeguard) {
     public static final Codec<ConnectorConfig> CODEC = RecordCodecBuilder.create(instance -> instance.group(
         Codec.INT

@@ -5,8 +5,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.art.api.ClassProvider;
 import net.neoforged.fml.ModLoadingException;
-import net.neoforged.fml.ModLoadingIssue;
-import net.neoforged.fml.loading.*;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.fml.loading.mixin.FMLMixinClassProcessor;
 import net.neoforged.fml.loading.mixin.FMLMixinService;
 import net.neoforged.fml.loading.progress.ProgressMeter;
@@ -15,13 +14,13 @@ import net.neoforged.neoforgespi.locating.IModFile;
 import net.neoforged.neoforgespi.transformation.BytecodeProvider;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.util.provider.ClassLookup;
-import org.sinytra.adapter.util.provider.ZipClassLookup;
 import org.sinytra.connector.ConnectorEarlyLoader;
 import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.SimpleClassLookup;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
 import org.sinytra.connector.util.ConnectorUtil;
+import org.sinytra.connector.util.GameCodeRetriever;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.MixinService;
 
@@ -32,12 +31,8 @@ import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
-import java.util.zip.ZipFile;
 
-import static org.sinytra.connector.transformer.transform.TransformerUtil.uncheck;
-
-@SuppressWarnings({"UnstableApiUsage", "Java9ReflectionClassVisibility"})
+@SuppressWarnings("UnstableApiUsage")
 public class ConnectorTransformerEnvironment implements TransformerEnvironment {
     // Keep this outside of BytecodeFixerUpperFrontend to prevent unnecessary static init of patches when we only need the jar path
     private static final String GENERATED_JAR_PATH = "adapter/adapter_generated_mixins.jar";
@@ -45,6 +40,7 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
 
     private static final MethodHandle BYTECODE_PROVIDER_CTR;
     
+    private final String mcVersion;
     @Nullable
     private final IModFile coremodsFile;
 
@@ -58,7 +54,8 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
         }
     }
 
-    public ConnectorTransformerEnvironment(@Nullable IModFile coremodsFile) {
+    public ConnectorTransformerEnvironment(String mcVersion, @Nullable IModFile coremodsFile) {
+        this.mcVersion = mcVersion;
         this.coremodsFile = coremodsFile;
     }
 
@@ -74,23 +71,11 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
 
     @Override
     public ClassLookup getCleanClassLookup() {
-        String mcAndNeoFormVersion = FMLLoader.getCurrent().getVersionInfo().mcAndNeoFormVersion();
-        if (FMLEnvironment.isProduction()) {
-            // FIXME This will no longer work, lol
-            MavenCoordinate coords = new MavenCoordinate("net.minecraft", FMLEnvironment.getDist().isClient() ? "client" : "server", "", "srg", mcAndNeoFormVersion);
-            Path path = LibraryFinder.findPathForMaven(coords);
-            if (!Files.exists(path)) {
-                throw new ModLoadingException(ModLoadingIssue.error("fml.modloadingissue.corrupted_installation").withAffectedPath(path));
-            }
-            ZipFile zipFile = uncheck(() -> new ZipFile(path.toFile()));
-            return new ZipClassLookup(zipFile);
-        } else {
-            // Search for system property
-            Path cleanPath = Optional.ofNullable(System.getProperty("connector.clean.path"))
-                .map(Path::of)
-                .filter(Files::exists)
-                .orElseThrow(() -> new RuntimeException("Could not determine clean minecraft artifact path"));
-            return new SimpleClassLookup(ClassProvider.fromPaths(cleanPath));
+        try {
+            Path cleanJarPath = GameCodeRetriever.getCleanMinecraftJar(this.mcVersion, this);
+            return new SimpleClassLookup(ClassProvider.fromPaths(cleanJarPath));
+        } catch (Exception e) {
+            throw new ModLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(e, "Failed to retrieve clean game code"));
         }
     }
 

@@ -9,7 +9,6 @@ plugins {
     id("com.gradleup.shadow") version "9.4.2" apply false
     id("me.modmuss50.mod-publish-plugin") version "2.1.1"
     id("net.neoforged.gradleutils") version "5.1.1"
-    id("org.sinytra.adapter.userdev") version "1.2.1-SNAPSHOT"
     id("org.moddedmc.wiki.toolkit") version "0.4.1"
 }
 
@@ -29,6 +28,8 @@ val githubRepository = project.property("githubRepository") as String
 val publishBranch = project.property("publishBranch") as String
 val forgifiedFabricApiCurseForge = project.property("forgifiedFabricApiCurseForge") as String
 val forgifiedFabricApiModrinth = project.property("forgifiedFabricApiModrinth") as String
+val launchpadCurseForge = project.property("launchpadCurseForge") as String
+val launchpadModrinth = project.property("launchpadModrinth") as String
 val connectorExtrasCurseForge = project.property("connectorExtrasCurseForge") as String
 val connectorExtrasModrinth = project.property("connectorExtrasModrinth") as String
 
@@ -230,6 +231,9 @@ publishMods {
         requires {
             slug = forgifiedFabricApiCurseForge
         }
+        requires { 
+            slug = launchpadCurseForge
+        }
         optional {
             slug = connectorExtrasCurseForge
         }
@@ -240,6 +244,9 @@ publishMods {
         minecraftVersions.add(versionMc)
         requires {
             id = forgifiedFabricApiModrinth
+        }
+        requires { 
+            id = launchpadModrinth
         }
         optional {
             id = connectorExtrasModrinth

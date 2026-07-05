@@ -8,6 +8,7 @@ import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.fml.ModLoadingException;
 import net.neoforged.fml.jarcontents.JarContents;
 import net.neoforged.fml.jarmoduleinfo.JarModuleInfo;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.LogMarkers;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import net.neoforged.neoforgespi.language.IModInfo;
@@ -88,7 +89,8 @@ public class ConnectorLocator implements IDependencyLocator {
 
     @Nullable
     private LocationResult locateFabricMods(List<IModFile> discoveredNeoMods, List<IModFile> discoveredAllMods) {
-        TransformerEnvironment environment = new ConnectorTransformerEnvironment(findCoremodsLibarary(discoveredAllMods));
+        String mcVersion = determineMcVersion(discoveredNeoMods);
+        TransformerEnvironment environment = new ConnectorTransformerEnvironment(mcVersion, findCoremodsLibarary(discoveredAllMods));
         JarTransformer transformer = new JarTransformer(environment);
 
         // Get all existing mods
@@ -278,6 +280,26 @@ public class ConnectorLocator implements IDependencyLocator {
             parents.push(dot < 0 ? name : name.substring(0, dot));
         }
         return String.join("$", parents);
+    }
+
+    private static String determineMcVersion(Collection<IModFile> loadedMods) {
+        String known = FMLLoader.getCurrent().getVersionInfo().mcVersion();
+        if (known != null) {
+            return known;
+        }
+
+        for (var modFile : loadedMods) {
+            var mods = modFile.getModFileInfo().getMods();
+            if (mods.isEmpty()) {
+                continue;
+            }
+            var mainMod = mods.getFirst();
+            if (modFile.getId().equals("minecraft")) {
+                return mainMod.getVersion().toString();
+            }
+        }
+
+        throw new RuntimeException("Unable to determine minecraft version");
     }
 
     private record SimpleModInfo(String modid, ArtifactVersion version, boolean library, @Nullable IModFile origin) {

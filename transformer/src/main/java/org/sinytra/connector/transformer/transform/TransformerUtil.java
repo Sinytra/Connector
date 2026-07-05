@@ -91,7 +91,7 @@ public final class TransformerUtil {
     }
 
     public static CacheFile getCachedPath(@Nullable Path input, Path output, String cacheVersion) {
-        return getCached(rethrowSupplier(() -> Files.readAllBytes(input)), output, cacheVersion);
+        return getCached(input != null ? rethrowSupplier(() -> Files.readAllBytes(input)) : null, output, cacheVersion);
     }
 
     public static CacheFile getCached(@Nullable Supplier<byte[]> input, Path output, String cacheVersion) {
@@ -125,16 +125,12 @@ public final class TransformerUtil {
         return new CacheFile(null, null, false);
     }
 
-    public static void cache(@Nullable Path input, Path output, Callable<?> action, String cacheVersion) {
-        cache(rethrowSupplier(() -> Files.readAllBytes(input)), output, action, cacheVersion);
-    }
-
-    public static void cache(@Nullable Supplier<byte[]> input, Path output, Callable<?> action, String cacheVersion) {
+    public static void cache(@Nullable Supplier<byte[]> input, Path output, ExceptionRunnable action, String cacheVersion) {
         CacheFile cacheFile = getCached(input, output, cacheVersion);
         if (!cacheFile.isUpToDate()) {
             try {
                 Files.deleteIfExists(output);
-                action.call();
+                action.run();
                 cacheFile.save();
             } catch (Throwable t) {
                 throw new RuntimeException(t);

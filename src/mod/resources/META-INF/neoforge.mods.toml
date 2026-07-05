@@ -20,6 +20,12 @@ multiple platforms at once, as well as allowing players to play all their favour
 config="connector.mixins.json"
 
 [[dependencies.connector]]
+    modId="launchpad"
+    type="required"
+    versionRange="[0,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.connector]]
     modId="neoforge"
     type="required"
     versionRange="[26.1,26.2)"

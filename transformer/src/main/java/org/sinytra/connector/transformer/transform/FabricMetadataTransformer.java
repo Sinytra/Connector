@@ -9,12 +9,15 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class FabricMetadataTransformer implements Transformer {
     public static final FabricMetadataTransformer INSTANCE = new FabricMetadataTransformer();
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String NORMALIZER_SUFFIX = "_nojpms";
+    private static final String FAPI_MODID = "fabric-api";
+    private static final Pattern PATCH_VERSION = Pattern.compile("(\\d+\\.\\d+)\\.\\d+(?:\\.\\d+)*");
 
     private static final Gson GSON = new GsonBuilder()
         .setPrettyPrinting()
@@ -88,10 +91,28 @@ public class FabricMetadataTransformer implements Transformer {
             }
         }
 
+        // Strip patch FAPI dep version
+        JsonObject depends = json.getAsJsonObject("depends");
+        if (depends != null && depends.has(FAPI_MODID)) {
+            String ver = depends.getAsJsonPrimitive(FAPI_MODID).getAsString();
+            String stripped = stripPatchVersion(ver);
+            depends.addProperty(FAPI_MODID, stripped);
+        }
+
         JsonObject custom = Objects.requireNonNullElseGet(json.getAsJsonObject("custom"), JsonObject::new);
         custom.addProperty(TransformerUtil.METADATA_MARKER, true);
         custom.addProperty(TransformerUtil.LAUNCHPAD_MARKER, true);
         custom.addProperty(TransformerUtil.FLUID_TYPE_POLYFILL, true);
         json.add("custom", custom);
+    }
+
+    private static String stripPatchVersion(String predicate) {
+        int plus = predicate.indexOf('+');
+        if (plus < 0) {
+            return PATCH_VERSION.matcher(predicate).replaceAll("$1");
+        }
+        String head = predicate.substring(0, plus);
+        String tail = predicate.substring(plus);
+        return PATCH_VERSION.matcher(head).replaceAll("$1") + tail;
     }
 }

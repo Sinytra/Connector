@@ -22,7 +22,9 @@
   ],
   "client": [
     "client.ForgeHooksClientMixin",
-    "client.KeyMappingMixin"
+    "client.KeyMappingMixin",
+    "client.FullFaceCalculatorAccessor",
+    "client.ModelBlockRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

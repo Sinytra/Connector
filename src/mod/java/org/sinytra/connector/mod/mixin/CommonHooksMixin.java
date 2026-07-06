@@ -8,11 +8,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.common.CommonHooks;
-import net.neoforged.neoforge.fluids.FluidType;
 import org.sinytra.connector.mod.ConnectorMod;
-import org.sinytra.connector.mod.compat.FluidHandlerCompat;
 import org.sinytra.connector.mod.compat.ItemStackExtensions;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,15 +21,6 @@ import java.util.Map;
 
 @Mixin(CommonHooks.class)
 public abstract class CommonHooksMixin {
-
-    @Inject(method = "getVanillaFluidType", at = @At(value = "NEW", target = "java/lang/RuntimeException"), remap = false, cancellable = true)
-    private static void getFabricVanillaFluidType(Fluid fluid, CallbackInfoReturnable<FluidType> cir) {
-        FluidType fabricFluidType = FluidHandlerCompat.getFabricFluidType(fluid);
-        if (fabricFluidType != null) {
-            cir.setReturnValue(fabricFluidType);
-        }
-    }
-
     @Inject(method = "modifyAttributes", at = @At("TAIL"), remap = false)
     private static void connector$allowAttributeMixins(CallbackInfo ci, @Local Map<EntityType<? extends LivingEntity>, AttributeSupplier.Builder> modifiedMap) {
         modifiedMap.forEach((entity, attributes) -> {

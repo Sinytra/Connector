@@ -8,6 +8,7 @@
     "block.IBlockExtensionMixin",
     "item.IItemExtensionMixin",
     "item.ItemStackMixin",
+    "fluid.CommonHooksFluidMixin",
     "network.BundlerInfoMixin",
     "network.StreamCodecMixin",
     "registries.DataPackRegistriesHooksAccessor",

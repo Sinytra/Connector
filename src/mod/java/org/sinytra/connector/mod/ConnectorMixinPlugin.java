@@ -1,5 +1,6 @@
 package org.sinytra.connector.mod;
 
+import net.fabricmc.loader.api.FabricLoader;
 import org.objectweb.asm.tree.ClassNode;
 import org.sinytra.connector.ConnectorEarlyLoader;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
@@ -20,9 +21,16 @@ public class ConnectorMixinPlugin implements IMixinConfigPlugin {
         CrashReportUpgrade.registerCrashLogInfo();
     }
 
+    @Override
+    public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.endsWith(".fluid.CommonHooksFluidMixin")) {
+            return FabricLoader.getInstance().isModLoaded("fabric-transfer-api-v1");
+        }
+        return true;
+    }
+
     // We don't need any of the mixin stuff
     //@formatter:off
-    @Override public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {return true;}
     @Override public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {}
     @Override public void onLoad(String mixinPackage) {}
     @Override public String getRefMapperConfig() {return null;}

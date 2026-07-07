@@ -69,7 +69,7 @@ public class PortableTransformerFrontend {
             });
         List<JarTransformer.TransformableJar> allJars = Stream.concat(discoveredJars.stream(), discoveredNestedJars).toList();
 
-        List<Path> resolvedClassPath = new ArrayList<>(ProbeModDiscoverer.resolveClassPath(classPath));
+        List<Path> resolvedClassPath = new ArrayList<>(ProbeModDiscoverer.resolveClassPath(classPath, tempDir));
         resolvedClassPath.addAll(jars.other());
 
         // Run transformation

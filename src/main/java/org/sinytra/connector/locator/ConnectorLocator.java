@@ -60,7 +60,7 @@ public class ConnectorLocator implements IDependencyLocator {
 
             if (results != null) {
                 results.mods().forEach(pipeline::addModFile);
-                results.originalPaths().forEach(ConnectorEarlyLoader::addConnectorModPath);
+                ConnectorEarlyLoader.init(results.mods());
 
                 // Create mod file for generated adapter mixins jar
                 Path generatedAdapterJar = results.generatedJarPath();
@@ -130,7 +130,7 @@ public class ConnectorLocator implements IDependencyLocator {
             MixinTransformSafeguard.trigger(failing);
         }
 
-        // Deal with split packages (thanks modules
+        // Deal with split packages (thanks modules)
         List<FilteredPaths> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(
             transformed.stream().map(TransformedFabricModPath::output).toList(),
             loadedModFiles,

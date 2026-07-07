@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 public final class TransformerUtil {
     public static final String FABRIC_MOD_JSON = "fabric.mod.json";
     public static final long ZIP_TIME = 318211200000L;
-    public static final String METADATA_MARKER = "connector:transformed";
+    public static final String METADATA_MARKER = "connector:active";
     public static final String LAUNCHPAD_MARKER = "launchpad:compatible";
     public static final String FLUID_TYPE_POLYFILL = "sinytra:use_default_fluid_type";
 

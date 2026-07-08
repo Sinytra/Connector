@@ -24,39 +24,38 @@ public class ConnectorMethodProcessor extends SimpleMethodProcessor {
 
     private static final Map<Target, Consumer<MethodNode>> SUBPROCESSORS;
 
-    // TODO 26.1 update
     static {
         ImmutableMap.Builder<Target, Consumer<MethodNode>> builder = new Builder<>();
 
-//        builder.put(
-//            new Target("net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen", "renderEffects", "(Lnet/minecraft/client/gui/GuiGraphics;II)V"),
-//            input -> {
-//                MethodInsnNode insn = ASMAPI.findFirstMethodCall(input, ASMAPI.MethodType.INTERFACE, "java/util/stream/Stream", "collect", "(Ljava/util/stream/Collector;)Ljava/lang/Object;");
-//                if (insn != null && insn.getNext() instanceof TypeInsnNode typeInsn) {
-//                    input.instructions.insert(typeInsn, ASMAPI.listOf(
-//                        new MethodInsnNode(Opcodes.INVOKESTATIC, "com/google/common/collect/Ordering", "natural", "()Lcom/google/common/collect/Ordering;"),
-//                        new InsnNode(Opcodes.SWAP),
-//                        new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "com/google/common/collect/Ordering", "sortedCopy", "(Ljava/lang/Iterable;)Ljava/util/List;")
-//                    ));
-//                }
-//            }
-//        );
-//
-//        builder.put(
-//            new Target("net.minecraft.world.entity.LivingEntity", "forceAddEffect", "(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)V"),
-//            input -> {
-//                LocalVariableLookup lvt = new LocalVariableLookup(input);
-//                LocalVariableNode mobEffect = lvt.getByTypedOrdinal(Type.getObjectType("net/minecraft/world/effect/MobEffectInstance"), 1).orElse(null);
-//                if (mobEffect != null) {
-//                    mobEffect.start = lvt.getByIndex(0).start;
-//                    input.instructions.insert(mobEffect.start, ASMAPI.listOf(
-//                        new InsnNode(Opcodes.ACONST_NULL),
-//                        new VarInsnNode(Opcodes.ASTORE, mobEffect.index)
-//                    ));
-//                    LOGGER.debug("Expanded local variable scope for LivingEntity#forceAddEffect index {}", mobEffect.index);
-//                }
-//            }
-//        );
+        builder.put(
+            new Target("net.minecraft.client.gui.screens.inventory.EffectsInInventory", "extractRenderState", "(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V"),
+            input -> {
+                MethodInsnNode insn = findFirstMethodCall(input, Opcodes.INVOKEINTERFACE, "java/util/stream/Stream", "collect", "(Ljava/util/stream/Collector;)Ljava/lang/Object;");
+                if (insn != null && insn.getNext() instanceof TypeInsnNode typeInsn) {
+                    input.instructions.insert(typeInsn, listOf(
+                        new MethodInsnNode(Opcodes.INVOKESTATIC, "com/google/common/collect/Ordering", "natural", "()Lcom/google/common/collect/Ordering;"),
+                        new InsnNode(Opcodes.SWAP),
+                        new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "com/google/common/collect/Ordering", "sortedCopy", "(Ljava/lang/Iterable;)Ljava/util/List;")
+                    ));
+                }
+            }
+        );
+
+        builder.put(
+            new Target("net.minecraft.world.entity.LivingEntity", "forceAddEffect", "(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)V"),
+            input -> {
+                LocalVariableLookup lvt = new LocalVariableLookup(input);
+                LocalVariableNode mobEffect = lvt.getByTypedOrdinal(Type.getObjectType("net/minecraft/world/effect/MobEffectInstance"), 1).orElse(null);
+                if (mobEffect != null) {
+                    mobEffect.start = lvt.getByIndex(0).start;
+                    input.instructions.insert(mobEffect.start, listOf(
+                        new InsnNode(Opcodes.ACONST_NULL),
+                        new VarInsnNode(Opcodes.ASTORE, mobEffect.index)
+                    ));
+                    LOGGER.debug("Expanded local variable scope for LivingEntity#forceAddEffect index {}", mobEffect.index);
+                }
+            }
+        );
 
         Consumer<MethodNode> injectFabricASM = input -> {
             var insns = new InsnList();
@@ -110,5 +109,23 @@ public class ConnectorMethodProcessor extends SimpleMethodProcessor {
         Consumer<MethodNode> processor = Objects.requireNonNull(SUBPROCESSORS.get(target));
 
         processor.accept(input);
+    }
+
+    private static InsnList listOf(AbstractInsnNode... nodes) {
+        InsnList list = new InsnList();
+        for (AbstractInsnNode node : nodes)
+            list.add(node);
+        return list;
+    }
+
+    private static MethodInsnNode findFirstMethodCall(MethodNode method, int opcode, String owner, String name, String descriptor) {
+        for (AbstractInsnNode insn : method.instructions) {
+            if (insn instanceof MethodInsnNode minsn && insn.getOpcode() == opcode) {
+                if (minsn.owner.equals(owner) && minsn.name.equals(name) && minsn.desc.equals(descriptor)) {
+                    return minsn;
+                }
+            }   
+        }
+        return null;
     }
 }

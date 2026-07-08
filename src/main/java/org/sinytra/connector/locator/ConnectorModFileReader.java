@@ -28,6 +28,7 @@ import org.sinytra.connector.service.ConnectorForkJoinThreadFactory;
 import org.sinytra.connector.transformer.jar.MetadataReader;
 import org.sinytra.connector.util.ConnectorConfig;
 import org.sinytra.connector.util.ConnectorUtil;
+import org.sinytra.connector.util.CrashReportHeader;
 import org.sinytra.launchpad.api.Constants;
 import org.slf4j.Logger;
 
@@ -40,6 +41,7 @@ public class ConnectorModFileReader implements IModFileReader {
 
     public ConnectorModFileReader() {
         injectLogMarkers();
+        CrashReportHeader.registerCrashLogInfo();
         ConnectorForkJoinThreadFactory.install();
         new MixinFacade();
 

@@ -3,12 +3,10 @@
   "minVersion": "0.8.4",
   "package": "org.sinytra.connector.mod.mixin",
   "compatibilityLevel": "JAVA_25",
-  "plugin": "org.sinytra.connector.mod.ConnectorMixinPlugin",
   "mixins": [
     "block.IBlockExtensionMixin",
     "item.IItemExtensionMixin",
     "item.ItemStackMixin",
-    "fluid.CommonHooksFluidMixin",
     "network.BundlerInfoMixin",
     "network.StreamCodecMixin",
     "registries.DataPackRegistriesHooksAccessor",

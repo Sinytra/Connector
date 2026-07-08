@@ -18,7 +18,6 @@ public final class TransformerUtil {
     public static final long ZIP_TIME = 318211200000L;
     public static final String METADATA_MARKER = "connector:active";
     public static final String LAUNCHPAD_MARKER = "launchpad:compatible";
-    public static final String FLUID_TYPE_POLYFILL = "sinytra:use_default_fluid_type";
 
     // keywords, boolean and null literals, not allowed in identifiers
     // See jdk.internal.module.Checks#RESERVED

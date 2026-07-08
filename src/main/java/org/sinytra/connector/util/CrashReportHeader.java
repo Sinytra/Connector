@@ -1,4 +1,4 @@
-package org.sinytra.connector.mod;
+package org.sinytra.connector.util;
 
 import net.neoforged.fml.CrashReportCallables;
 import net.neoforged.neoforgespi.language.IModInfo;
@@ -7,8 +7,9 @@ import org.sinytra.connector.ConnectorEarlyLoader;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
-public final class CrashReportUpgrade {
+public final class CrashReportHeader {
     private static final String CONNECTOR_ISSUE_TRACKER_URL = "https://github.com/Sinytra/Connector/issues";
 
     public static void registerCrashLogInfo() {
@@ -25,7 +26,7 @@ public final class CrashReportUpgrade {
         });
         CrashReportCallables.registerCrashCallable("Sinytra Connector", () -> {
             String format = "| %-50.50s | %-30.30s | %-30.30s | %-20.20s |";
-            String version = ConnectorMod.getVersion();
+            String version = getVersion();
             StringBuilder builder = new StringBuilder();
             builder.append(version);
             builder.append("\n\t\tSINYTRA CONNECTOR IS PRESENT!");
@@ -50,5 +51,9 @@ public final class CrashReportUpgrade {
             }
             return builder.toString();
         });
+    }
+
+    private static String getVersion() {
+        return Objects.requireNonNullElse(CrashReportHeader.class.getPackage().getImplementationVersion(), "<unknown>");
     }
 }

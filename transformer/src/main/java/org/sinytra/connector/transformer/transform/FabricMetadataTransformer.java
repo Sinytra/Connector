@@ -102,7 +102,6 @@ public class FabricMetadataTransformer implements Transformer {
         JsonObject custom = Objects.requireNonNullElseGet(json.getAsJsonObject("custom"), JsonObject::new);
         custom.addProperty(TransformerUtil.METADATA_MARKER, true);
         custom.addProperty(TransformerUtil.LAUNCHPAD_MARKER, true);
-        custom.addProperty(TransformerUtil.FLUID_TYPE_POLYFILL, true);
         json.add("custom", custom);
     }
 

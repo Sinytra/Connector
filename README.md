@@ -6,10 +6,9 @@
 <p align="center">
   <a href="https://github.com/Sinytra/Connector/actions/workflows/build.yml"><img src="https://github.com/Sinytra/Connector/actions/workflows/build.yml/badge.svg"></a>
   <a href="https://github.com/Sinytra/Connector/releases/latest"><img src="https://img.shields.io/github/v/release/Sinytra/Connector?style=flat&label=Release&include_prereleases&sort=semver"></a>
-  <a href="https://legacy.curseforge.com/minecraft/mc-mods/sinytra-connector"><img src="https://cf.way2muchnoise.eu/title/sinytra-connector.svg"></a>
+  <a href="https://legacy.curseforge.com/minecraft/mc-mods/sinytra-connector"><img src="https://cf.way2muchnoise.eu/short_sinytra-connector.svg"></a>
   <a href="https://modrinth.com/mod/connector"><img src="https://img.shields.io/modrinth/dt/u58R1TMW?color=00AF5C&label=modrinth&style=flat&logo=modrinth"></a>
-  <a href="https://github.com/Sinytra/ForgifiedFabricAPI"><img src="https://raw.githubusercontent.com/Sinytra/.github/main/badges/forgified-fabric-api-neo/compacter.svg"></a>
-  <a href="https://discord.sinytra.org"><img src="https://discordapp.com/api/guilds/1141048834177388746/widget.png?style=shield"></a>
+  <a href="https://discord.sinytra.org"><img src="https://img.shields.io/discord/1141048834177388746?logo=discord&logoColor=white&label=Discord&color=5865f2"></a>
   <a href="https://nightly.link/Sinytra/Connector/workflows/build/dev/Nightly%20mod%20jar.zip"><img src="https://img.shields.io/badge/Nightly-Download-9a32f0?logo=github"></a>
 </p>
 
@@ -25,7 +24,6 @@ all their favourite mods in one modpack.
 ### 🔗 Related Projects
 
 - Visit our [website](https://connector.sinytra.org) to find information on mod compatibility and common issues
-- Learn more about how Connector works by reading our [Introductory blog post](https://github.com/Sinytra/Connector/discussions/11)
 - Developing cross-platform mods? Check out the [Forgified Fabric API](https://github.com/Sinytra/ForgifiedFabricAPI), a port of the Fabric API to NeoForge
 - Install [Connector Extras](https://github.com/Sinytra/ConnectorExtras) for improved compatibility with third-party libraries and APIs
 
@@ -45,7 +43,8 @@ To install Connector and its dependencies, follow the same installation steps as
 1. Install **NeoForge**. We recommend using the latest stable version.  
 [\[NeoForge's website\]](https://neoforged.net/)
 
-2. Install **Connector**. Get the latest release from one of our official distribution channels and drop the jar in your mods folder.  
+2. Install **Connector**. Get the latest release from one of our official distribution channels and drop the jar in your
+mods folder.  
 [\[CurseForge\]](https://curseforge.com/minecraft/mc-mods/sinytra-connector) [\[Modrinth\]](https://modrinth.com/mod/connector) [\[GitHub\]](https://github.com/Sinytra/Connector/releases)
 
 3. Download the **Forgified Fabric API**.
@@ -81,11 +80,11 @@ also getting you a fixed version ASAP.
 
 ### Supported versions
 
-✅ **1.21.1** is our **primary supported version**.
+✅ **26.1.2** is our **primary supported version**.
 This is the one that will receive new fixes and compatibility improvements.
 
-⚠️ **1.20.1** is our **long-term-support** version and will still receive critical bugfixes.
-However, no compatibility fixes will be made.
+⚠️ **1.21.1** is our **long-term-support** version and will still receive critical bugfixes.
+The latest compatibility fixes might not be available.
 
 ## ⚖️ License
 
@@ -107,18 +106,11 @@ Here's a few tips to help get your PR approved:
 ## 🛠️ Developer guide
 
 If you're a mod developer and you'd like to run Connector in your dev environment, it is possible in just a few steps.
-Used Fabric mods must be mapped to `intermediary` so that Connector can process them.
 
 #### ModDevGradle Usage
 
 ```groovy
-plugins {
-   // Used to attach the clean mapped Minecraft artifact to run configurations
-   // Find the latest version at https://maven.su5ed.dev/#/releases/org/sinytra/adapter/userdev/
-   id 'org.sinytra.adapter.userdev' version '<version>'
-}
 repositories {
-    // Make sure to add this to the pluginManagement.repositories block in settings.gradle as well
     maven {
         name = "Sinytra"
         url = "https://maven.sinytra.org/"
@@ -126,11 +118,11 @@ repositories {
 }
 dependencies {
     // Add Connector to the launch classpath
-    additionalRuntimeClasspath "org.sinytra:connector:<version>"
+    implementation "org.sinytra:connector:<version>"
     // Add FFAPI dependency
-    runtimeOnly "org.sinytra.forgified-fabric-api:forgified-fabric-api:<version>"
-    // Install desired Fabric mods. Make sure they remain unmapped at runtime
-    runtimeOnly "some.fabric:mod:<version>"
+    implementation "org.sinytra.forgified-fabric-api:forgified-fabric-api:<version>"
+    // Install desired Fabric mods
+    implementation "some.fabric:mod:<version>"
 }
 ```
 

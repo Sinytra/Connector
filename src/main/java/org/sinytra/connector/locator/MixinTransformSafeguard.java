@@ -3,34 +3,41 @@ package org.sinytra.connector.locator;
 import com.mojang.logging.LogUtils;
 import net.neoforged.fml.ModLoadingException;
 import net.neoforged.fml.ModLoadingIssue;
-import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import org.sinytra.adapter.env.ctx.AuditTrail;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.util.ConnectorConfig;
-import org.sinytra.connector.util.PriorityModLoadingException;
 import org.slf4j.Logger;
 
 import java.util.List;
 
 public final class MixinTransformSafeguard {
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static List<JarTransformer.TransformedFabricModPath> failing;
 
     public static boolean isEnabled() {
         return ConnectorConfig.INSTANCE.get().enableMixinSafeguard();
     }
 
-    public static void trigger(List<JarTransformer.TransformedFabricModPath> failing) throws ModLoadingException {
+    public static void prepare(List<JarTransformer.TransformedFabricModPath> mods) {
         if (!isEnabled()) {
-            LOGGER.warn("Ignoring {} found incompatibilities as mixin safeguard is disabled", failing.size());
+            LOGGER.warn("Ignoring {} found incompatibilities as mixin safeguard is disabled", mods.size());
+            return;
+        }
+        if (!mods.isEmpty()) {
+            failing = mods;
+        }
+    }
+
+    public static void trigger() {
+        if (failing == null) {
             return;
         }
 
-        StartupNotificationManager.addModMessage("INCOMPATIBLE FABRIC MOD FOUND");
         StringBuilder builder = new StringBuilder();
 
         String msg = "Found §e" + failing.size() + " incompatible Fabric " + (failing.size() > 1 ? "mods" : "mod") + "§r. Details are provided below.\n\n" +
-                "With the current configuration, Connector §ccannot guarantee§r a stable environment. Should you still want to proceed, please restart the game.\n\n" +
-                "§7This one-time safety check can be disabled in Connector's config file under \"enableMixinSafeguard\".§r";
+            "With the current configuration, Connector §ccannot guarantee§r a stable environment. Should you still want to proceed, please restart the game.\n\n" +
+            "§7This one-time safety check can be disabled in Connector's config file under \"enableMixinSafeguard\".§r";
         builder.append(msg).append("\n\n");
 
         failing.forEach(p -> {
@@ -42,6 +49,6 @@ public final class MixinTransformSafeguard {
             builder.append("\n");
         });
 
-        throw new PriorityModLoadingException(ModLoadingIssue.error(builder.toString()));
+        throw new ModLoadingException(ModLoadingIssue.error(builder.toString()));
     }
 }

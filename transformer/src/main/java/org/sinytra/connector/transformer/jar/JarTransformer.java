@@ -53,8 +53,7 @@ public final class JarTransformer {
         for (TransformableJar jar : jars) {
             if (jar.cacheFile().isUpToDate()) {
                 transformed.add(jar.toTransformedPath());
-            }
-            else {
+            } else {
                 needTransforming.add(jar);
             }
             inputLibs.add(jar.input().toPath());
@@ -99,13 +98,13 @@ public final class JarTransformer {
                 initProgress.complete();
             }
             ExecutorService executorService = Executors.newFixedThreadPool(paths.size());
-            List<Pair<File, Future<Pair<FabricModPath, AuditTrail>>>> futures = paths.stream()
+            List<Pair<File, Future<TransformedFabricModPath>>> futures = paths.stream()
                 .map(jar -> {
-                    Future<Pair<FabricModPath, AuditTrail>> future = executorService.submit(() -> {
+                    Future<TransformedFabricModPath> future = executorService.submit(() -> {
                         Thread.currentThread().setName("TX " + jar.input.getName());
-                        Pair<FabricModPath, AuditTrail> pair = jar.transform(transformInstance);
+                        TransformedFabricModPath output = jar.transform(transformInstance);
                         progress.increment();
-                        return pair;
+                        return output;
                     });
                     return Pair.of(jar.input(), future);
                 })
@@ -117,8 +116,7 @@ public final class JarTransformer {
             List<TransformedFabricModPath> results = futures.stream()
                 .map(pair -> {
                     try {
-                        Pair<FabricModPath, AuditTrail> result = pair.getSecond().get();
-                        return new TransformedFabricModPath(pair.getFirst().toPath(), result.getFirst(), result.getSecond());
+                        return pair.getSecond().get();
                     } catch (Throwable t) {
                         throw this.environment.onTransformationError("Error transforming file " + pair.getFirst().getName(), t);
                     }
@@ -158,20 +156,24 @@ public final class JarTransformer {
         }
     }
 
-    public record FabricModPath(Path path, FabricModFileMetadata metadata) {}
+    public record FabricModPath(Path path, FabricModFileMetadata metadata) {
+    }
 
-    public record TransformedFabricModPath(Path input, FabricModPath output, @Nullable AuditTrail auditTrail) {}
+    public record TransformedFabricModPath(Path input, FabricModPath output, CacheFile cacheFile, @Nullable AuditTrail auditTrail) {
+        public boolean needsUpdate() {
+            return this.auditTrail != null;
+        }
+    }
 
     public record TransformableJar(File input, FabricModPath modPath, CacheFile cacheFile) {
-        public Pair<FabricModPath, AuditTrail> transform(JarTransformInstance transformInstance) throws IOException {
+        public TransformedFabricModPath transform(JarTransformInstance transformInstance) throws IOException {
             Files.deleteIfExists(this.modPath.path);
             AuditTrail audit = transformInstance.transformJar(this.input, this.modPath.path, this.modPath.metadata());
-            this.cacheFile.save();
-            return Pair.of(this.modPath, audit);
+            return new TransformedFabricModPath(this.input.toPath(), this.modPath, this.cacheFile, audit);
         }
 
         public TransformedFabricModPath toTransformedPath() {
-            return new TransformedFabricModPath(this.input.toPath(), this.modPath, null);
+            return new TransformedFabricModPath(this.input.toPath(), this.modPath, this.cacheFile, null);
         }
     }
 }

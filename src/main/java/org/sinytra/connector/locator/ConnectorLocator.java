@@ -28,7 +28,6 @@ import org.sinytra.connector.transformer.jar.JarTransformer.TransformableJar;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformedFabricModPath;
 import org.sinytra.connector.transformer.jar.MetadataReader;
 import org.sinytra.connector.transformer.transform.FabricMetadataTransformer;
-import org.sinytra.connector.util.PriorityModLoadingException;
 import org.sinytra.launchpad.service.FabricModJsonFileReader;
 import org.slf4j.Logger;
 
@@ -56,11 +55,9 @@ public class ConnectorLocator implements IDependencyLocator {
             List<IModFile> loadedModsWithDeps = grabLocatedMods(pipeline);
             LocationResult results = locateFabricMods(loadedMods, loadedModsWithDeps);
 
-            // TODO Make sure to show dep errors even if TX fails
-
             if (results != null) {
                 results.mods().forEach(pipeline::addModFile);
-                ConnectorEarlyLoader.init(results.mods());
+                ConnectorEarlyLoader.init(results.mods(), results.output());
 
                 // Create mod file for generated adapter mixins jar
                 Path generatedAdapterJar = results.generatedJarPath();
@@ -71,8 +68,6 @@ public class ConnectorLocator implements IDependencyLocator {
                 // Remove stubs
                 loadedModsWithDeps.removeIf(m -> m.getModFileInfo() instanceof StubModFileInfo);
             }
-        } catch (PriorityModLoadingException e) {
-            throw e;
         } catch (ModLoadingException e) {
             // Let these pass through
             throw e;
@@ -81,9 +76,6 @@ public class ConnectorLocator implements IDependencyLocator {
             StartupNotificationManager.addModMessage("CONNECTOR LOCATOR ERROR");
             LOGGER.error("Connector locator error", t);
             throw new ModLoadingException(ConnectorEarlyLoader.createGenericLoadingIssue(t, "Fabric mod discovery failed"));
-        } finally {
-            // Handle forge mod split packages
-//            ForgeModPackageFilter.filterPackages(loadedMods); TODO
         }
     }
 
@@ -113,8 +105,6 @@ public class ConnectorLocator implements IDependencyLocator {
         // Remove mods loaded by FML
         List<TransformableJar> uniqueJars = handleDuplicateMods(candidates, loadedModInfos, ignoredModFiles);
 
-        // TODO Basic dependency check
-
         // Get renamer library classpath
         List<Path> renameLibs = loadedModFiles.stream()
             .map(IModFile::getFilePath)
@@ -126,9 +116,7 @@ public class ConnectorLocator implements IDependencyLocator {
         List<TransformedFabricModPath> failing = transformed.stream()
             .filter(j -> j.auditTrail() != null && j.auditTrail().hasFailingMixins())
             .toList();
-        if (!failing.isEmpty()) {
-            MixinTransformSafeguard.trigger(failing);
-        }
+        MixinTransformSafeguard.prepare(failing);
 
         // Deal with split packages (thanks modules)
         List<FilteredPaths> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(
@@ -144,10 +132,7 @@ public class ConnectorLocator implements IDependencyLocator {
                 return Objects.requireNonNull(mf, "Invalid mod file");
             })
             .toList();
-        List<Path> originalPaths = transformed.stream()
-            .map(JarTransformer.TransformedFabricModPath::input)
-            .toList();
-        return new LocationResult(loadedMods, originalPaths, environment.getGeneratedJarPath());
+        return new LocationResult(loadedMods, transformed, environment.getGeneratedJarPath());
     }
 
     // Removes any duplicates from located connector mods, as well as mods that are already located by FML.
@@ -305,7 +290,7 @@ public class ConnectorLocator implements IDependencyLocator {
     private record SimpleModInfo(String modid, ArtifactVersion version, boolean library, @Nullable IModFile origin) {
     }
 
-    private record LocationResult(List<IModFile> mods, List<Path> originalPaths, Path generatedJarPath) {
+    private record LocationResult(List<IModFile> mods, List<TransformedFabricModPath> output, Path generatedJarPath) {
     }
 
     private record ComparableModFile(IModFile file, Version version, int nestingLevel) {

@@ -84,7 +84,7 @@ public class ConnectorModFileReader implements IModFileReader {
 
         // Check if mod is a valid candidate
         if (shouldIgnoreMod(metadata)) {
-            // TODO Logging
+            LOGGER.debug("Skipping loading mod {}", metadata.getId());
             return null;
         }
 

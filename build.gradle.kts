@@ -181,6 +181,11 @@ val fullJar = tasks.register("fullHar", ShadowJar::class) {
 
 tasks {
     jar {
+        from("src/mod/resources/META-INF/neoforge.mods.toml") {
+            into("META-INF")
+        }
+        from("src/mod/resources/logo.png")
+
         manifest {
             attributes(
                 "Specification-Title" to project.name,

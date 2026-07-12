@@ -3,6 +3,8 @@ package org.sinytra.connector.locator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.fml.ModLoadingException;
@@ -143,6 +145,7 @@ public class ConnectorLocator implements IDependencyLocator {
                 return Objects.requireNonNull(mf, "Invalid mod file");
             })
             .toList();
+
         return new LocationResult(loadedMods, transformed, environment.getGeneratedJarPath());
     }
 
@@ -240,6 +243,13 @@ public class ConnectorLocator implements IDependencyLocator {
 
     private static boolean shouldLoadMod(IModFile modFile, Collection<String> loadedNeoMods) {
         LoaderModMetadata metadata = ((StubModFileInfo) modFile.getModFileInfo()).metadata();
+
+        EnvType env = FabricLoader.getInstance().getEnvironmentType();
+        if (!metadata.loadsInEnvironment(env)) {
+            LOGGER.debug("Not loading mod {} ({}) in current environment", metadata.getId(), modFile.getFilePath());
+            return false;
+        }
+
         // Skip loading mods that already have a native neo equivalent loaded
         String neoModId = FabricMetadataTransformer.normalizeModId(metadata.getId());
         return !loadedNeoMods.contains(neoModId);

@@ -45,6 +45,15 @@ public final class ConnectorUtil {
         return ver + "," + FMLEnvironment.getDist().name().toLowerCase();
     });
 
+    public static final Supplier<Boolean> SHOULD_ENABLE = Suppliers.memoize(() -> {
+        try {
+            Class.forName("org.sinytra.launchpad.api.Launchpad");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    });
+
     // Ugly hardcoded values
     // Never load fabric mods of these mod ids
     public static final Collection<String> DISABLED_MODS = Set.of(

@@ -40,6 +40,10 @@ public class ConnectorModFileReader implements IModFileReader {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public ConnectorModFileReader() {
+        if (!ConnectorUtil.SHOULD_ENABLE.get()) {
+            return;
+        }
+
         injectLogMarkers();
         CrashReportHeader.registerCrashLogInfo();
         ConnectorForkJoinThreadFactory.install();
@@ -58,6 +62,10 @@ public class ConnectorModFileReader implements IModFileReader {
     @Override
     @Nullable
     public IModFile read(JarContents jar, ModFileDiscoveryAttributes attributes) {
+        if (!ConnectorUtil.SHOULD_ENABLE.get()) {
+            return null;
+        }
+
         try {
             return readModFile(jar, attributes.withReader(this));
         } catch (ModLoadingException e) {

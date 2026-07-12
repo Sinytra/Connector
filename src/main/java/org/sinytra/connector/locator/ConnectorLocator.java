@@ -33,6 +33,7 @@ import org.sinytra.connector.transformer.jar.JarTransformer.TransformableJar;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformedFabricModPath;
 import org.sinytra.connector.transformer.jar.MetadataReader;
 import org.sinytra.connector.transformer.transform.FabricMetadataTransformer;
+import org.sinytra.connector.util.ConnectorUtil;
 import org.sinytra.launchpad.api.FabricModFactory;
 import org.slf4j.Logger;
 
@@ -57,6 +58,10 @@ public class ConnectorLocator implements IDependencyLocator {
 
     @Override
     public void scanMods(List<IModFile> loadedMods, IDiscoveryPipeline pipeline) {
+        if (!ConnectorUtil.SHOULD_ENABLE.get()) {
+            return;
+        }
+
         try {
             List<IModFile> loadedModsWithDeps = grabLocatedMods(pipeline);
             LocationResult results = locateFabricMods(loadedMods, loadedModsWithDeps);

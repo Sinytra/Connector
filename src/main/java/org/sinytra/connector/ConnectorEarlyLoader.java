@@ -38,16 +38,12 @@ public class ConnectorEarlyLoader {
         return new ModLoadingIssue(ModLoadingIssue.Severity.ERROR, message, Arrays.asList(args), keepOriginal ? original : null, null, null, null);
     }
 
-    public static void init(List<IModFile> mods, List<TransformedFabricModPath> output) {
-        for (IModFile file : mods) {
-            if (file.getModInfos().size() != 1) {
-                throw new RuntimeException("Expected to find a single mod");
+    public static void init(List<IModFile> modFiles, List<TransformedFabricModPath> output) {
+        for (IModFile file : modFiles) {
+            for (IModInfo mod : file.getModInfos()) {
+                CONNECTOR_MODIDS.add(mod.getModId());
+                CONNECTOR_MODS.add(mod);
             }
-
-            IModInfo mod = file.getModFileInfo().getMods().getFirst();
-
-            CONNECTOR_MODIDS.add(mod.getModId());
-            CONNECTOR_MODS.add(mod);
         }
 
         for (TransformedFabricModPath path : output) {

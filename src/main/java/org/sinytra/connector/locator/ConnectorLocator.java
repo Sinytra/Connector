@@ -13,6 +13,7 @@ import net.neoforged.fml.loading.LogMarkers;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import net.neoforged.neoforgespi.language.IModInfo;
 import net.neoforged.neoforgespi.locating.*;
+import net.neoforged.neoforgespi.locating.IModFile.Type;
 import org.apache.maven.artifact.versioning.ArtifactVersion;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.jetbrains.annotations.Nullable;
@@ -20,18 +21,21 @@ import org.sinytra.connector.ConnectorEarlyLoader;
 import org.sinytra.connector.locator.ConnectorModFileReader.StubModFileInfo;
 import org.sinytra.connector.locator.filter.SplitPackageMerger;
 import org.sinytra.connector.locator.filter.SplitPackageMerger.FilteredPaths;
+import org.sinytra.connector.locator.filter.SplitPackageMerger.SplitInputPath;
 import org.sinytra.connector.locator.transform.ConnectorTransformerEnvironment;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.FabricModFileMetadata;
 import org.sinytra.connector.transformer.jar.JarTransformer;
+import org.sinytra.connector.transformer.jar.JarTransformer.FabricModPath;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformableJar;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformedFabricModPath;
 import org.sinytra.connector.transformer.jar.MetadataReader;
 import org.sinytra.connector.transformer.transform.FabricMetadataTransformer;
-import org.sinytra.launchpad.service.FabricModJsonFileReader;
+import org.sinytra.launchpad.api.FabricModFactory;
 import org.slf4j.Logger;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -119,16 +123,23 @@ public class ConnectorLocator implements IDependencyLocator {
         MixinTransformSafeguard.prepare(failing);
 
         // Deal with split packages (thanks modules)
+        List<SplitInputPath> splitInput = transformed.stream()
+            .map(path -> {
+                IModFile.Type type = determineModType(path.output(), discoveredAllMods);
+                return new SplitInputPath(path.output().path(), path.output().metadata(), type);
+            })
+            .toList();
         List<FilteredPaths> moduleSafeJars = SplitPackageMerger.mergeSplitPackages(
-            transformed.stream().map(TransformedFabricModPath::output).toList(),
+            splitInput,
             loadedModFiles,
             ignoredModFiles
         );
 
+        ModFileDiscoveryAttributes attributes = ModFileDiscoveryAttributes.DEFAULT.withDependencyLocator(this);
         List<IModFile> loadedMods = moduleSafeJars.stream()
             .map(out -> {
                 JarContents contents = uncheck(() -> JarContents.ofFilteredPaths(out.paths()));
-                IModFile mf = FabricModJsonFileReader.createModFile(contents, ModFileDiscoveryAttributes.DEFAULT);
+                IModFile mf = FabricModFactory.createModFile(contents, attributes, out.type());
                 return Objects.requireNonNull(mf, "Invalid mod file");
             })
             .toList();
@@ -232,6 +243,30 @@ public class ConnectorLocator implements IDependencyLocator {
         // Skip loading mods that already have a native neo equivalent loaded
         String neoModId = FabricMetadataTransformer.normalizeModId(metadata.getId());
         return !loadedNeoMods.contains(neoModId);
+    }
+
+    private static IModFile.Type determineModType(FabricModPath path, List<IModFile> discoveredAllMods) {
+        if (!path.metadata().generated()) {
+            return Type.MOD;
+        }
+
+        try {
+            JarContents jar = JarContents.ofPath(path.path());
+            JarModuleInfo info = JarModuleInfo.from(jar);
+            String id = info.name();
+
+            boolean existing = discoveredAllMods.stream()
+                .anyMatch(m -> id.equals(m.getId())
+                    && m.getDiscoveryAttributes().parent() != null
+                    && m.getDiscoveryAttributes().parent().getType() == Type.LIBRARY);
+            if (existing) {
+                return Type.LIBRARY;
+            }
+        } catch (IOException e) {
+            LOGGER.error("Error determining mod type for {}", path.path(), e);
+        }
+
+        return Type.GAMELIBRARY;
     }
 
     @Nullable

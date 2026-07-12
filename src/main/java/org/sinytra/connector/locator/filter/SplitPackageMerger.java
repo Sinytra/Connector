@@ -8,9 +8,9 @@ import net.neoforged.fml.jarcontents.JarContents.PathFilter;
 import net.neoforged.fml.jarmoduleinfo.JarModuleInfo;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforgespi.locating.IModFile;
+import net.neoforged.neoforgespi.locating.IModFile.Type;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.transformer.jar.FabricModFileMetadata;
-import org.sinytra.connector.transformer.jar.JarTransformer.FabricModPath;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -31,20 +31,25 @@ public class SplitPackageMerger {
      * @param paths jar paths to process
      * @return a list of adjusted jar paths
      */
-    public static List<FilteredPaths> mergeSplitPackages(List<FabricModPath> paths, Iterable<IModFile> existing, Collection<? super IModFile> ignoredModFiles) {
+    public static List<FilteredPaths> mergeSplitPackages(List<SplitInputPath> paths, Iterable<IModFile> existing, Collection<? super IModFile> ignoredModFiles) {
         // Paths that don't contain conflicting jars
-        List<FabricModPath> plainPaths = new ArrayList<>(paths);
+        List<SplitInputPath> plainPaths = new ArrayList<>(paths);
         // Processed paths result
         List<FilteredPaths> output = new ArrayList<>();
 
         // Package name -> list of jars that contain the package
-        Map<String, List<Pair<JarContents, FabricModPath>>> pkgSources = new HashMap<>();
-        for (FabricModPath modInfo : paths) {
-            JarContents jar = uncheck(() -> JarContents.ofPath(modInfo.path()));
+        Map<String, List<Pair<JarContents, SplitInputPath>>> pkgSources = new HashMap<>();
+        for (SplitInputPath input : paths) {
+            // Libraries are loaded in unnamed modules and are not subject to JPMS rules
+            if (input.type() == Type.LIBRARY) {
+                continue;
+            }
+
+            JarContents jar = uncheck(() -> JarContents.ofPath(input.path()));
             Collection<String> packages = JarModuleInfo.scanModulePackages(jar);
             for (String pkg : packages) {
                 pkgSources.computeIfAbsent(pkg, _ -> new ArrayList<>())
-                    .add(Pair.of(jar, modInfo));
+                    .add(Pair.of(jar, input));
             }
         }
 
@@ -52,7 +57,7 @@ public class SplitPackageMerger {
         // Keep track of the order jars were found in, for selecting package owners
         List<JarContents> jarOrder = new ArrayList<>();
         // Map of packages that need merging and their sources
-        Map<String, List<Pair<JarContents, FabricModPath>>> mergePkgs = new LinkedHashMap<>();
+        Map<String, List<Pair<JarContents, SplitInputPath>>> mergePkgs = new LinkedHashMap<>();
         AtomicInteger totalJars = new AtomicInteger(0);
         pkgSources.forEach((pkg, sources) -> {
             if (sources.size() > 1) {
@@ -78,11 +83,11 @@ public class SplitPackageMerger {
             // Sort sources in the order jars were discovered
             sources.sort(Comparator.comparingInt(p -> jarOrder.indexOf(p.getFirst())));
 
-            Pair<JarContents, FabricModPath> pair = sources.getFirst();
+            Pair<JarContents, SplitInputPath> pair = sources.getFirst();
             JarContents candidate = pair.getFirst();
             JarMergeInfo owner = jarMap.computeIfAbsent(
                 getJarKey(candidate),
-                _ -> new JarMergeInfo(candidate.getPrimaryPath(), pair.getSecond().metadata())
+                _ -> new JarMergeInfo(candidate.getPrimaryPath(), pair.getSecond().metadata(), pair.getSecond().type())
             );
             analyzeJar(jarMap, owner, sources.subList(1, sources.size()), pkg);
         });
@@ -104,15 +109,15 @@ public class SplitPackageMerger {
 
         // Remove existing classpath packages
         for (String pkg : existingPackages) {
-            List<Pair<JarContents, FabricModPath>> list = pkgSources.get(pkg);
+            List<Pair<JarContents, SplitInputPath>> list = pkgSources.get(pkg);
             if (list != null) {
-                for (Pair<JarContents, FabricModPath> pair : list) {
+                for (Pair<JarContents, SplitInputPath> pair : list) {
                     JarContents jar = pair.getFirst();
-                    FabricModPath modPath = pair.getSecond();
-                    plainPaths.remove(modPath);
+                    SplitInputPath input = pair.getSecond();
+                    plainPaths.remove(input);
                     JarMergeInfo info = jarMap.computeIfAbsent(
                         getJarKey(jar),
-                        _ -> new JarMergeInfo(jar.getPrimaryPath(), modPath.metadata())
+                        _ -> new JarMergeInfo(jar.getPrimaryPath(), input.metadata(), input.type())
                     );
                     LOGGER.debug("Excluding existing package {} from jar {}", pkg, jar.getPrimaryPath());
                     info.excludedPackages().add(pkg);
@@ -130,13 +135,15 @@ public class SplitPackageMerger {
                 Stream.of(new FilteredPath(info.origin(), mergeANDFilter(BASE_FILTER, filter))),
                 additionalPaths.stream()
             ).toList();
-            output.add(new FilteredPaths(jarPaths));
+
+            output.add(new FilteredPaths(jarPaths, info.type()));
         });
 
         // Add unprocessed paths to output
-        for (FabricModPath modPath : plainPaths) {
-            FilteredPath path = new FilteredPath(modPath.path(), BASE_FILTER);
-            output.add(new FilteredPaths(List.of(path)));
+        for (SplitInputPath input : plainPaths) {
+            PathFilter filter = input.type() == Type.LIBRARY ? null : BASE_FILTER;
+            FilteredPath path = new FilteredPath(input.path(), filter);
+            output.add(new FilteredPaths(List.of(path), input.type()));
         }
         if (paths.size() != output.size()) {
             LOGGER.error("Expected {} paths, got {}", paths.size(), plainPaths.size());
@@ -154,14 +161,15 @@ public class SplitPackageMerger {
      * @param others the remaining package sources
      * @param pkg    the package to look filter out
      */
-    private static void analyzeJar(Map<Object, JarMergeInfo> swap, JarMergeInfo master, List<Pair<JarContents, FabricModPath>> others, String pkg) {
+    private static void analyzeJar(Map<Object, JarMergeInfo> swap, JarMergeInfo master, List<Pair<JarContents, SplitInputPath>> others, String pkg) {
         List<FilteredPath> additionalPaths = others.stream()
             .map(pair -> {
                 JarContents jar = pair.getFirst();
                 FabricModFileMetadata metadata = pair.getSecond().metadata();
 
                 FilteredPath filteredPath = new FilteredPath(jar.getPrimaryPath(), singlePackageFilter(pkg));
-                JarMergeInfo jarInfo = swap.computeIfAbsent(getJarKey(jar), name -> new JarMergeInfo(jar.getPrimaryPath(), metadata));
+                JarMergeInfo jarInfo = swap.computeIfAbsent(getJarKey(jar), name ->
+                    new JarMergeInfo(jar.getPrimaryPath(), metadata, pair.getSecond().type()));
                 jarInfo.excludedPackages().add(pkg);
 
                 return filteredPath;
@@ -205,11 +213,13 @@ public class SplitPackageMerger {
      * @param additionalPaths additional paths to include in the jar
      * @param excludedPackages packages to exlude from the jar
      */
-    private record JarMergeInfo(Path origin, FabricModFileMetadata metadata, Set<FilteredPath> additionalPaths, Set<String> excludedPackages) {
-        public JarMergeInfo(Path origin, FabricModFileMetadata metadata) {
-            this(origin, metadata, new HashSet<>(), new HashSet<>());
+    private record JarMergeInfo(Path origin, FabricModFileMetadata metadata, IModFile.Type type, Set<FilteredPath> additionalPaths, Set<String> excludedPackages) {
+        public JarMergeInfo(Path origin, FabricModFileMetadata metadata, IModFile.Type type) {
+            this(origin, metadata, type, new HashSet<>(), new HashSet<>());
         }
     }
 
-    public record FilteredPaths(Collection<FilteredPath> paths) {}
+    public record SplitInputPath(Path path, FabricModFileMetadata metadata, IModFile.Type type) {}
+
+    public record FilteredPaths(Collection<FilteredPath> paths, IModFile.Type type) {}
 }

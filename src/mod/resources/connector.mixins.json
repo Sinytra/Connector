@@ -17,7 +17,8 @@
     "registries.RegistryDataLoaderMixin",
     "ChunkGeneratorMixin",
     "CommonHooksMixin",
-    "PlayerListMixin"
+    "PlayerListMixin",
+    "TranslatableContentsMixin"
   ],
   "client": [
     "client.ForgeHooksClientMixin",

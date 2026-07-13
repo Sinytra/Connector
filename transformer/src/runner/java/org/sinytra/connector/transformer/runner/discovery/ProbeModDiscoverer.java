@@ -36,7 +36,7 @@ public class ProbeModDiscoverer {
             List<Path> output = new ArrayList<>();
 
             try (JarContents jar = JarContents.ofPath(path)) {
-                jar.visitContent("META-INF/jars", (p, res) -> {
+                jar.visitContent("META-INF/jarjar", (p, res) -> {
                     if (p.endsWith(".jar")) {
                         Path extracted = extractFile(p, res, tempDir);
                         output.add(extracted);

@@ -2,8 +2,13 @@ package org.sinytra.connector.transformer.runner;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import net.fabricmc.loader.impl.Constants;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.fml.jarcontents.JarContents;
+import net.neoforged.fml.loading.moddiscovery.readers.JarModsDotTomlModFileReader;
+import net.neoforged.neoforgespi.locating.IModFile;
+import net.neoforged.neoforgespi.locating.IModFileReader;
+import net.neoforged.neoforgespi.locating.ModFileDiscoveryAttributes;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.transformer.runner.discovery.JarInspector;
 import org.sinytra.connector.transformer.runner.discovery.ProbeModDiscoverer;
@@ -15,11 +20,12 @@ import org.spongepowered.asm.launch.MixinBootstrap;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.sinytra.connector.transformer.transform.TransformerUtil.rethrowFunction;
+import static org.sinytra.connector.transformer.transform.TransformerUtil.uncheck;
 
 public class PortableTransformerFrontend {
     private static final Logger LOGGER = LoggerFactory.getLogger(PortableTransformerFrontend.class);
@@ -70,11 +76,16 @@ public class PortableTransformerFrontend {
         List<JarTransformer.TransformableJar> allJars = Stream.concat(discoveredJars.stream(), discoveredNestedJars).toList();
 
         List<Path> resolvedClassPath = new ArrayList<>(ProbeModDiscoverer.resolveClassPath(classPath, tempDir));
+        Collection<String> loadedModIDs = getLoadedModIDs(resolvedClassPath);
         resolvedClassPath.addAll(jars.other());
+
+        List<JarTransformer.TransformableJar> finalCandidates = allJars.stream()
+            .filter(j -> !loadedModIDs.contains(j.modPath().metadata().modMetadata().getId()))
+            .toList();
 
         // Run transformation
         try {
-            List<JarTransformer.TransformedFabricModPath> results = transformer.transform(allJars, resolvedClassPath);
+            List<JarTransformer.TransformedFabricModPath> results = transformer.transform(finalCandidates, resolvedClassPath);
             boolean success = results.stream()
                 .allMatch(result -> result.auditTrail() == null || !result.auditTrail().hasFailingMixins());
             return new TransformOutput(success, primaryModid);
@@ -98,5 +109,27 @@ public class PortableTransformerFrontend {
         }
 
         return new ModPathTuple(fabricJars, otherJars);
+    }
+
+    private Collection<String> getLoadedModIDs(List<Path> paths) {
+        IModFileReader reader = new JarModsDotTomlModFileReader();
+        List<IModFile> modFiles = paths.stream()
+            .map(p -> uncheck(() -> reader.read(JarContents.ofPath(p), ModFileDiscoveryAttributes.DEFAULT)))
+            .toList();
+
+        return modFiles.stream()
+            .flatMap(f -> f.getModInfos().stream())
+            .flatMap(m -> {
+                Set<String> ids = new HashSet<>();
+                ids.add(m.getModId());
+
+                List<String> provides = (List<String>) m.getModProperties().get(Constants.PROVIDES);
+                if (provides != null) {
+                    ids.addAll(provides);
+                }
+
+                return ids.stream();
+            })
+            .collect(Collectors.toUnmodifiableSet());
     }
 }

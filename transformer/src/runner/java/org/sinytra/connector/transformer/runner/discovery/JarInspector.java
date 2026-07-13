@@ -34,7 +34,8 @@ public class JarInspector {
         Collection<NestedJarEntry> jars,
         Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren
     ) {
-        try (JarContents jar = JarContents.ofPath(parent.input().toPath())) {
+        try {
+            JarContents jar = JarContents.ofPath(parent.input().toPath());
             return jars.stream()
                 .filter(entry -> jar.containsFile(entry.getFile()))
                 .flatMap(entry -> {

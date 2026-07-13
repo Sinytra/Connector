@@ -62,7 +62,7 @@ dependencies {
 
     compileOnly("org.jetbrains:annotations:13.0")
     implementation("com.mojang:logging:1.2.7")
-    implementation("net.neoforged.fancymodloader:loader:11.0.13") { isTransitive = false }
+    implementation("net.neoforged.fancymodloader:loader:11.0.13")
     implementation("net.fabricmc:sponge-mixin:0.15.2+mixin.0.8.7")
 
     "runnerImplementation"(sourceSets.main.get().output)

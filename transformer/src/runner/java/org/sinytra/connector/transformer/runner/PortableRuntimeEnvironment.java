@@ -28,7 +28,7 @@ public class PortableRuntimeEnvironment implements TransformerEnvironment {
         this.auditLogPath = auditLogPath;
         this.cleanPath = cleanPath;
         this.generatedJarPath = generatedJarPath;
-        this.mappedSuffix = "_mapped_moj_" + gameVersion;
+        this.mappedSuffix = "_tx_" + gameVersion;
     }
 
     @Override

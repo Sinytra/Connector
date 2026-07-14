@@ -2,6 +2,7 @@ package org.sinytra.connector.locator.transform;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.impl.launch.FabricMixinBootstrap;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.art.api.ClassProvider;
 import net.neoforged.fml.ModLoadingException;
@@ -132,7 +133,7 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
 
     @Override
     public int getFabricMixinCompatibility(LoaderModMetadata metadata) {
-        return MixinCompatibility.getMixinCompat(metadata);
+        return FabricMixinBootstrap.getMixinCompat(metadata);
     }
 
     @Override

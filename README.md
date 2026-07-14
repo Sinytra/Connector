@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://connector.sinytra.org">
-    <img src="https://raw.githubusercontent.com/Sinytra/.github/main/art/connector_banner_small.png">
+    <img height="163px" alt="banner" src="https://raw.githubusercontent.com/Sinytra/.github/main/art/connector_banner.svg">
   </a>
 </p>
 <p align="center">
@@ -24,7 +24,7 @@ all their favourite mods in one modpack.
 ### 🔗 Related Projects
 
 - Visit our [website](https://connector.sinytra.org) to find information on mod compatibility and common issues
-- Developing cross-platform mods? Check out the [Forgified Fabric API](https://github.com/Sinytra/ForgifiedFabricAPI), a port of the Fabric API to NeoForge
+- Developing cross-platform mods? Check out [Launchpad](https://github.com/Sinytra/Launchpad) and [Forgified Fabric API](https://github.com/Sinytra/ForgifiedFabricAPI)
 - Install [Connector Extras](https://github.com/Sinytra/ConnectorExtras) for improved compatibility with third-party libraries and APIs
 
 ### 💬 Join the Community
@@ -34,26 +34,20 @@ We have an official [Discord community](https://discord.sinytra.org) for Connect
 - Get help and technical support from our team and community members
 - Keep in touch with the latest development updates and community events
 - Engage in the project's development and collaborate with our team
-- ... and just hang out with the rest of our community.
 
 ## 📋 Usage Guide
 
-To install Connector and its dependencies, follow the same installation steps as you would for any other mods:
+To install Connector and its dependencies, follow the standard installation steps:
 
 1. Install **NeoForge**. We recommend using the latest stable version.  
 [\[NeoForge's website\]](https://neoforged.net/)
 
-2. Install **Connector**. Get the latest release from one of our official distribution channels and drop the jar in your
-mods folder.  
-[\[CurseForge\]](https://curseforge.com/minecraft/mc-mods/sinytra-connector) [\[Modrinth\]](https://modrinth.com/mod/connector) [\[GitHub\]](https://github.com/Sinytra/Connector/releases)
+2. Install Connector and dependencies
+   - [**Forgified Fabric API**](https://github.com/Sinytra/ForgifiedFabricAPI/releases/latest)
+   - [**Launchpad**](https://github.com/Sinytra/Launchpad/releases/latest)
+   - [**Connector**](https://github.com/Sinytra/Connector/releases/latest)
 
-3. Download the **Forgified Fabric API**.
-   It is meant to be a direct *replacement* for the Fabric API and is not compatible with it.
-   We'll try our best to avoid loading the Fabric API if it's installed automatically (e.g.
-   by your modpack manager), but if you have the option to avoid installing it, please do so.  
-[\[CurseForge\]](https://curseforge.com/minecraft/mc-mods/forgified-fabric-api) [\[Modrinth\]](https://modrinth.com/mod/forgified-fabric-api) [\[GitHub\]](https://github.com/Sinytra/ForgifiedFabricAPI/releases/latest)
-
-4. You're good to go! With all dependencies installed, grab your favourite Fabric mods and
+3. You're good to go! With all dependencies installed, grab your favourite Fabric mods and
    **just drop them in the mods folder** like you would with any NeoForge mods. Connector will handle loading them for
    you with no additional steps required.
 
@@ -80,8 +74,7 @@ also getting you a fixed version ASAP.
 
 ### Supported versions
 
-✅ **26.1.2** is our **primary supported version**.
-This is the one that will receive new fixes and compatibility improvements.
+✅ **26.1.2** is our **primary supported version** and will receive the latest fixes and compatibility improvements.
 
 ⚠️ **1.21.1** is our **long-term-support** version and will still receive critical bugfixes.
 The latest compatibility fixes might not be available.
@@ -117,10 +110,12 @@ repositories {
     }
 }
 dependencies {
-    // Add Connector to the launch classpath
-    implementation "org.sinytra:connector:<version>"
-    // Add FFAPI dependency
+    // Add dependencies
+    implementation "org.sinytra.launchpad:launchpad:<version>"
     implementation "org.sinytra.forgified-fabric-api:forgified-fabric-api:<version>"
+    // Add connector
+    implementation "org.sinytra:connector:<version>"
+
     // Install desired Fabric mods
     implementation "some.fabric:mod:<version>"
 }

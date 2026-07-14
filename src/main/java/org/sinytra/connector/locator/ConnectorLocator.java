@@ -64,7 +64,7 @@ public class ConnectorLocator implements IDependencyLocator {
 
         try {
             List<IModFile> loadedModsWithDeps = grabLocatedMods(pipeline);
-            LocationResult results = locateFabricMods(loadedMods, loadedModsWithDeps);
+            LocationResult results = locateFabricMods(loadedModsWithDeps);
 
             if (results != null) {
                 results.mods().forEach(pipeline::addModFile);
@@ -91,9 +91,13 @@ public class ConnectorLocator implements IDependencyLocator {
     }
 
     @Nullable
-    private LocationResult locateFabricMods(List<IModFile> discoveredNeoMods, List<IModFile> discoveredAllMods) {
+    private LocationResult locateFabricMods(List<IModFile> discoveredMods) {
+        List<IModFile> discoveredNeoMods = discoveredMods.stream()
+            .filter(m -> !(m.getModFileInfo() instanceof StubModFileInfo))
+            .toList();
+
         String mcVersion = determineMcVersion(discoveredNeoMods);
-        TransformerEnvironment environment = new ConnectorTransformerEnvironment(mcVersion, findCoremodsLibarary(discoveredAllMods));
+        TransformerEnvironment environment = new ConnectorTransformerEnvironment(mcVersion, findCoremodsLibarary(discoveredNeoMods));
         JarTransformer transformer = new JarTransformer(environment);
 
         // Get all existing mods
@@ -104,7 +108,7 @@ public class ConnectorLocator implements IDependencyLocator {
             .collect(Collectors.toUnmodifiableSet());
         Collection<IModFile> loadedModFiles = loadedModInfos.stream().map(SimpleModInfo::origin).toList();
 
-        List<IModFile> interest = discoveredAllMods.stream()
+        List<IModFile> interest = discoveredMods.stream()
             .filter(m -> m.getModFileInfo() instanceof StubModFileInfo)
             .filter(m -> shouldLoadMod(m, loadedModIds))
             .toList();
@@ -132,7 +136,7 @@ public class ConnectorLocator implements IDependencyLocator {
         // Deal with split packages (thanks modules)
         List<SplitInputPath> splitInput = transformed.stream()
             .map(path -> {
-                IModFile.Type type = determineModType(path.output(), discoveredAllMods);
+                IModFile.Type type = determineModType(path.output(), discoveredNeoMods);
                 return new SplitInputPath(path.output().path(), path.output().metadata(), type);
             })
             .toList();
@@ -225,10 +229,6 @@ public class ConnectorLocator implements IDependencyLocator {
         return discoveredMods.stream()
             .flatMap(modFile -> Optional.ofNullable(modFile.getModFileInfo()).stream())
             .flatMap(modFileInfo -> {
-                if (modFileInfo instanceof StubModFileInfo) {
-                    return Stream.empty();
-                }
-
                 IModFile modFile = modFileInfo.getFile();
                 List<IModInfo> modInfos = modFileInfo.getMods();
                 if (!modInfos.isEmpty()) {
@@ -260,7 +260,7 @@ public class ConnectorLocator implements IDependencyLocator {
         return !loadedNeoMods.contains(neoModId);
     }
 
-    private static IModFile.Type determineModType(FabricModPath path, List<IModFile> discoveredAllMods) {
+    private static IModFile.Type determineModType(FabricModPath path, List<IModFile> discoveredNeoMods) {
         if (!path.metadata().generated()) {
             return Type.MOD;
         }
@@ -270,7 +270,7 @@ public class ConnectorLocator implements IDependencyLocator {
             JarModuleInfo info = JarModuleInfo.from(jar);
             String id = info.name();
 
-            boolean existing = discoveredAllMods.stream()
+            boolean existing = discoveredNeoMods.stream()
                 .anyMatch(m -> id.equals(m.getId())
                     && m.getDiscoveryAttributes().parent() != null
                     && m.getDiscoveryAttributes().parent().getType() == Type.LIBRARY);

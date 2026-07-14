@@ -39,8 +39,7 @@ We have an official [Discord community](https://discord.sinytra.org) for Connect
 
 To install Connector and its dependencies, follow the standard installation steps:
 
-1. Install **NeoForge**. We recommend using the latest stable version.  
-[\[NeoForge's website\]](https://neoforged.net/)
+1. Install [**NeoForge**](https://neoforged.net). We recommend using the latest stable version.
 
 2. Install Connector and dependencies
    - [**Forgified Fabric API**](https://github.com/Sinytra/ForgifiedFabricAPI/releases/latest)

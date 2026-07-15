@@ -9,6 +9,7 @@ import net.neoforged.fml.loading.moddiscovery.readers.JarModsDotTomlModFileReade
 import net.neoforged.neoforgespi.locating.IModFile;
 import net.neoforged.neoforgespi.locating.IModFileReader;
 import net.neoforged.neoforgespi.locating.ModFileDiscoveryAttributes;
+import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.transformer.runner.discovery.JarInspector;
 import org.sinytra.connector.transformer.runner.discovery.ProbeModDiscoverer;
@@ -29,6 +30,7 @@ import static org.sinytra.connector.transformer.transform.TransformerUtil.unchec
 
 public class PortableTransformerFrontend {
     private static final Logger LOGGER = LoggerFactory.getLogger(PortableTransformerFrontend.class);
+    private static final IModFileReader READER = new JarModsDotTomlModFileReader();
     private static boolean initialized;
 
     public record ModPathTuple(List<Path> fabric, List<Path> other) {
@@ -76,6 +78,10 @@ public class PortableTransformerFrontend {
         List<JarTransformer.TransformableJar> allJars = Stream.concat(discoveredJars.stream(), discoveredNestedJars).toList();
 
         List<Path> resolvedClassPath = new ArrayList<>(ProbeModDiscoverer.resolveClassPath(classPath, tempDir));
+
+        IModFile coremods = findCoremodsLibrary(resolvedClassPath);
+        environment.setCoremodsFile(coremods);
+
         Collection<String> loadedModIDs = getLoadedModIDs(resolvedClassPath);
         resolvedClassPath.addAll(jars.other());
 
@@ -112,9 +118,8 @@ public class PortableTransformerFrontend {
     }
 
     private Collection<String> getLoadedModIDs(List<Path> paths) {
-        IModFileReader reader = new JarModsDotTomlModFileReader();
         List<IModFile> modFiles = paths.stream()
-            .map(p -> uncheck(() -> reader.read(JarContents.ofPath(p), ModFileDiscoveryAttributes.DEFAULT)))
+            .map(p -> uncheck(() -> READER.read(JarContents.ofPath(p), ModFileDiscoveryAttributes.DEFAULT)))
             .toList();
 
         return modFiles.stream()
@@ -131,5 +136,21 @@ public class PortableTransformerFrontend {
                 return ids.stream();
             })
             .collect(Collectors.toUnmodifiableSet());
+    }
+
+    @Nullable
+    private IModFile findCoremodsLibrary(List<Path> paths) {
+        return paths.stream()
+            .filter(p -> p.getFileName().toString().contains("net.neoforged.neoforge-coremods"))
+            .map(p -> {
+                try {
+                    return READER.read(JarContents.ofPath(p), ModFileDiscoveryAttributes.DEFAULT);
+                } catch (IOException e) {
+                    LOGGER.error("Error reading mod file", e);
+                    return null;
+                }
+            })
+            .findFirst()
+            .orElse(null);
     }
 }

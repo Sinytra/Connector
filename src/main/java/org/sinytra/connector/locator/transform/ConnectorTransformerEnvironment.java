@@ -19,6 +19,7 @@ import org.sinytra.connector.ConnectorEarlyLoader;
 import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.SimpleClassLookup;
+import org.sinytra.connector.transformer.jar.EarlyCoremodTransformer;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.sinytra.connector.util.GameCodeRetriever;

@@ -3,10 +3,12 @@ package org.sinytra.connector.transformer.runner;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.art.api.ClassProvider;
+import net.neoforged.neoforgespi.locating.IModFile;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.util.provider.ClassLookup;
 import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;
+import org.sinytra.connector.transformer.jar.EarlyCoremodTransformer;
 import org.sinytra.connector.transformer.jar.SimpleClassLookup;
 import org.sinytra.connector.transformer.runner.runtime.MixinServiceProbe;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
@@ -22,6 +24,9 @@ public class PortableRuntimeEnvironment implements TransformerEnvironment {
     private final Path cleanPath;
     private final Path generatedJarPath;
     private final String mappedSuffix;
+    
+    @Nullable
+    private IModFile coremodsFile;
 
     public PortableRuntimeEnvironment(Path outputDir, Path auditLogPath, Path cleanPath, Path generatedJarPath, String gameVersion) {
         this.outputDir = outputDir;
@@ -29,6 +34,10 @@ public class PortableRuntimeEnvironment implements TransformerEnvironment {
         this.cleanPath = cleanPath;
         this.generatedJarPath = generatedJarPath;
         this.mappedSuffix = "_tx_" + gameVersion;
+    }
+
+    public void setCoremodsFile(@Nullable IModFile coremodsFile) {
+        this.coremodsFile = coremodsFile;
     }
 
     @Override
@@ -48,7 +57,11 @@ public class PortableRuntimeEnvironment implements TransformerEnvironment {
 
     @Override
     public ClassProvider getRuntimeClassProvider(List<Path> libraries) {
-        return ClassProvider.fromPaths(libraries.toArray(Path[]::new));
+        ClassProvider classProvider = ClassProvider.fromPaths(libraries.toArray(Path[]::new));
+        if (this.coremodsFile != null) {
+            return EarlyCoremodTransformer.create(classProvider, this.coremodsFile);
+        }
+        return classProvider;
     }
 
     @Override

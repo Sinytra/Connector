@@ -1,4 +1,4 @@
-package org.sinytra.connector.locator.transform;
+package org.sinytra.connector.transformer.jar;
 
 import com.mojang.logging.LogUtils;
 import net.neoforged.art.api.ClassProvider;
@@ -27,7 +27,7 @@ import java.util.function.Supplier;
 
 import static org.sinytra.connector.transformer.transform.TransformerUtil.uncheck;
 
-@SuppressWarnings({"UnstableApiUsage", "Java9UndeclaredServiceUsage"})
+@SuppressWarnings("UnstableApiUsage")
 public class EarlyCoremodTransformer implements ClassProvider {
     private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -35,7 +35,9 @@ public class EarlyCoremodTransformer implements ClassProvider {
     private final ClassProcessorSet processors;
 
     public static EarlyCoremodTransformer create(ClassProvider classProvider, IModFile library) {
-        ClassLoader parent = FMLLoader.getCurrent().getCurrentClassLoader();
+        ClassLoader parent = FMLLoader.getCurrentOrNull() != null
+            ? FMLLoader.getCurrent().getCurrentClassLoader()
+            : Thread.currentThread().getContextClassLoader();
         URL[] sources = new URL[]{ uncheck(() -> library.getFilePath().toUri().toURL()) };
         ClassLoader loader = new URLClassLoader("Connector Early Coremods", sources, parent);
         

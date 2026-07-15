@@ -23,6 +23,8 @@ public class FabricMetadataTransformer implements Transformer {
         .setPrettyPrinting()
         .disableHtmlEscaping()
         .create();
+    private static final List<String> DEPENDENCY_FIELDS = List.of("depends", "recommends", "suggests", "breaks", "conflicts");
+    private final Map<String, String> modIdAliases;
     // Never run entrypoints matching these values
     private static final Collection<String> DISABLED_MIXINEXTRAS_ENTRYPOINTS = Set.of(
         // Mixinextras initializes itself from within its own mixin config plugin.
@@ -32,6 +34,14 @@ public class FabricMetadataTransformer implements Transformer {
         "com.llamalad7.mixinextras.MixinExtrasBootstrap::init"
     );
 
+    public FabricMetadataTransformer() {
+        this(Map.of());
+    }
+
+    public FabricMetadataTransformer(Map<String, String> modIdAliases) {
+        this.modIdAliases = Map.copyOf(modIdAliases);
+    }
+
     @Override
     public ResourceEntry process(ResourceEntry entry) {
         if (entry.getName().equals(TransformerUtil.FABRIC_MOD_JSON)) {
@@ -39,7 +49,7 @@ public class FabricMetadataTransformer implements Transformer {
                 JsonElement raw = JsonParser.parseReader(new InputStreamReader(new ByteArrayInputStream(entry.getData())));
                 JsonObject obj = raw.getAsJsonObject();
 
-                processMetadata(obj);
+                processMetadata(obj, this.modIdAliases);
 
                 byte[] data = GSON.toJson(obj).getBytes(StandardCharsets.UTF_8);
                 return ResourceEntry.create(entry.getName(), entry.getTime(), data);
@@ -54,7 +64,7 @@ public class FabricMetadataTransformer implements Transformer {
         return modId.replace('-', '_');
     }
 
-    private static void processMetadata(JsonObject json) {
+    private static void processMetadata(JsonObject json, Map<String, String> modIdAliases) {
         String modId = json.get("id").getAsString();
         String version = json.get("version").getAsString();
 
@@ -99,10 +109,42 @@ public class FabricMetadataTransformer implements Transformer {
             depends.addProperty(FAPI_MODID, stripped);
         }
 
+        DEPENDENCY_FIELDS.stream()
+            .map(json::getAsJsonObject)
+            .filter(Objects::nonNull)
+            .forEach(dependencies -> applyModIdAliases(dependencies, modIdAliases));
+
         JsonObject custom = Objects.requireNonNullElseGet(json.getAsJsonObject("custom"), JsonObject::new);
         custom.addProperty(TransformerUtil.METADATA_MARKER, true);
         custom.addProperty(TransformerUtil.LAUNCHPAD_MARKER, true);
         json.add("custom", custom);
+    }
+
+    private static void applyModIdAliases(JsonObject dependencies, Map<String, String> modIdAliases) {
+        modIdAliases.forEach((alias, target) -> {
+            JsonElement predicate = dependencies.remove(alias);
+            if (predicate == null) {
+                return;
+            }
+
+            JsonElement existing = dependencies.remove(target);
+            dependencies.add(target, existing == null ? predicate : mergePredicates(existing, predicate));
+        });
+    }
+
+    private static JsonArray mergePredicates(JsonElement first, JsonElement second) {
+        JsonArray merged = new JsonArray();
+        addPredicates(merged, first);
+        addPredicates(merged, second);
+        return merged;
+    }
+
+    private static void addPredicates(JsonArray output, JsonElement predicates) {
+        if (predicates.isJsonArray()) {
+            predicates.getAsJsonArray().forEach(output::add);
+        } else {
+            output.add(predicates);
+        }
     }
 
     private static String stripPatchVersion(String predicate) {

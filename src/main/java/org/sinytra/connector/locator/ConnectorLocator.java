@@ -33,6 +33,7 @@ import org.sinytra.connector.transformer.jar.JarTransformer.TransformableJar;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformedFabricModPath;
 import org.sinytra.connector.transformer.jar.MetadataReader;
 import org.sinytra.connector.transformer.transform.FabricMetadataTransformer;
+import org.sinytra.connector.util.ConnectorConfig;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.sinytra.launchpad.api.FabricModFactory;
 import org.slf4j.Logger;
@@ -96,10 +97,6 @@ public class ConnectorLocator implements IDependencyLocator {
             .filter(m -> !(m.getModFileInfo() instanceof StubModFileInfo))
             .toList();
 
-        String mcVersion = determineMcVersion(discoveredNeoMods);
-        TransformerEnvironment environment = new ConnectorTransformerEnvironment(mcVersion, findCoremodsLibarary(discoveredNeoMods));
-        JarTransformer transformer = new JarTransformer(environment);
-
         // Get all existing mods
         Collection<SimpleModInfo> loadedModInfos = getPreviouslyDiscoveredMods(discoveredNeoMods);
         Collection<String> loadedModIds = loadedModInfos.stream()
@@ -107,6 +104,11 @@ public class ConnectorLocator implements IDependencyLocator {
             .map(SimpleModInfo::modid)
             .collect(Collectors.toUnmodifiableSet());
         Collection<IModFile> loadedModFiles = loadedModInfos.stream().map(SimpleModInfo::origin).toList();
+
+        String mcVersion = determineMcVersion(discoveredNeoMods);
+        Map<String, String> activeModAliases = getActiveModAliases(loadedModIds);
+        TransformerEnvironment environment = new ConnectorTransformerEnvironment(mcVersion, findCoremodsLibarary(discoveredNeoMods), activeModAliases);
+        JarTransformer transformer = new JarTransformer(environment);
 
         List<IModFile> interest = discoveredMods.stream()
             .filter(m -> m.getModFileInfo() instanceof StubModFileInfo)
@@ -258,6 +260,17 @@ public class ConnectorLocator implements IDependencyLocator {
         // Skip loading mods that already have a native neo equivalent loaded
         String neoModId = FabricMetadataTransformer.normalizeModId(metadata.getId());
         return !loadedNeoMods.contains(neoModId);
+    }
+
+    private static Map<String, String> getActiveModAliases(Collection<String> loadedNeoMods) {
+        Map<String, String> aliases = new HashMap<>();
+        ConnectorConfig.INSTANCE.get().globalModAliases().asMap().forEach((nativeId, fabricIds) -> {
+            String normalizedNativeId = FabricMetadataTransformer.normalizeModId(nativeId);
+            if (loadedNeoMods.contains(normalizedNativeId)) {
+                fabricIds.forEach(fabricId -> aliases.put(fabricId, normalizedNativeId));
+            }
+        });
+        return aliases;
     }
 
     private static IModFile.Type determineModType(FabricModPath path, List<IModFile> discoveredNeoMods) {

@@ -37,9 +37,11 @@ public class JarTransformInstance {
     private final ClassLookup cleanClassLookup;
     private final AuditTrail auditTrail;
     private final TransformerEnvironment environment;
+    private final FabricMetadataTransformer metadataTransformer;
 
     public JarTransformInstance(TransformerEnvironment environment) {
         this.environment = environment;
+        this.metadataTransformer = new FabricMetadataTransformer(environment.getModIdAliases());
 
         this.cleanClassLookup = environment.getCleanClassLookup();
         this.bfu = new BytecodeFixerUpperFrontend(this.cleanClassLookup, MixinClassLookup.INSTANCE, this.environment);
@@ -55,7 +57,7 @@ public class JarTransformInstance {
         Stopwatch stopwatch = Stopwatch.createStarted();
 
         if (metadata.generated()) {
-            processGeneratedJar(input, output, stopwatch);
+            processGeneratedJar(input, output, stopwatch, this.metadataTransformer);
             return null;
         }
 
@@ -67,10 +69,12 @@ public class JarTransformInstance {
         int fabricLVTCompatibility = this.environment.getFabricMixinCompatibility(metadata.modMetadata());
         PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility, jarTrail);
         MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.environment, environment, accessorRedirectTransformer.getPatches());
+        FabricEnumExtensionTransformer enumExtensionTransformer = new FabricEnumExtensionTransformer(metadata);
 
         Renamer.Builder builder = Renamer.builder()
             .add(new JarSignatureStripper())
-            .add(FabricMetadataTransformer.INSTANCE)
+            .add(this.metadataTransformer)
+            .add(enumExtensionTransformer)
             .add(new ClassNodeTransformer(
                 new FieldToMethodTransformer(metadata.modMetadata().getClassTweaker()),
                 new ClassAnalysingTransformer()
@@ -85,6 +89,7 @@ public class JarTransformInstance {
             renamer.run(input, output.toFile());
 
             try (FileSystem zipFile = FileSystems.newFileSystem(output)) {
+                enumExtensionTransformer.writeGeneratedResources(zipFile.getPath("/"));
                 patchTransformer.finalize(zipFile.getPath("/"), metadata.mixinConfigs(), refmap.files(), refmapHolder.getDirtyRefmaps());
             }
         } catch (Throwable t) {
@@ -106,14 +111,14 @@ public class JarTransformInstance {
         return jarTrail;
     }
 
-    private static void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
+    private static void processGeneratedJar(File input, Path output, Stopwatch stopwatch, FabricMetadataTransformer metadataTransformer) throws IOException {
         Files.copy(input.toPath(), output);
 
         try (FileSystem fs = FileSystems.newFileSystem(output)) {
             Path path = fs.getPath(TransformerUtil.FABRIC_MOD_JSON);
             byte[] data = Files.readAllBytes(path);
             ResourceEntry entry = ResourceEntry.create(TransformerUtil.FABRIC_MOD_JSON, 0, data);
-            ResourceEntry processed = Objects.requireNonNull(FabricMetadataTransformer.INSTANCE.process(entry), "Failed to process FMJ entry");
+            ResourceEntry processed = Objects.requireNonNull(metadataTransformer.process(entry), "Failed to process FMJ entry");
             Files.write(path, processed.getData());
         } catch (IOException e) {
             throw new UncheckedIOException("Error patching generated jar file", e);

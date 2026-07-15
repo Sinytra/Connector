@@ -65,12 +65,24 @@ dependencies {
     implementation("net.neoforged.fancymodloader:loader:11.0.13")
     implementation("net.fabricmc:sponge-mixin:0.15.2+mixin.0.8.7")
 
+    testImplementation(platform("org.junit:junit-bom:6.0.3"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
     "runnerImplementation"(sourceSets.main.get().output)
     shade("runnerImplementation"("info.picocli:picocli:4.7.7")!!)
     "runnerAnnotationProcessor"("info.picocli:picocli-codegen:4.7.7")
 }
 
 tasks {
+    test {
+        useJUnitPlatform()
+        systemProperty("java.io.tmpdir", layout.buildDirectory.dir("tmp/tests").get().asFile)
+        doFirst {
+            layout.buildDirectory.dir("tmp/tests").get().asFile.mkdirs()
+        }
+    }
+
     compileJava {
         options.compilerArgs.add("-Aproject=${project.group}/${project.name}")
     }

@@ -32,6 +32,8 @@ import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @SuppressWarnings("UnstableApiUsage")
 public class ConnectorTransformerEnvironment implements TransformerEnvironment {
@@ -42,6 +44,7 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
     private static final MethodHandle BYTECODE_PROVIDER_CTR;
     
     private final String mcVersion;
+    private final Map<String, String> modIdAliases;
     @Nullable
     private final IModFile coremodsFile;
 
@@ -55,9 +58,10 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
         }
     }
 
-    public ConnectorTransformerEnvironment(String mcVersion, @Nullable IModFile coremodsFile) {
+    public ConnectorTransformerEnvironment(String mcVersion, @Nullable IModFile coremodsFile, Map<String, String> modIdAliases) {
         this.mcVersion = mcVersion;
         this.coremodsFile = coremodsFile;
+        this.modIdAliases = Map.copyOf(modIdAliases);
     }
 
     @Override
@@ -137,8 +141,21 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
     }
 
     @Override
+    public Map<String, String> getModIdAliases() {
+        return this.modIdAliases;
+    }
+
+    @Override
     public String getJarCacheVersion() {
-        return ConnectorUtil.getJarCacheVersion();
+        String version = ConnectorUtil.getJarCacheVersion();
+        if (version == null || this.modIdAliases.isEmpty()) {
+            return version;
+        }
+        String aliases = this.modIdAliases.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> entry.getKey() + "=" + entry.getValue())
+            .collect(Collectors.joining(","));
+        return version + ",aliases=" + aliases;
     }
 
     private static Path getCacheDir() {

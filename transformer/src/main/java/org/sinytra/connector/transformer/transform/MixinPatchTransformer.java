@@ -58,6 +58,7 @@ public class MixinPatchTransformer implements Transformer {
             .toList();
         this.patcher = Patcher.builder(this.environment)
             .classTransformers(DynamicPatches.CLASS_PATCHES)
+            .classTransformer(new DebugifyShadowFieldTransformer())
             .methodTransformers(DynamicPatches.methodTransformers(allPatches))
             .build();
     }

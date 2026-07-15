@@ -10,6 +10,7 @@ import org.sinytra.connector.transformer.transform.TransformProgressMeter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 public interface TransformerEnvironment {
     Path getAuditReportPath();
@@ -31,6 +32,10 @@ public interface TransformerEnvironment {
     RuntimeException onTransformationError(String msg, Throwable throwable);
 
     int getFabricMixinCompatibility(LoaderModMetadata metadata);
+
+    default Map<String, String> getModIdAliases() {
+        return Map.of();
+    }
 
     String getJarCacheVersion();
 }

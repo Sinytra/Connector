@@ -34,8 +34,6 @@ import java.util.stream.Stream;
 import static org.sinytra.connector.transformer.transform.TransformerUtil.rethrowConsumer;
 
 public class MixinPatchTransformer implements Transformer {
-    private static final List<MethodPatch> PRIORITY_PATCHES = MixinPatches.getPriorityPatches();
-    private static final List<MethodPatch> PATCHES = MixinPatches.getPatches();
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final PatchEnvironment environment;
@@ -45,20 +43,17 @@ public class MixinPatchTransformer implements Transformer {
     // Applied to mixins only
     private final Patcher patcher;
 
-    public MixinPatchTransformer(TransformerEnvironment runtimeEnvironment, PatchEnvironment environment, List<? extends MethodPatch> extraPatches) {
-        this.environment = environment;
+    public MixinPatchTransformer(TransformerEnvironment environment, PatchEnvironment patchEnvironment, List<MethodPatch> patches) {
+        this.environment = patchEnvironment;
 
         this.classTransforms = List.of(
-            new EnvironmentStripperTransformer(runtimeEnvironment.getEnvType()),
+            new EnvironmentStripperTransformer(environment.getEnvType()),
             new FieldTypeUsageTransformer()
         );
 
-        List<MethodPatch> allPatches = Stream.of(PRIORITY_PATCHES, extraPatches, PATCHES)
-            .<MethodPatch>flatMap(Collection::stream)
-            .toList();
         this.patcher = Patcher.builder(this.environment)
             .classTransformers(DynamicPatches.CLASS_PATCHES)
-            .methodTransformers(DynamicPatches.methodTransformers(allPatches))
+            .methodTransformers(DynamicPatches.methodTransformers(patches))
             .build();
     }
 

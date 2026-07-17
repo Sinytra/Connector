@@ -159,21 +159,18 @@ public final class JarTransformer {
     public record FabricModPath(Path path, FabricModFileMetadata metadata) {
     }
 
-    public record TransformedFabricModPath(Path input, FabricModPath output, CacheFile cacheFile, @Nullable AuditTrail auditTrail) {
-        public boolean needsUpdate() {
-            return this.auditTrail != null;
-        }
+    public record TransformedFabricModPath(Path input, FabricModPath output, CacheFile cacheFile, boolean needsUpdate, @Nullable AuditTrail auditTrail) {
     }
 
     public record TransformableJar(File input, FabricModPath modPath, CacheFile cacheFile) {
         public TransformedFabricModPath transform(JarTransformInstance transformInstance) throws IOException {
             Files.deleteIfExists(this.modPath.path);
             AuditTrail audit = transformInstance.transformJar(this.input, this.modPath.path, this.modPath.metadata());
-            return new TransformedFabricModPath(this.input.toPath(), this.modPath, this.cacheFile, audit);
+            return new TransformedFabricModPath(this.input.toPath(), this.modPath, this.cacheFile, true, audit);
         }
 
         public TransformedFabricModPath toTransformedPath() {
-            return new TransformedFabricModPath(this.input.toPath(), this.modPath, this.cacheFile, null);
+            return new TransformedFabricModPath(this.input.toPath(), this.modPath, this.cacheFile, false, null);
         }
     }
 }

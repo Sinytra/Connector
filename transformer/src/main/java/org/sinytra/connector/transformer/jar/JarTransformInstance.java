@@ -3,19 +3,26 @@ package org.sinytra.connector.transformer.jar;
 import com.google.common.base.Stopwatch;
 import com.mojang.logging.LogUtils;
 import net.neoforged.art.api.Renamer;
+import net.neoforged.art.api.Transformer;
 import net.neoforged.art.api.Transformer.ResourceEntry;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.env.ctx.AuditTrail;
 import org.sinytra.adapter.env.ctx.PatchEnvironment;
+import org.sinytra.adapter.transform.patch.MethodPatch;
 import org.sinytra.adapter.util.provider.ClassLookup;
 import org.sinytra.adapter.util.provider.MixinClassLookup;
 import org.sinytra.connector.transformer.TransformerEnvironment;
-import org.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
-import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
+import org.sinytra.connector.transformer.api.TransformerContext;
+import org.sinytra.connector.transformer.api.TransformerIds;
+import org.sinytra.connector.transformer.api.TransformerRegistrar.OrderingHint;
 import org.sinytra.connector.transformer.patch.ConnectorRefmapHolder;
 import org.sinytra.connector.transformer.patch.RefmapStorage;
 import org.sinytra.connector.transformer.patch.RefmapStorage.RefmapFiles;
-import org.sinytra.connector.transformer.transform.*;
+import org.sinytra.connector.transformer.plugin.PluginManager;
+import org.sinytra.connector.transformer.plugin.TransformerContextImpl;
+import org.sinytra.connector.transformer.transform.FabricMetadataTransformer;
+import org.sinytra.connector.transformer.transform.MixinPatchTransformer;
+import org.sinytra.connector.transformer.transform.TransformerUtil;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -25,6 +32,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -60,26 +68,24 @@ public class JarTransformInstance {
         }
 
         RefmapFiles refmap = RefmapStorage.processRefmaps(input.toPath(), metadata.refmaps());
-        AccessorRedirectTransformer accessorRedirectTransformer = new AccessorRedirectTransformer();
-
         AuditTrail jarTrail = AuditTrail.create();
         ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
         int fabricLVTCompatibility = this.environment.getFabricMixinCompatibility(metadata.modMetadata());
         PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility, jarTrail);
-        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.environment, environment, accessorRedirectTransformer.getPatches());
+
+        PluginManager plugins = PluginManager.getInstance();
+        TransformerContext context = new TransformerContextImpl(metadata, environment, this.environment);
+        List<MethodPatch> patches = plugins.gatherMethodPatches(context);
+
+        MixinPatchTransformer patchTransformer = new MixinPatchTransformer(this.environment, environment, patches);
+        List<Transformer> transformers = plugins.gatherJarTranformers(context, r ->
+            r.register(TransformerIds.METHOD_PATCHES, null, null, OrderingHint.LATE, patchTransformer));
 
         Renamer.Builder builder = Renamer.builder()
-            .add(new JarSignatureStripper())
-            .add(FabricMetadataTransformer.INSTANCE)
-            .add(new ClassNodeTransformer(
-                new FieldToMethodTransformer(metadata.modMetadata().getClassTweaker()),
-                new ClassAnalysingTransformer()
-            ))
-            .add(patchTransformer)
-            .add(new ClassNodeTransformer(accessorRedirectTransformer))
             .logger(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
             .debug(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
             .ignoreJarPathPrefix("assets/", "data/");
+        transformers.forEach(builder::add);
 
         try (Renamer renamer = builder.build()) {
             renamer.run(input, output.toFile());

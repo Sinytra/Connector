@@ -3,6 +3,7 @@ package org.sinytra.connector.transformer.runner.cli;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.jetbrains.annotations.Nullable;
+import org.sinytra.connector.transformer.plugin.PluginManager;
 import org.sinytra.connector.transformer.runner.PortableTransformerFrontend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,6 +86,7 @@ public class Main implements Callable<Integer> {
     @Override
     public Integer call() throws Exception {
         Path primarySource = sources.getFirst();
+        PluginManager.initialize();
         PortableTransformerFrontend.TransformOutput result = new PortableTransformerFrontend().transform(sources, workDir, primarySource, cleanPath, classPath, gameVersion);
 
         Path output = workDir.resolve("output.json");

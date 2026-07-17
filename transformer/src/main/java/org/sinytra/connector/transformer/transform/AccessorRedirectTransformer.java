@@ -16,29 +16,36 @@ import java.util.Map;
 public class AccessorRedirectTransformer implements ClassNodeTransformer.ClassProcessor {
     private static final String PREFIX = "connector$redirect$";
 
-    private final Map<String, Map<String, String>> methodRenames = new HashMap<>();
-    private final List<? extends MethodPatch> patches = FieldToMethodTransformer.REPLACEMENTS.entrySet().stream()
-        .flatMap(entry -> entry.getValue().values().stream()
-            .map(s -> MethodPatch.builder()
-                .targetClass(entry.getKey().replace('.', '/'))
-                .targetField(s)
-                .transform(new AccessorToInvokerTransformer(s))
-                .transform((context, configuration) -> {
-                    ClassNode classNode = context.classNode();
-                    MethodNode methodNode = context.methodNode();
+    private final List<MethodPatch> patches;
+    private final Map<String, Map<String, String>> methodRenames;
 
-                    // Add prefix to invoker
-                    String newName = PREFIX + methodNode.name;
-                    this.methodRenames.computeIfAbsent(classNode.name, a -> new HashMap<>())
-                        .put(methodNode.name + methodNode.desc, newName);
-                    methodNode.name = newName;
+    public AccessorRedirectTransformer() {
+        Map<String, Map<String, String>> methodRenames = new HashMap<>();
 
-                    return PatchResult.APPLY;
-                })
-                .build()))
-        .toList();
+        this.patches = FieldToMethodTransformer.REPLACEMENTS.entrySet().stream()
+            .flatMap(entry -> entry.getValue().values().stream()
+                .map(s -> MethodPatch.builder()
+                    .targetClass(entry.getKey().replace('.', '/'))
+                    .targetField(s)
+                    .transform(new AccessorToInvokerTransformer(s))
+                    .transform((context, configuration) -> {
+                        ClassNode classNode = context.classNode();
+                        MethodNode methodNode = context.methodNode();
 
-    public List<? extends MethodPatch> getPatches() {
+                        // Add prefix to invoker
+                        String newName = PREFIX + methodNode.name;
+                        methodRenames.computeIfAbsent(classNode.name, a -> new HashMap<>())
+                            .put(methodNode.name + methodNode.desc, newName);
+                        methodNode.name = newName;
+
+                        return PatchResult.APPLY;
+                    })
+                    .build()))
+            .toList();
+        this.methodRenames = Map.copyOf(methodRenames);
+    }
+
+    public List<MethodPatch> getPatches() {
         return this.patches;
     }
 

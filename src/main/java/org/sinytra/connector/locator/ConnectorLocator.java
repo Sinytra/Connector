@@ -25,6 +25,7 @@ import org.sinytra.connector.locator.filter.SplitPackageMerger;
 import org.sinytra.connector.locator.filter.SplitPackageMerger.FilteredPaths;
 import org.sinytra.connector.locator.filter.SplitPackageMerger.SplitInputPath;
 import org.sinytra.connector.locator.transform.ConnectorTransformerEnvironment;
+import org.sinytra.connector.transformer.plugin.PluginManager;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.FabricModFileMetadata;
 import org.sinytra.connector.transformer.jar.JarTransformer;
@@ -63,6 +64,8 @@ public class ConnectorLocator implements IDependencyLocator {
         }
 
         try {
+            PluginManager.initialize();
+
             List<IModFile> loadedModsWithDeps = grabLocatedMods(pipeline);
             LocationResult results = locateFabricMods(loadedModsWithDeps);
 

@@ -74,9 +74,9 @@ public class MetadataReader {
         Set<String> mixinPackages = new HashSet<>();
         Set<String> mixinClasses = new HashSet<>();
 
-        jar.visitContent((name, resource) -> {
+        jar.visitContent((relativePath, resource) -> {
             // Read base config
-            if (configs.contains(name)) {
+            if (configs.contains(relativePath)) {
                 MixinConfigData data = readMixinConfig(resource);
                 refmaps.addAll(data.refmaps());
                 mixinPackages.addAll(data.packages());
@@ -84,11 +84,13 @@ public class MetadataReader {
             }
 
             // Already discovered and ignored due to env setting
-            if (allConfigs.contains(name)) {
+            if (allConfigs.contains(relativePath)) {
                 return;
             }
 
-            if ((name.endsWith(".mixins.json") || name.startsWith("mixins.") && name.endsWith(".json")) && configs.add(name)) {
+            if ((relativePath.endsWith(".mixins.json") || relativePath.startsWith("mixins.") && relativePath.endsWith(".json"))
+                && configs.add(relativePath)
+            ) {
                 MixinConfigData data = readMixinConfig(resource);
                 refmaps.addAll(data.refmaps());
                 mixinPackages.addAll(data.packages());
@@ -103,7 +105,6 @@ public class MetadataReader {
 
         return new FabricModFileMetadata(
             metadata,
-            Set.copyOf(configs),
             configs,
             refmaps,
             mixinPackages,

@@ -9,7 +9,6 @@ import java.util.jar.Attributes;
 
 public record FabricModFileMetadata(
     LoaderModMetadata modMetadata,
-    Collection<String> visibleMixinConfigs,
     Collection<String> mixinConfigs,
     Set<String> refmaps,
     Set<String> mixinPackages,

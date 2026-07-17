@@ -117,6 +117,7 @@ dependencies {
     implementation("org.sinytra.adapter:core:$versionAdapterCore") { isTransitive = false }
     implementation("net.fabricmc:class-tweaker:$versionClassTweaker") { isTransitive = false }
     implementation("org.sinytra:AutoRenamingTool:$versionAutoRenamingTool") { isTransitive = false }
+    api(project(":transformer"))
     implementation(project(":transformer")) { isTransitive = false }
 
     jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))

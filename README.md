@@ -120,6 +120,14 @@ dependencies {
 }
 ```
 
+### Transformer Plugins
+
+Developers can create addons that register their own jar transformers and Mixin method patches in addition to those
+provided by Connector.
+
+See the [Plugins](https://moddedmc.wiki/en/project/connector/latest/docs/plugins) documentation page for a guide. Code
+documentation is available in the `org.sinytra.connector.transformer.api` package.
+
 ## ⚙️ Configuration
 
 All information regarding Connector's configuration options can be found on

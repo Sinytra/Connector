@@ -25,6 +25,10 @@ configurations {
     }
 }
 
+java {
+    withSourcesJar()
+}
+
 repositories {
     mavenCentral()
     maven {

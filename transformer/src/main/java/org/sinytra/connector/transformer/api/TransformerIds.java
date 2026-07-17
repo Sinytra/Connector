@@ -1,5 +1,8 @@
 package org.sinytra.connector.transformer.api;
 
+/**
+ * Contains IDs of builtin transformers registered by Connector.
+ */
 public final class TransformerIds {
     public static final String SIGNATURE_STRIPPER = "connector:signature_stripper";
     public static final String MOD_METADATA = "connector:mod_metadata";

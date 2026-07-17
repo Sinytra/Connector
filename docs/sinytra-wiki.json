@@ -1,5 +1,8 @@
 {
-    "id": "connector",
-    "platform": "modrinth",
-    "slug": "connector"
+  "schema": "1",
+  "id": "connector",
+  "platforms": {
+    "curseforge": "sinytra-connector",
+    "modrinth": "connector"
+  }
 }

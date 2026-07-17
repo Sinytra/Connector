@@ -1,0 +1,104 @@
+# Plugins
+
+Connector offers a transformer API that extending its mod processing pipeline. This can be used to add new jar
+transformers or mixin patches.
+
+Example usage includes developing addons that provide support for specific mods through hardcoded mixin patches.
+
+All API classes including javadocs can be found under the `org.sinytra.connector.transformer.api` package.
+
+## Authoring plugins
+
+Plugins are loaded as Java services from the runtime classpath during mod discovery. Connector will initialize plugins
+at once, and then run them to gather patches and transformers for every jar individually.
+
+To get started, create a class that implements the `org.sinytra.connector.transformer.api.TransformerPlugin`
+interface.
+
+```java copy title="ExampleTransformerPlugin.java"
+public class ExampleTransformerPlugin implements TransformerPlugin {
+    @Override
+    public String name() {
+        return "examplemod:plugin";
+    }
+
+    // Override methods as desired
+}
+```
+
+Then, create a file that provivides this plugin under
+`META-INF/services/org.sinytra.connector.transformer.api.TransformerPlugin`.
+
+```text title="org.sinytra.connector.transformer.api.TransformerPlugin"
+com.example.examplemod.ExampleTransformerPlugin
+```
+
+### Loading the jar
+
+Connector runs before mod discovery, and therefore all plugins must be present at this time as well.
+
+For this, you'll need to mark you jar as an early FML service to make FML load it before it begins the discovery
+process. This is very simple, as all you need to do is add a service file for an eligible early service. In this guide,
+we'll be using `IModFileCandidateLocator`.
+
+Simply create an **empty** file under `META-INF/services/net.neoforged.neoforgespi.locating.IModFileCandidateLocator`.
+
+<Callout variant="warning">
+    Early service jars can not double as mods. If your project includes a FML mod, bundle it using Jar-in-Jar in the
+    main jar instead. You can check Connector's or Launchpad's own setups for examples.
+</Callout>
+
+## Registering jar transformers
+
+One of the available plugin methods is `registerJarTransformers`, which accepts a `TransformerRegistrar`. You can use
+this interface to register [ART](https://github.com/neoforged/AutoRenamingTool) transformers that modify the contents
+of jars at the file level.
+
+You can choose the order in which these transformers are executed by supplying a set of transformer names that should
+run before/after your transformer as well as ordering hints that affect the general sorting order.
+
+Each transformer should be given a globally unique name. We recommend using prefixed names in line with the game's
+resource location standard.
+
+```java
+@Override
+public void registerJarTransformers(TransformerRegistrar registrar, TransformerContext context) {
+    // Run regardless of order
+    registrar.register("examplemod:example_tx", new ExampleTransformer());
+    // Run before all transformers
+    registrar.register("examplemod:early_tx", null, null, OrderingHint.EARLY, new ExampleTransformer());
+    // Run after mixin patches
+    registrar.registerAfter("examplemod:late_patch", Set.of(TransformerIds.METHOD_PATCHES), new PatchTransformer());
+}
+```
+
+## Adding mixin patches
+
+The `registerPatches` method allows adding manual/hardcoded mixin patches. This is particularly useful when you want to
+fix compatibility with a specific mod.
+
+```java
+@Override
+public void registerPatches(PatchRegistrar registrar, TransformerContext context) {
+    // Target a specific mod only
+    if (!context.candidateJar().modMetadata().getId().equals("sandbox")) {
+        return;
+    }
+
+    // Register with default priority
+    registrar.add(
+        MethodPatch.builder()
+            .targetClass("net/minecraft/client/KeyMapping")
+            .targetMethod("set")
+            .targetInjectionPoint("TAIL")
+            .modifyInjectionPoint("INVOKE", "Lnet/minecraft/client/KeyMapping;setDown(Z)V")
+            .build()
+    );
+    
+    // Register with given priority
+    registrar.register(
+        PatchRegistrar.HIGHER_SYSTEM_PRIORITY, // 500
+        MethodPatch.builder().build()
+    );
+}
+```

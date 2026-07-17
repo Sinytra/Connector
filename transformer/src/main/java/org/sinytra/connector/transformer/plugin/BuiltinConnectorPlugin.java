@@ -31,12 +31,18 @@ public class BuiltinConnectorPlugin implements TransformerPlugin {
     public void registerJarTransformers(TransformerRegistrar registrar, TransformerContext context) {
         registrar.register(TransformerIds.SIGNATURE_STRIPPER, new JarSignatureStripper());
         registrar.register(TransformerIds.MOD_METADATA, FabricMetadataTransformer.INSTANCE);
+
         registrar.registerBefore(TransformerIds.CLASS_ANALYSIS,
             Set.of(TransformerIds.METHOD_PATCHES),
             new ClassNodeTransformer(
                 new FieldToMethodTransformer(context.candidateJar().modMetadata().getClassTweaker()),
                 new ClassAnalysingTransformer()
             ));
-        registrar.registerAfter(TransformerIds.ACCESS_REDIRECT, Set.of(TransformerIds.METHOD_PATCHES), new ClassNodeTransformer(this.redirectTransformer));
+
+        registrar.registerAfter(
+            TransformerIds.ACCESS_REDIRECT,
+            Set.of(TransformerIds.METHOD_PATCHES),
+            new ClassNodeTransformer(this.redirectTransformer)
+        );
     }
 }

@@ -10,8 +10,8 @@ to reflect the current state of the mod. If your question is not listed, we'll b
 ## ❌️ Backports
 
 Backports to Minecraft versions older than 1.20.1 are **not planned**. Our focus is on future versions where
-compatibility will improve over time as major blockers are patched upstream, such as [Mixin](https://github.com/Sinytra/Connector/discussions/383) or transformable mc
-libraries.
+compatibility will improve over time as major blockers are patched upstream, such as
+[Mixin](https://github.com/Sinytra/Connector/discussions/383) or transformable mc libraries.
 
 ## ❌️ Is OptiFine compatible?
 
@@ -26,7 +26,7 @@ Instead, we recommend using some of the available alternatives:
 
 This largely depends on how the mod's codebase and API are structured.
 
-#### Multiloader mods
+### Multiloader mods
 
 Some mods use a multiloader setup in which most code is shared between platforms, including the public API.
 In these cases, the chances of proper cross-platform behavior are higher.
@@ -34,7 +34,7 @@ In these cases, the chances of proper cross-platform behavior are higher.
 A good example of this is [Cloth Config](https://github.com/shedaniel/cloth-config), which only contains a platform-specific classes, none of
 which are considered public API.
 
-#### Standalone ports
+### Standalone ports
 
 Other mods may consist of completely independent codebases for each modloader. This may be the case if you're playing
 an unofficial port of the mod (such as [Farmer's Delight Fabric](https://www.curseforge.com/minecraft/mc-mods/farmers-delight-fabric)) or the author intended so themselves.
@@ -77,21 +77,23 @@ regardless of the mod, increasing the chances of getting other mods working in t
 
 #### 🛠️ Modpack / general issues and crashes
 
-If you're having trouble running Connector, feel free to join our community on [Discord](https://discord.sinytra.org), where we'll be happy to
-help you out in the [#support](https://discord.com/channels/1141048834177388746/1141062824265793650) channel. When opening a thread, please make sure
-to provide a description of your issue and include the necessary game logs.
+If you're having trouble running Connector, feel free to join our community on [Discord](https://discord.sinytra.org),
+where we'll be happy to help you out in the
+[#support](https://discord.com/channels/1141048834177388746/1141062824265793650) channel. When opening a thread, please
+make sure to provide a description of your issue and include the necessary game logs.
 
 #### 🐞 Confirmed bugs / Forge mod interference
 
-Connector bugs should be submitted on our [issue tracker](https://github.com/Sinytra/Connector/issues). Each issue is reviewed and processed equally,
-so even if we can't get to you immediately, please bear with us.
+Connector bugs should be submitted on our [issue tracker](https://github.com/Sinytra/Connector/issues). Each issue is
+reviewed and processed equally, so even if we can't get to you immediately, please bear with us.
 
 Here's a few tips to follow when reporting issues:
 
 1. Make sure you are using latest available version. Look for existing issues that might've already been
 answered / fixed. Think about whether the issue is caused by Connector itself and not another mod you've installed.
 To test this, try reproducing the same issue on Fabric.
-2. Navigate to [the issues tab](https://github.com/Sinytra/Connector/issues) and open a [new issue](https://github.com/Sinytra/Connector/issues/new/choose).
+2. Navigate to [the issues tab](https://github.com/Sinytra/Connector/issues) and open a
+[new issue](https://github.com/Sinytra/Connector/issues/new/choose).
 Select one of the available templates depending on the topic. Read the template carefully and thoroughly.
 Fill in the required fields. In order to increase our chances of identifying and reproducing the issue, please make sure
 to include as many details as possible.

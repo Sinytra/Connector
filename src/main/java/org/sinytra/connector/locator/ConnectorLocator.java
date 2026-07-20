@@ -154,7 +154,7 @@ public class ConnectorLocator implements IDependencyLocator {
             .map(out -> {
                 JarContents contents = uncheck(() -> JarContents.ofFilteredPaths(out.paths()));
                 IModFile mf = FabricModFactory.createModFile(contents, attributes, out.type());
-                return Objects.requireNonNull(mf, "Invalid mod file");
+                return Objects.requireNonNull(mf, "Invalid mod file " + contents.getPrimaryPath());
             })
             .toList();
 

@@ -3,6 +3,7 @@ package org.sinytra.connector.mod.compat;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -47,7 +48,7 @@ public final class FluidHandlerCompat {
             // Allow Forge mods to access Fabric fluid properties
             ResourceKey<Fluid> key = entry.getKey();
             Fluid fluid = entry.getValue();
-            if (ModList.get().getModContainerById(key.location().getNamespace()).map(c -> ConnectorEarlyLoader.isConnectorMod(c.getModId())).orElse(false)) {
+            if (ModList.get().getModContainerById(key.location().getNamespace()).map(c -> ConnectorEarlyLoader.isConnectorMod(c.getModId())).orElseGet(() -> FabricLoader.getInstance().getModContainer(key.location().getNamespace()).map(c -> ConnectorEarlyLoader.isConnectorMod(c.getMetadata().getId())).orElse(false))) {
                 FluidType type = new FabricFluidType(FluidType.Properties.create(), fluid);
                 FABRIC_FLUID_TYPES.put(fluid, type);
                 FABRIC_FLUID_TYPES_BY_NAME.put(key.location(), type);

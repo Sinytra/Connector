@@ -16,11 +16,13 @@ import net.neoforged.neoforgespi.transformation.BytecodeProvider;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.util.provider.ClassLookup;
 import org.sinytra.connector.ConnectorEarlyLoader;
+import org.sinytra.connector.transformer.DependencyConfiguration;
 import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;
-import org.sinytra.connector.transformer.jar.SimpleClassLookup;
 import org.sinytra.connector.transformer.jar.EarlyCoremodTransformer;
+import org.sinytra.connector.transformer.jar.SimpleClassLookup;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
+import org.sinytra.connector.util.ConnectorConfig;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.sinytra.connector.util.GameCodeRetriever;
 import org.spongepowered.asm.service.IClassBytecodeProvider;
@@ -32,6 +34,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.List;
 
 @SuppressWarnings("UnstableApiUsage")
@@ -45,6 +48,7 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
     private final String mcVersion;
     @Nullable
     private final IModFile coremodsFile;
+    private final Collection<String> knownMods;
 
     static {
         try {
@@ -56,9 +60,10 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
         }
     }
 
-    public ConnectorTransformerEnvironment(String mcVersion, @Nullable IModFile coremodsFile) {
+    public ConnectorTransformerEnvironment(String mcVersion, @Nullable IModFile coremodsFile, Collection<String> knownMods) {
         this.mcVersion = mcVersion;
         this.coremodsFile = coremodsFile;
+        this.knownMods = knownMods;
     }
 
     @Override
@@ -140,6 +145,12 @@ public class ConnectorTransformerEnvironment implements TransformerEnvironment {
     @Override
     public String getJarCacheVersion() {
         return ConnectorUtil.getJarCacheVersion();
+    }
+
+    @Override
+    @Nullable
+    public DependencyConfiguration getDependencyConfiguration() {
+        return new DependencyConfiguration(this.knownMods, ConnectorConfig.INSTANCE.get().globalModAliases().asMap());
     }
 
     private static Path getCacheDir() {

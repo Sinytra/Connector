@@ -1,6 +1,7 @@
 package org.sinytra.connector.locator;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
@@ -25,7 +26,6 @@ import org.sinytra.connector.locator.ConnectorModFileReader.StubModFileInfo;
 import org.sinytra.connector.locator.filter.SplitPackageMerger;
 import org.sinytra.connector.locator.filter.SplitPackageMerger.FilteredPaths;
 import org.sinytra.connector.locator.filter.SplitPackageMerger.SplitInputPath;
-import org.sinytra.connector.transformer.plugin.PluginManager;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.FabricModFileMetadata;
 import org.sinytra.connector.transformer.jar.JarTransformer;
@@ -33,6 +33,7 @@ import org.sinytra.connector.transformer.jar.JarTransformer.FabricModPath;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformableJar;
 import org.sinytra.connector.transformer.jar.JarTransformer.TransformedFabricModPath;
 import org.sinytra.connector.transformer.jar.MetadataReader;
+import org.sinytra.connector.transformer.plugin.PluginManager;
 import org.sinytra.connector.transformer.transform.FabricMetadataTransformer;
 import org.sinytra.connector.util.ConnectorUtil;
 import org.sinytra.launchpad.api.FabricModFactory;
@@ -99,10 +100,6 @@ public class ConnectorLocator implements IDependencyLocator {
             .filter(m -> !(m.getModFileInfo() instanceof StubModFileInfo))
             .toList();
 
-        String mcVersion = determineMcVersion(discoveredNeoMods);
-        TransformerEnvironment environment = new ConnectorTransformerEnvironment(mcVersion, findCoremodsLibarary(discoveredNeoMods));
-        JarTransformer transformer = new JarTransformer(environment);
-
         // Get all existing mods
         Collection<SimpleModInfo> loadedModInfos = getPreviouslyDiscoveredMods(discoveredNeoMods);
         Collection<String> loadedModIds = loadedModInfos.stream()
@@ -115,6 +112,15 @@ public class ConnectorLocator implements IDependencyLocator {
             .filter(m -> m.getModFileInfo() instanceof StubModFileInfo)
             .filter(m -> shouldLoadMod(m, loadedModIds))
             .toList();
+        Collection<String> fabricModIds = interest.stream()
+            .map(m -> ((StubModFileInfo) m.getModFileInfo()).metadata().getId())
+            .collect(Collectors.toUnmodifiableSet());
+        Collection<String> allKnownMods = ImmutableSet.<String>builder().addAll(loadedModIds).addAll(fabricModIds).build();
+
+        String mcVersion = determineMcVersion(discoveredNeoMods);
+        TransformerEnvironment environment = new ConnectorTransformerEnvironment(mcVersion, findCoremodsLibarary(discoveredNeoMods), allKnownMods);
+        JarTransformer transformer = new JarTransformer(environment);
+        
         List<TransformableJar> candidates = buildCandiates(interest, environment, transformer);
 
         // Collect mods that are (likely) going to be excluded by FML's UniqueModListBuilder. Exclude them from global split package filtering

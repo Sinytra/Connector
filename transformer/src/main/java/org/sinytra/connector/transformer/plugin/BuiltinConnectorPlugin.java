@@ -30,7 +30,7 @@ public class BuiltinConnectorPlugin implements TransformerPlugin {
     @Override
     public void registerJarTransformers(TransformerRegistrar registrar, TransformerContext context) {
         registrar.register(TransformerIds.SIGNATURE_STRIPPER, new JarSignatureStripper());
-        registrar.register(TransformerIds.MOD_METADATA, FabricMetadataTransformer.INSTANCE);
+        registrar.register(TransformerIds.MOD_METADATA, new FabricMetadataTransformer(context.environment()));
 
         registrar.registerBefore(TransformerIds.CLASS_ANALYSIS,
             Set.of(TransformerIds.METHOD_PATCHES),

@@ -112,14 +112,15 @@ public class JarTransformInstance {
         return jarTrail;
     }
 
-    private static void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
+    private void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
         Files.copy(input.toPath(), output);
+        FabricMetadataTransformer transformer = new FabricMetadataTransformer(this.environment);
 
         try (FileSystem fs = FileSystems.newFileSystem(output)) {
             Path path = fs.getPath(TransformerUtil.FABRIC_MOD_JSON);
             byte[] data = Files.readAllBytes(path);
             ResourceEntry entry = ResourceEntry.create(TransformerUtil.FABRIC_MOD_JSON, 0, data);
-            ResourceEntry processed = Objects.requireNonNull(FabricMetadataTransformer.INSTANCE.process(entry), "Failed to process FMJ entry");
+            ResourceEntry processed = Objects.requireNonNull(transformer.process(entry), "Failed to process FMJ entry");
             Files.write(path, processed.getData());
         } catch (IOException e) {
             throw new UncheckedIOException("Error patching generated jar file", e);

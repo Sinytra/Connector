@@ -4,6 +4,8 @@ import com.google.gson.*;
 import com.mojang.logging.LogUtils;
 import net.neoforged.art.api.Transformer;
 import net.neoforged.fml.loading.moddiscovery.readers.JarModsDotTomlModFileReader;
+import org.sinytra.connector.transformer.DependencyConfiguration;
+import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
@@ -13,8 +15,6 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class FabricMetadataTransformer implements Transformer {
-    public static final FabricMetadataTransformer INSTANCE = new FabricMetadataTransformer();
-
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String NORMALIZER_SUFFIX = "_nojpms";
     private static final String FAPI_MODID = "fabric-api";
@@ -32,6 +32,12 @@ public class FabricMetadataTransformer implements Transformer {
         "com.llamalad7.mixinextras.MixinExtrasBootstrap",
         "com.llamalad7.mixinextras.MixinExtrasBootstrap::init"
     );
+    
+    private final TransformerEnvironment environment;
+    
+    public FabricMetadataTransformer(TransformerEnvironment environment) {
+        this.environment = environment;
+    }
 
     @Override
     public ResourceEntry process(ResourceEntry entry) {
@@ -59,7 +65,7 @@ public class FabricMetadataTransformer implements Transformer {
         return modId.replace('-', '_');
     }
 
-    private static void processMetadata(JsonObject json) {
+    private void processMetadata(JsonObject json) {
         String modId = json.get("id").getAsString();
         String version = json.get("version").getAsString();
 
@@ -98,16 +104,36 @@ public class FabricMetadataTransformer implements Transformer {
 
         // Strip patch FAPI dep version
         JsonObject depends = json.getAsJsonObject("depends");
-        if (depends != null && depends.has(FAPI_MODID)) {
-            String ver = depends.getAsJsonPrimitive(FAPI_MODID).getAsString();
-            String stripped = stripPatchVersion(ver);
-            depends.addProperty(FAPI_MODID, stripped);
+        if (depends != null) {
+            applyGlobalModAliases(depends);
+
+            if (depends.has(FAPI_MODID)) {
+                String ver = depends.getAsJsonPrimitive(FAPI_MODID).getAsString();
+                String stripped = stripPatchVersion(ver);
+                depends.addProperty(FAPI_MODID, stripped);
+            }
         }
 
         JsonObject custom = Objects.requireNonNullElseGet(json.getAsJsonObject("custom"), JsonObject::new);
         custom.addProperty(TransformerUtil.METADATA_MARKER, true);
         custom.addProperty(TransformerUtil.LAUNCHPAD_MARKER, true);
         json.add("custom", custom);
+    }
+
+    private void applyGlobalModAliases(JsonObject depends) {
+        DependencyConfiguration config = this.environment.getDependencyConfiguration();
+        if (config == null) return;
+
+        for (Map.Entry<String, JsonElement> entry : Set.copyOf(depends.entrySet())) {
+            String modId = entry.getKey();
+            if (!config.knownMods().contains(modId)) {
+                String alternative = config.findAlternative(modId);
+                if (alternative != null) {
+                    depends.remove(modId);
+                    depends.addProperty(alternative, "*");
+                }
+            }
+        }
     }
 
     private static String stripPatchVersion(String predicate) {

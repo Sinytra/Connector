@@ -33,4 +33,9 @@ public interface TransformerEnvironment {
     int getFabricMixinCompatibility(LoaderModMetadata metadata);
 
     String getJarCacheVersion();
+
+    @Nullable
+    default DependencyConfiguration getDependencyConfiguration() {
+        return null;
+    }
 }

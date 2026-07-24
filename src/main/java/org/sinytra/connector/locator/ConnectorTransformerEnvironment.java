@@ -1,4 +1,4 @@
-package org.sinytra.connector.locator.transform;
+package org.sinytra.connector.locator;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;

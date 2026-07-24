@@ -3,6 +3,7 @@ package org.sinytra.connector.locator;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.DataResult;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.Version;
@@ -24,7 +25,6 @@ import org.sinytra.connector.locator.ConnectorModFileReader.StubModFileInfo;
 import org.sinytra.connector.locator.filter.SplitPackageMerger;
 import org.sinytra.connector.locator.filter.SplitPackageMerger.FilteredPaths;
 import org.sinytra.connector.locator.filter.SplitPackageMerger.SplitInputPath;
-import org.sinytra.connector.locator.transform.ConnectorTransformerEnvironment;
 import org.sinytra.connector.transformer.plugin.PluginManager;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.FabricModFileMetadata;
@@ -153,8 +153,8 @@ public class ConnectorLocator implements IDependencyLocator {
         List<IModFile> loadedMods = moduleSafeJars.stream()
             .map(out -> {
                 JarContents contents = uncheck(() -> JarContents.ofFilteredPaths(out.paths()));
-                IModFile mf = FabricModFactory.createModFile(contents, attributes, out.type());
-                return Objects.requireNonNull(mf, "Invalid mod file");
+                DataResult<IModFile> result = FabricModFactory.createModFile(contents, attributes, out.type());
+                return result.getOrThrow(msg -> new RuntimeException("Invalid mod file %s: %s".formatted(contents.getPrimaryPath().toString(), msg)));
             })
             .toList();
 

@@ -3,6 +3,7 @@ package org.sinytra.connector.transformer.transform;
 import com.google.gson.*;
 import com.mojang.logging.LogUtils;
 import net.neoforged.art.api.Transformer;
+import net.neoforged.fml.loading.moddiscovery.readers.JarModsDotTomlModFileReader;
 import org.slf4j.Logger;
 
 import java.io.ByteArrayInputStream;
@@ -46,6 +47,10 @@ public class FabricMetadataTransformer implements Transformer {
             } catch (Exception e) {
                 LOGGER.error("Error processing {}", entry.getName(), e);
             }
+        }
+        // Remove placeholder neoforge.mods.toml
+        if (entry.getName().equals(JarModsDotTomlModFileReader.MODS_TOML)) {
+            return null;
         }
         return entry;
     }

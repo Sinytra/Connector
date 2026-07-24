@@ -4,16 +4,21 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
+import net.neoforged.fml.jarcontents.JarContents;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLLoader;
+import net.neoforged.neoforgespi.locating.IModFile.Type;
+import net.neoforged.neoforgespi.locating.ModFileDiscoveryAttributes;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.transformer.transform.TransformerUtil;
+import org.sinytra.launchpad.api.FabricModFactory;
 import org.slf4j.Logger;
 import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -48,8 +53,9 @@ public final class ConnectorUtil {
     public static final Supplier<Boolean> SHOULD_ENABLE = Suppliers.memoize(() -> {
         try {
             Class.forName("org.sinytra.launchpad.api.Launchpad");
+            FabricModFactory.createModFile(JarContents.empty(Path.of("nonexistent")), ModFileDiscoveryAttributes.DEFAULT, Type.MOD);
             return true;
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | NoSuchMethodError e) {
             return false;
         }
     });

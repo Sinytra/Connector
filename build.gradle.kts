@@ -8,7 +8,7 @@ plugins {
     `maven-publish`
     id("net.neoforged.moddev") version "2.0.140"
     id("com.gradleup.shadow") version "9.3.1" apply false
-    id("me.modmuss50.mod-publish-plugin") version "0.5.+"
+    id("me.modmuss50.mod-publish-plugin") version "2.1.1"
     id("net.neoforged.gradleutils") version "5.1.0"
     id("org.sinytra.adapter.userdev") version "1.2.1-SNAPSHOT"
     id("org.moddedmc.wiki.toolkit") version "0.4.1"
@@ -248,6 +248,8 @@ publishMods {
         accessToken.set(providers.environmentVariable("CURSEFORGE_TOKEN"))
         projectId.set(curseForgeId)
         minecraftVersions.add(versionMc)
+        client.set(true)
+        server.set(true)
         requires {
             slug.set(forgifiedFabricApiCurseForge)
         }

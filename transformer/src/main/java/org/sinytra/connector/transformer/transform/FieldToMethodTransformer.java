@@ -2,12 +2,15 @@ package org.sinytra.connector.transformer.transform;
 
 import com.google.common.collect.ImmutableMap;
 import com.mojang.logging.LogUtils;
-import net.fabricmc.accesswidener.AccessWidenerReader;
-import net.fabricmc.accesswidener.AccessWidenerVisitor;
-import net.fabricmc.accesswidener.AccessWidenerWriter;
-import net.fabricmc.accesswidener.ForwardingVisitor;
+import net.fabricmc.classtweaker.api.ClassTweaker;
+import net.fabricmc.classtweaker.api.ClassTweakerReader;
+import net.fabricmc.classtweaker.api.ClassTweakerWriter;
+import net.fabricmc.classtweaker.api.visitor.AccessWidenerVisitor;
+import net.fabricmc.classtweaker.api.visitor.ClassTweakerVisitor;
+import net.fabricmc.classtweaker.visitors.ForwardingVisitor;
 import net.minecraftforge.fart.api.Transformer;
 import net.minecraftforge.srgutils.IMappingFile;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 import org.sinytra.adapter.env.ctx.PatchResult;
@@ -56,11 +59,12 @@ public class FieldToMethodTransformer implements ClassNodeTransformer.ClassProce
     @Override
     public Transformer.ResourceEntry process(Transformer.ResourceEntry entry) {
         if (entry.getName().equals(this.accessWidenerResource)) {
-            AccessWidenerWriter writer = new AccessWidenerWriter();
-            AccessWidenerVisitor filter = new FilteringAccessWidenerVisitor(this.mappedReplacements.keySet(), writer);
-            AccessWidenerReader reader = new AccessWidenerReader(filter);
-            reader.read(entry.getData());
-            return Transformer.ResourceEntry.create(entry.getName(), entry.getTime(), writer.write());
+            ClassTweakerWriter writer = ClassTweakerWriter.create(ClassTweaker.CT_LATEST);
+
+            ClassTweakerVisitor visitor = new FilteringClassTweakerVisitor(this.mappedReplacements.keySet(), writer);
+            ClassTweakerReader.create(visitor).read(entry.getData());
+            
+            return Transformer.ResourceEntry.create(entry.getName(), entry.getTime(), writer.getOutput());
         }
         return entry;
     }
@@ -88,26 +92,47 @@ public class FieldToMethodTransformer implements ClassNodeTransformer.ClassProce
         return replaced;
     }
 
-    private static class FilteringAccessWidenerVisitor extends ForwardingVisitor {
+    private static class FilteringClassTweakerVisitor extends ForwardingVisitor {
         private final Collection<String> exclude;
 
-        public FilteringAccessWidenerVisitor(Collection<String> exclude, AccessWidenerVisitor... visitors) {
+        public FilteringClassTweakerVisitor(Collection<String> exclude, ClassTweakerVisitor... visitors) {
             super(visitors);
             this.exclude = exclude;
         }
 
+        @Nullable
         @Override
-        public void visitMethod(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
-            if (!this.exclude.contains(name)) {
-                super.visitMethod(owner, name, descriptor, access, transitive);
-            }
+        public AccessWidenerVisitor visitAccessWidener(String owner) {
+            return new FilteringAccessWidenerVisitor(super.visitAccessWidener(owner), this.exclude);
+        }
+    }
+
+    private static class FilteringAccessWidenerVisitor implements AccessWidenerVisitor {
+        private final Collection<String> exclude;
+        private final AccessWidenerVisitor parent;
+
+        public FilteringAccessWidenerVisitor(AccessWidenerVisitor parent, Collection<String> exclude) {
+            this.parent = parent;
+            this.exclude = exclude;
         }
 
         @Override
-        public void visitField(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
-            if (!this.exclude.contains(name)) {
-                super.visitField(owner, name, descriptor, access, transitive);
-            }
+        public void visitClass(AccessType access, boolean transitive) {
+            this.parent.visitClass(access, transitive);
+        }
+
+        @Override
+        public void visitMethod(String name, String descriptor, AccessType access, boolean transitive) {
+            if (this.exclude.contains(name)) return;
+
+            this.parent.visitMethod(name, descriptor, access, transitive);
+        }
+
+        @Override
+        public void visitField(String name, String descriptor, AccessType access, boolean transitive) {
+            if (this.exclude.contains(name)) return;
+
+            this.parent.visitField(name, descriptor, access, transitive);
         }
     }
 }

@@ -1,9 +1,12 @@
 package org.sinytra.connector.transformer.transform;
 
-import net.fabricmc.accesswidener.AccessWidenerReader;
-import net.fabricmc.accesswidener.AccessWidenerVisitor;
+import net.fabricmc.classtweaker.api.ClassTweakerReader;
+import net.fabricmc.classtweaker.api.visitor.AccessWidenerVisitor;
+import net.fabricmc.classtweaker.api.visitor.AccessWidenerVisitor.AccessType;
+import net.fabricmc.classtweaker.api.visitor.ClassTweakerVisitor;
 import net.fabricmc.loader.impl.MappingResolverImpl;
 import net.minecraftforge.fart.api.Transformer;
+import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.transformer.jar.IntermediateMapping;
 
 import java.nio.charset.StandardCharsets;
@@ -31,26 +34,31 @@ public class AccessWidenerTransformer implements Transformer {
     }
 
     public String mapAccessWidener(byte[] content) {
-        AccessWidenerReader.Header header = AccessWidenerReader.readHeader(content);
+        ClassTweakerReader.Header header = ClassTweakerReader.readHeader(content);
         String namespace = header.getNamespace();
-        RemappingAccessWidenerVisitor visitor = new RemappingAccessWidenerVisitor(namespace);
-        AccessWidenerReader reader = new AccessWidenerReader(visitor);
-        reader.read(content);
+        TransformingClassTweakerVisitor visitor = new TransformingClassTweakerVisitor(namespace);
+        ClassTweakerReader.create(visitor).read(content);
         visitor.finish();
         return visitor.builder.toString();
     }
 
-    public class RemappingAccessWidenerVisitor implements AccessWidenerVisitor {
+    public class TransformingClassTweakerVisitor implements ClassTweakerVisitor {
         private final String sourceNamespace;
         private final StringBuilder builder = new StringBuilder();
 
-        private final Map<String, AccessWidenerReader.AccessType> classAccess = new HashMap<>();
-        private final Map<String, Map<String, AccessWidenerReader.AccessType>> classFields = new HashMap<>();
+        private final Map<String, AccessType> classAccess = new HashMap<>();
+        private final Map<String, Map<String, AccessType>> classFields = new HashMap<>();
 
-        public RemappingAccessWidenerVisitor(String sourceNamespace) {
+        public TransformingClassTweakerVisitor(String sourceNamespace) {
             this.sourceNamespace = sourceNamespace;
 
             this.builder.append("# Access Transformer file converted by Connector\n");
+        }
+
+        @Nullable
+        @Override
+        public AccessWidenerVisitor visitAccessWidener(String owner) {
+            return new RemappingAccessWidenerVisitor(owner);
         }
 
         public void finish() {
@@ -81,46 +89,54 @@ public class AccessWidenerTransformer implements Transformer {
             }));
         }
 
-        @Override
-        public void visitClass(String name, AccessWidenerReader.AccessType access, boolean transitive) {
-            // AcessWidener silently also access widens owners of methods that are being AW'd, but never calls visitClass for those entries
-            // Therefore, we have to replicate this behavior ourselves in visitMethod below. In addition, we first gather all class AWs in a map
-            // and only translate them once all AW entries have been process. This prevents conflicts in case visitMethod generates an AW entry
-            // for a class that already has one, except with lower access.
-            this.classAccess.compute(name, (value, existing) -> existing == null || access.ordinal() > existing.ordinal() ? access : existing);
-        }
+        public class RemappingAccessWidenerVisitor implements AccessWidenerVisitor {
+            private final String owner;
 
-        @Override
-        public void visitMethod(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
-            String modifier = switch (access) {
-                case ACCESSIBLE -> "public";
-                case EXTENDABLE -> "protected-f";
-                default -> throw new IllegalArgumentException("Invalid access type " + access + " for method");
-            };
-            String mappedOwner = AccessWidenerTransformer.this.resolver.mapClassName(this.sourceNamespace, owner);
-            String mappedName = AccessWidenerTransformer.this.resolver.mapMethodName(this.sourceNamespace, owner, name, descriptor);
-            // Mods might target inherited methods that are not part of the mapping file, we'll try to remap them using the flat mapping instead
-            if (name.equals(mappedName)) {
-                mappedName = AccessWidenerTransformer.this.fastMapping.mapMethodOrDefault(name, descriptor);
+            public RemappingAccessWidenerVisitor(String owner) {
+                this.owner = owner;
             }
-            String mappedDescriptor = AccessWidenerTransformer.this.resolver.mapDescriptor(this.sourceNamespace, descriptor);
-            this.builder.append(modifier).append(" ")
-                .append(mappedOwner.replace('/', '.')).append(" ")
-                .append(mappedName)
-                .append(mappedDescriptor)
-                .append(!name.equals(mappedName) ? " # " + mappedName : "")
-                .append("\n");
-            // Make parent class accessible / extensible if necessary
-            visitClass(owner, access, false);
-        }
 
-        @Override
-        public void visitField(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
-            this.classFields.computeIfAbsent(owner, n -> new HashMap<>())
-                .compute(name, (value, existing) -> existing == null || access.ordinal() > existing.ordinal() ? access : existing);
-            // Make parent class accessible / extensible if necessary
-            if (access != AccessWidenerReader.AccessType.MUTABLE) {
-                visitClass(owner, access, false);
+            @Override
+            public void visitClass(AccessType access, boolean transitive) {
+                // AcessWidener silently also access widens owners of methods that are being AW'd, but never calls visitClass for those entries
+                // Therefore, we have to replicate this behavior ourselves in visitMethod below. In addition, we first gather all class AWs in a map
+                // and only translate them once all AW entries have been process. This prevents conflicts in case visitMethod generates an AW entry
+                // for a class that already has one, except with lower access.
+                classAccess.compute(this.owner, (value, existing) -> existing == null || access.ordinal() > existing.ordinal() ? access : existing);
+            }
+
+            @Override
+            public void visitMethod(String name, String descriptor, AccessType access, boolean transitive) {
+                String modifier = switch (access) {
+                    case ACCESSIBLE -> "public";
+                    case EXTENDABLE -> "protected-f";
+                    default -> throw new IllegalArgumentException("Invalid access type " + access + " for method");
+                };
+                String mappedOwner = AccessWidenerTransformer.this.resolver.mapClassName(sourceNamespace, owner);
+                String mappedName = AccessWidenerTransformer.this.resolver.mapMethodName(sourceNamespace, owner, name, descriptor);
+                // Mods might target inherited methods that are not part of the mapping file, we'll try to remap them using the flat mapping instead
+                if (name.equals(mappedName)) {
+                    mappedName = AccessWidenerTransformer.this.fastMapping.mapMethodOrDefault(name, descriptor);
+                }
+                String mappedDescriptor = AccessWidenerTransformer.this.resolver.mapDescriptor(sourceNamespace, descriptor);
+                builder.append(modifier).append(" ")
+                    .append(mappedOwner.replace('/', '.')).append(" ")
+                    .append(mappedName)
+                    .append(mappedDescriptor)
+                    .append(!name.equals(mappedName) ? " # " + mappedName : "")
+                    .append("\n");
+                // Make parent class accessible / extensible if necessary
+                visitClass(access, false);
+            }
+
+            @Override
+            public void visitField(String name, String descriptor, AccessType access, boolean transitive) {
+                classFields.computeIfAbsent(owner, n -> new HashMap<>())
+                    .compute(name, (value, existing) -> existing == null || access.ordinal() > existing.ordinal() ? access : existing);
+                // Make parent class accessible / extensible if necessary
+                if (access != AccessType.MUTABLE) {
+                    visitClass(access, false);
+                }
             }
         }
     }

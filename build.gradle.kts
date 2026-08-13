@@ -23,7 +23,7 @@ val versionParchmentMc: String by project
 val versionParchment: String by project
 val versionForgeAutoRenamingTool: String by project
 val versionForgifiedFabricLoader: String by project
-val versionAccessWidener: String by project
+val versionClassTweaker: String by project
 val versionForgifiedFabricApi: String by project
 val curseForgeId: String by project
 val modrinthId: String by project
@@ -120,6 +120,10 @@ repositories {
         }
     }
     maven {
+        name = "Fabric"
+        url = uri("https://maven.fabricmc.net")
+    }
+    maven {
         url = uri("https://www.cursemaven.com")
         content {
             includeGroup("curse.maven")
@@ -130,7 +134,7 @@ repositories {
 
 dependencies {
     shade(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader)
-    shade(group = "net.fabricmc", name = "access-widener", version = versionAccessWidener) { isTransitive = false }
+    shade(group = "net.fabricmc", name = "class-tweaker", version = versionClassTweaker) { isTransitive = false }
     shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool) { isTransitive = false }
     shade(group = "org.sinytra.adapter", name = "core", version = versionAdapterCore) { isTransitive = false }
     shade(project(":transformer")) { isTransitive = false }

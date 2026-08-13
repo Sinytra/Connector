@@ -14,7 +14,7 @@ version = rootProject.version
 val versionAdapterCore: String by rootProject
 val versionForgeAutoRenamingTool: String by rootProject
 val versionForgifiedFabricLoader: String by rootProject
-val versionAccessWidener: String by rootProject
+val versionClassTweaker: String by rootProject
 
 val runner: SourceSet by sourceSets.creating {}
 val shade: Configuration by configurations.creating
@@ -39,6 +39,10 @@ repositories {
         url = uri("https://maven.neoforged.net/releases")
     }
     maven {
+        name = "Fabric"
+        url = uri("https://maven.fabricmc.net")
+    }
+    maven {
         name = "Mojang"
         url = uri("https://libraries.minecraft.net")
     }
@@ -54,7 +58,7 @@ dependencies {
         isTransitive = false
     }
     implementation("org.sinytra:forgified-fabric-loader:$versionForgifiedFabricLoader")
-    implementation("net.fabricmc:access-widener:$versionAccessWidener")
+    implementation("net.fabricmc:class-tweaker:$versionClassTweaker")
 
     compileOnly("org.jetbrains:annotations:13.0")
     implementation("com.mojang:logging:1.2.7")

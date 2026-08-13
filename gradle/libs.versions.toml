@@ -1,0 +1,35 @@
+[versions]
+minecraft = "1.21.1"
+neoforge = "21.1.219"
+parchment = "2024.11.17"
+parchmentMc = "1.21.1"
+
+adapterCore = "2.0.40+1.21.1"
+adapterRuntime = "1.0.0+1.21.1"
+classTweaker = "0.3.0"
+forgeAutoRenamingTool = "1.0.14"
+forgifiedFabricApi = "0.116.7+2.2.1+1.21.1"
+forgifiedFabricLoader = "2.5.70+0.19.3+1.21.1"
+
+moddevgradle = "2.0.140"
+shadow = "9.3.1"
+modPublishPlugin = "2.1.1"
+gradleutils = "5.1.0"
+adapterUserdev = "1.2.1-SNAPSHOT"
+wikiToolkit = "0.4.1"
+
+[libraries]
+adapterCore = { module = "org.sinytra.adapter:core", version.ref = "adapterCore" }
+adapterRuntime = { module = "org.sinytra.adapter:runtime", version.ref = "adapterRuntime" }
+classTweaker = { module = "net.fabricmc:class-tweaker", version.ref = "classTweaker" }
+forgeAutoRenamingTool = { module = "org.sinytra:ForgeAutoRenamingTool", version.ref = "forgeAutoRenamingTool" }
+forgifiedFabricApi = { module = "org.sinytra.forgified-fabric-api:forgified-fabric-api", version.ref = "forgifiedFabricApi" }
+forgifiedFabricLoader = { module = "org.sinytra:forgified-fabric-loader", version.ref = "forgifiedFabricLoader" }
+
+[plugins]
+moddevgradle = { id = "net.neoforged.moddev", version.ref = "moddevgradle" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+modPublishPlugin = { id = "me.modmuss50.mod-publish-plugin", version.ref = "modPublishPlugin" }
+gradleutils = { id = "net.neoforged.gradleutils", version.ref = "gradleutils" }
+adapterUserdev = { id = "org.sinytra.adapter.userdev", version.ref = "adapterUserdev" }
+wikiToolkit = { id = "org.moddedmc.wiki.toolkit", version.ref = "wikiToolkit" }

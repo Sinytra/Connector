@@ -6,25 +6,16 @@ import net.neoforged.moddevgradle.internal.RunGameTask
 plugins {
     java
     `maven-publish`
-    id("net.neoforged.moddev") version "2.0.140"
-    id("com.gradleup.shadow") version "9.3.1" apply false
-    id("me.modmuss50.mod-publish-plugin") version "2.1.1"
-    id("net.neoforged.gradleutils") version "5.1.0"
-    id("org.sinytra.adapter.userdev") version "1.2.1-SNAPSHOT"
-    id("org.moddedmc.wiki.toolkit") version "0.4.1"
+    alias(libs.plugins.moddevgradle)
+    alias(libs.plugins.shadow) apply false
+    alias(libs.plugins.modPublishPlugin)
+    alias(libs.plugins.gradleutils)
+    alias(libs.plugins.adapterUserdev)
+    alias(libs.plugins.wikiToolkit)
 }
 
 val versionConnector: String by project
-val versionAdapterCore: String by project
-val versionAdapterRuntime: String by project
-val versionMc: String by project
-val versionNeoForge: String by project
-val versionParchmentMc: String by project
-val versionParchment: String by project
-val versionForgeAutoRenamingTool: String by project
-val versionForgifiedFabricLoader: String by project
-val versionClassTweaker: String by project
-val versionForgifiedFabricApi: String by project
+val versionMc = libs.versions.minecraft.get()
 val curseForgeId: String by project
 val modrinthId: String by project
 val githubRepository: String by project
@@ -66,15 +57,15 @@ configurations {
 println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty("java.vm.version")} (${System.getProperty("java.vendor")}), Arch: ${System.getProperty("os.arch")}")
 neoForge {
     // Specify the version of NeoForge to use.
-    version = versionNeoForge
+    version = libs.versions.neoforge.get()
 
     accessTransformers {
         from(project.file("src/mod/resources/META-INF/accesstransformer.cfg"))
     }
 
     parchment {
-        mappingsVersion = versionParchment
-        minecraftVersion = versionParchmentMc
+        mappingsVersion = libs.versions.parchment.get()
+        minecraftVersion = libs.versions.parchmentMc.get()
     }
 
     runs {
@@ -133,16 +124,21 @@ repositories {
 }
 
 dependencies {
-    shade(group = "org.sinytra", name = "forgified-fabric-loader", version = versionForgifiedFabricLoader)
-    shade(group = "net.fabricmc", name = "class-tweaker", version = versionClassTweaker) { isTransitive = false }
-    shade(group = "org.sinytra", name = "ForgeAutoRenamingTool", version = versionForgeAutoRenamingTool) { isTransitive = false }
-    shade(group = "org.sinytra.adapter", name = "core", version = versionAdapterCore) { isTransitive = false }
+    shade(libs.forgifiedFabricLoader)
+    shade(libs.classTweaker) { isTransitive = false }
+    shade(libs.forgeAutoRenamingTool) { isTransitive = false }
+    shade(libs.adapterCore) { isTransitive = false }
     shade(project(":transformer")) { isTransitive = false }
 
-    jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
-    "modImplementation"(implementation(group = "org.sinytra.forgified-fabric-api", name = "forgified-fabric-api", version = versionForgifiedFabricApi)) {
+    val adapterRuntime = dependencies.create(libs.adapterRuntime.get())
+    jarJar(adapterRuntime)
+    implementation(adapterRuntime)
+
+    val forgifiedFabricApi = (dependencies.create(libs.forgifiedFabricApi.get()) as ExternalModuleDependency).apply {
         exclude(group = "org.sinytra", module = "forgified-fabric-loader")
     }
+    implementation(forgifiedFabricApi)
+    "modImplementation"(forgifiedFabricApi)
 
     "modCompileOnly"(sourceSets.main.get().output)
 
@@ -187,7 +183,7 @@ val fullJar by tasks.registering(ShadowJar::class) {
     mergeServiceFiles() // Relocate services
     relocate("net.minecraftforge.fart", "reloc.net.minecraftforge.fart")
     relocate("net.minecraftforge.srgutils", "reloc.net.minecraftforge.srgutils")
-    relocate("net.fabricmc.accesswidener", "reloc.net.fabricmc.accesswidener")
+    relocate("net.fabricmc.classtweaker", "reloc.net.fabricmc.classtweaker")
     relocate("org.sat4j", "reloc.org.sat4j")
     relocate("net.bytebuddy", "reloc.net.bytebuddy")
     manifest.attributes(tasks.jar.get().manifest.attributes)
@@ -212,7 +208,7 @@ tasks {
                 "Implementation-Version" to project.version,
                 "Implementation-Vendor" to "Sinytra",
                 "Automatic-Module-Name" to "org.sinytra.connector",
-                "Fabric-Loader-Version" to versionForgifiedFabricLoader.split("+")[1]
+                "Fabric-Loader-Version" to libs.versions.forgifiedFabricLoader.get().split("+")[1]
             )
         }
     }

@@ -47,6 +47,7 @@ public class MixinPatches {
                 .modifyStatic(false)
                 .extractMixin("net/neoforged/neoforge/common/extensions/IBlockExtension")
                 .modifyTarget("connector_getTextureDiffuseColor")
+                .modifyInjectionPoint("INVOKE", "Lnet/minecraft/world/item/DyeColor;getTextureDiffuseColor()I")
                 .build()
         );
     }

@@ -4,7 +4,7 @@ neoforge = "21.1.219"
 parchment = "2024.11.17"
 parchmentMc = "1.21.1"
 
-adapterCore = "2.0.40+1.21.1"
+adapterCore = "2.0.43+1.21.1"
 adapterRuntime = "1.0.0+1.21.1"
 classTweaker = "0.3.0"
 forgeAutoRenamingTool = "1.0.14"

@@ -36,7 +36,7 @@ public final class MixinTransformSafeguard {
         StringBuilder builder = new StringBuilder();
 
         String msg = "Found §e" + failing.size() + " incompatible Fabric " + (failing.size() > 1 ? "mods" : "mod") + "§r. Details are provided below.\n\n" +
-            "With the current configuration, Connector §ccannot guarantee§r a stable environment. Should you still want to proceed, please restart the game.\n\n" +
+            "With the current configuration, Connector §ccannot guarantee§r a stable environment.\n\n" +
             "§7This one-time safety check can be disabled in Connector's config file under \"enableMixinSafeguard\".§r";
         builder.append(msg).append("\n\n");
 

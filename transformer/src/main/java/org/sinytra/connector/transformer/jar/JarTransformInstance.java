@@ -32,6 +32,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -45,9 +46,11 @@ public class JarTransformInstance {
     private final ClassLookup cleanClassLookup;
     private final AuditTrail auditTrail;
     private final TransformerEnvironment environment;
+    private final Collection<String> pkgNamespaces;
 
-    public JarTransformInstance(TransformerEnvironment environment) {
+    public JarTransformInstance(TransformerEnvironment environment, Collection<String> pkgNamespaces) {
         this.environment = environment;
+        this.pkgNamespaces = pkgNamespaces;
 
         this.cleanClassLookup = environment.getCleanClassLookup();
         this.bfu = new BytecodeFixerUpperFrontend(this.cleanClassLookup, MixinClassLookup.INSTANCE, this.environment);
@@ -71,7 +74,7 @@ public class JarTransformInstance {
         AuditTrail jarTrail = AuditTrail.create();
         ConnectorRefmapHolder refmapHolder = new ConnectorRefmapHolder(refmap.merged(), refmap.files());
         int fabricLVTCompatibility = this.environment.getFabricMixinCompatibility(metadata.modMetadata());
-        PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility, jarTrail);
+        PatchEnvironment environment = PatchEnvironment.create(refmapHolder, this.cleanClassLookup, this.bfu.unwrap(), fabricLVTCompatibility, jarTrail, this.pkgNamespaces);
 
         PluginManager plugins = PluginManager.getInstance();
         TransformerContext context = new TransformerContextImpl(metadata, environment, this.environment);

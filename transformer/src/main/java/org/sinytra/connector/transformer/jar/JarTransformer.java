@@ -6,8 +6,10 @@ import com.mojang.logging.LogUtils;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.art.api.ClassProvider;
 import net.neoforged.fml.jarcontents.JarContents;
+import net.neoforged.fml.jarmoduleinfo.JarModuleInfo;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.env.ctx.AuditTrail;
+import org.sinytra.adapter.util.AdapterUtil;
 import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
@@ -24,10 +26,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -89,11 +88,13 @@ public final class JarTransformer {
             TransformProgressMeter initProgress = this.environment.createProgressMeter("[Connector] Initializing Transformer", 0);
             JarTransformInstance transformInstance;
             try {
+                Collection<String> pkgNamespaces = computePackages(libs);
+
                 ClassProvider classProvider = this.environment.getRuntimeClassProvider(libs);
                 TransformerBytecodeProvider loader = name -> classProvider.getClassBytes(name.replace('.', '/')).orElseThrow(() -> new ClassNotFoundException(name));
                 this.environment.setGlobalBytecodeLoader(loader);
 
-                transformInstance = new JarTransformInstance(this.environment);
+                transformInstance = new JarTransformInstance(this.environment, pkgNamespaces);
             } finally {
                 initProgress.complete();
             }
@@ -134,6 +135,22 @@ public final class JarTransformer {
             cleanupEnvironment();
             progress.complete();
         }
+    }
+
+    private static Collection<String> computePackages(Collection<Path> paths) {
+        Collection<String> allPackages = new HashSet<>();
+        for (Path lib : paths) {
+            try {
+                JarContents contents = JarContents.ofPath(lib);
+                Set<String> packages = JarModuleInfo.from(contents).createDescriptor(contents).packages();
+                for (String pkg : packages) {
+                    allPackages.add(AdapterUtil.shortenPackage(pkg));
+                }
+            } catch (Exception e) {
+                LOGGER.warn("Error scanning packages for {}", lib, e);
+            }
+        }
+        return allPackages;
     }
 
     @SuppressWarnings("unchecked")

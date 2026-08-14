@@ -11,11 +11,6 @@ plugins {
 group = "org.sinytra.connector"
 version = rootProject.version
 
-val versionAdapterCore: String by rootProject
-val versionAutoRenamingTool: String by rootProject
-val versionForgifiedFabricLoader: String by rootProject
-val versionClassTweaker: String by rootProject
-
 val runner: SourceSet by sourceSets.creating {}
 val shade: Configuration by configurations.creating
 
@@ -57,12 +52,12 @@ dependencies {
     implementation(platform("org.apache.logging.log4j:log4j-bom:2.24.3"))
     implementation("org.apache.logging.log4j:log4j-core")
     implementation("org.apache.logging.log4j:log4j-slf4j2-impl")
-    implementation("org.sinytra.adapter:core:$versionAdapterCore")
-    implementation("org.sinytra:AutoRenamingTool:$versionAutoRenamingTool") {
+    implementation(libs.adapter.core)
+    implementation(libs.auto.renaming.tool) {
         isTransitive = false
     }
-    implementation("org.sinytra:forgified-fabric-loader:$versionForgifiedFabricLoader")
-    implementation("net.fabricmc:class-tweaker:$versionClassTweaker") { isTransitive = false }
+    implementation(libs.forgified.fabric.loader)
+    implementation(libs.classtweaker) { isTransitive = false }
 
     compileOnly("org.jetbrains:annotations:13.0")
     implementation("com.mojang:logging:1.2.7")

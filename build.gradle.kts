@@ -1,26 +1,18 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import me.modmuss50.mpp.ReleaseType
-import org.slf4j.event.Level
 
 plugins {
     java
     `maven-publish`
-    id("net.neoforged.moddev") version "2.0.141"
-    id("com.gradleup.shadow") version "9.4.2" apply false
-    id("me.modmuss50.mod-publish-plugin") version "2.1.1"
-    id("net.neoforged.gradleutils") version "5.1.1"
-    id("org.moddedmc.wiki.toolkit") version "0.4.1"
+    alias(libs.plugins.moddev)
+    alias(libs.plugins.shadow) apply false
+    alias(libs.plugins.mod.publish)
+    alias(libs.plugins.gradleutils)
+    alias(libs.plugins.wiki.toolkit)
 }
 
 val versionConnector = project.property("versionConnector") as String
-val versionLaunchpad = project.property("versionLaunchpad") as String
-val versionAdapterCore = project.property("versionAdapterCore") as String
-val versionAdapterRuntime = project.property("versionAdapterRuntime") as String
-val versionAutoRenamingTool = project.property("versionAutoRenamingTool") as String
-val versionClassTweaker = project.property("versionClassTweaker") as String
-val versionMc = project.property("versionMc") as String
-val versionNeoForge = project.property("versionNeoForge") as String
-val versionForgifiedFabricApi = project.property("versionForgifiedFabricApi") as String
+val versionMc = libs.versions.minecraft.get()
 
 val curseForgeId = project.property("curseForgeId") as String
 val modrinthId = project.property("modrinthId") as String
@@ -53,7 +45,7 @@ java {
 
 println("Java: ${System.getProperty("java.version")}, JVM: ${System.getProperty("java.vm.version")} (${System.getProperty("java.vendor")}), Arch: ${System.getProperty("os.arch")}")
 neoForge {
-    version = versionNeoForge
+    version = libs.versions.neoforge.get()
 
     accessTransformers {
         from(project.file("src/mod/resources/META-INF/accesstransformer.cfg"))
@@ -74,7 +66,7 @@ neoForge {
             systemProperty("connector.logging.markers", "MIXINPATCH,MERGER")
             systemProperty("mixin.debug.export", "true")
 
-//            logLevel = Level.DEBUG
+//            logLevel = org.slf4j.event.Level.DEBUG
         }
     }
 
@@ -109,20 +101,27 @@ repositories {
 }
 
 dependencies {
-    shade("org.sinytra.adapter:core:$versionAdapterCore") { isTransitive = false }
-    shade("net.fabricmc:class-tweaker:$versionClassTweaker") { isTransitive = false }
-    shade("org.sinytra:AutoRenamingTool:$versionAutoRenamingTool") { isTransitive = false }
+    shade(libs.adapter.core) { isTransitive = false }
+    shade(libs.classtweaker) { isTransitive = false }
+    shade(libs.auto.renaming.tool) { isTransitive = false }
     shade(project(":transformer")) { isTransitive = false }
 
-    implementation("org.sinytra.adapter:core:$versionAdapterCore") { isTransitive = false }
-    implementation("net.fabricmc:class-tweaker:$versionClassTweaker") { isTransitive = false }
-    implementation("org.sinytra:AutoRenamingTool:$versionAutoRenamingTool") { isTransitive = false }
+    implementation(libs.adapter.core) { isTransitive = false }
+    implementation(libs.classtweaker) { isTransitive = false }
+    implementation(libs.auto.renaming.tool) { isTransitive = false }
     api(project(":transformer"))
     implementation(project(":transformer")) { isTransitive = false }
 
-    jarJar(implementation(group = "org.sinytra.adapter", name = "runtime", version = versionAdapterRuntime))
-    "modImplementation"(implementation(group = "org.sinytra.launchpad", name = "launchpad", version = versionLaunchpad))
-    "modImplementation"(implementation(group = "org.sinytra.forgified-fabric-api", name = "forgified-fabric-api", version = versionForgifiedFabricApi)) {
+    implementation(libs.adapter.runtime)
+    jarJar(libs.adapter.runtime)
+
+    implementation(libs.launchpad)
+    "modImplementation"(libs.launchpad)
+
+    implementation(libs.forgified.fabric.api) {
+        exclude(group = "org.sinytra", module = "forgified-fabric-loader")
+    }
+    "modImplementation"(libs.forgified.fabric.api) {
         exclude(group = "org.sinytra", module = "forgified-fabric-loader")
     }
 

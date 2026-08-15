@@ -78,6 +78,13 @@ also getting you a fixed version ASAP.
 ⚠️ **1.21.1** is our **long-term-support** version and will still receive critical bugfixes.
 The latest compatibility fixes might not be available.
 
+### Issue policy
+
+Due to our limited work capacity, we'll prioritize issues based on their priority and complexity. Issues that are deemed
+too complex to solve or are out of scope for Connector's patching system may be marked as Not Planned.
+
+Contributions are always welcome and if you'd like to work on an issue yourself, feel free to let us know! 
+
 ## ⚖️ License
 
 Sinytra Connector is, and will always remain, licensed under the [MIT License](https://github.com/Sinytra/Connector/blob/master/LICENSE).

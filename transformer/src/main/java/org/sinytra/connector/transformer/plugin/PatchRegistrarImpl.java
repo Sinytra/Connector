@@ -25,7 +25,7 @@ public class PatchRegistrarImpl implements PatchRegistrar {
 
     public List<MethodPatch> getSortedPatches() {
         return this.groups.stream()
-            .sorted(Comparator.comparingInt(Registration::priority))
+            .sorted(Comparator.comparingInt(Registration::priority).reversed())
             .flatMap(r -> r.patches().stream())
             .toList();
     }

@@ -9,19 +9,17 @@ import org.sinytra.adapter.transform.patch.MethodPatch;
 import org.sinytra.connector.transformer.patch.AccessorToInvokerTransformer;
 import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AccessorRedirectTransformer implements ClassNodeTransformer.ClassProcessor {
     private static final String PREFIX = "connector$redirect$";
 
     private final List<MethodPatch> patches;
-    private final Map<String, Map<String, String>> methodRenames;
+    private final Map<String, Map<String, String>> methodRenames = new ConcurrentHashMap<>();
 
     public AccessorRedirectTransformer() {
-        Map<String, Map<String, String>> methodRenames = new HashMap<>();
-
         this.patches = FieldToMethodTransformer.REPLACEMENTS.entrySet().stream()
             .flatMap(entry -> entry.getValue().values().stream()
                 .map(s -> MethodPatch.builder()
@@ -34,7 +32,7 @@ public class AccessorRedirectTransformer implements ClassNodeTransformer.ClassPr
 
                         // Add prefix to invoker
                         String newName = PREFIX + methodNode.name;
-                        methodRenames.computeIfAbsent(classNode.name, a -> new HashMap<>())
+                        this.methodRenames.computeIfAbsent(classNode.name, a -> new ConcurrentHashMap<>())
                             .put(methodNode.name + methodNode.desc, newName);
                         methodNode.name = newName;
 
@@ -42,7 +40,6 @@ public class AccessorRedirectTransformer implements ClassNodeTransformer.ClassPr
                     })
                     .build()))
             .toList();
-        this.methodRenames = Map.copyOf(methodRenames);
     }
 
     public List<MethodPatch> getPatches() {

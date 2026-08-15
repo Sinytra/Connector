@@ -71,7 +71,7 @@ public class ConnectorClassProcessor extends SimpleClassProcessor {
                 // searchBarWidth
                 method.visitLdcInsn(89);
                 // tabsImage
-                method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/world/item/CreativeModeTab$Builder", "CREATIVE_INVENTORY_TABS_IMAGE", "Lnet/minecraft/resources/ResourceLocation;"); // tabsImage
+                method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/world/item/CreativeModeTab$Builder", "CREATIVE_INVENTORY_TABS_IMAGE", "Lnet/minecraft/resources/Identifier;"); // tabsImage
                 // labelColor
                 method.visitLdcInsn(4210752);
                 // slotColor
@@ -85,7 +85,7 @@ public class ConnectorClassProcessor extends SimpleClassProcessor {
                 method.visitInsn(Opcodes.DUP);
                 method.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/util/ArrayList", "<init>", "()V", false);
                 // invoke ctr
-                method.visitMethodInsn(Opcodes.INVOKESPECIAL, "net/minecraft/world/item/CreativeModeTab", "<init>", "(Lnet/minecraft/world/item/CreativeModeTab$Row;ILnet/minecraft/world/item/CreativeModeTab$Type;Lnet/minecraft/network/chat/Component;Ljava/util/function/Supplier;Lnet/minecraft/world/item/CreativeModeTab$DisplayItemsGenerator;Lnet/minecraft/resources/ResourceLocation;ZILnet/minecraft/resources/ResourceLocation;IILjava/util/List;Ljava/util/List;)V", false);
+                method.visitMethodInsn(Opcodes.INVOKESPECIAL, "net/minecraft/world/item/CreativeModeTab", "<init>", "(Lnet/minecraft/world/item/CreativeModeTab$Row;ILnet/minecraft/world/item/CreativeModeTab$Type;Lnet/minecraft/network/chat/Component;Ljava/util/function/Supplier;Lnet/minecraft/world/item/CreativeModeTab$DisplayItemsGenerator;Lnet/minecraft/resources/Identifier;ZILnet/minecraft/resources/Identifier;IILjava/util/List;Ljava/util/List;)V", false);
                 method.visitInsn(Opcodes.RETURN);
                 method.visitEnd();
 

@@ -120,6 +120,7 @@ public class PortableTransformerFrontend {
     private Collection<String> getLoadedModIDs(List<Path> paths) {
         List<IModFile> modFiles = paths.stream()
             .map(p -> uncheck(() -> READER.read(JarContents.ofPath(p), ModFileDiscoveryAttributes.DEFAULT)))
+            .filter(Objects::nonNull)
             .toList();
 
         return modFiles.stream()

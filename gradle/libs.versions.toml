@@ -4,7 +4,7 @@ neoforge = "26.1.2.95"
 
 adapter-core = "2.0.54+26.1.2"
 adapter-runtime = "1.0.0+26.1.2"
-launchpad = "1.9.0+26.1.2"
+launchpad = "1.9.1+26.1.2"
 auto-renaming-tool = "2.0.23"
 classtweaker = "0.3.0-beta.2"
 forgified-fabric-loader = "2.5.85+0.19.3+26.1.2"

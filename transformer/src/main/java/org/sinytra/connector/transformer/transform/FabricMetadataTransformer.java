@@ -32,9 +32,9 @@ public class FabricMetadataTransformer implements Transformer {
         "com.llamalad7.mixinextras.MixinExtrasBootstrap",
         "com.llamalad7.mixinextras.MixinExtrasBootstrap::init"
     );
-    
+
     private final TransformerEnvironment environment;
-    
+
     public FabricMetadataTransformer(TransformerEnvironment environment) {
         this.environment = environment;
     }

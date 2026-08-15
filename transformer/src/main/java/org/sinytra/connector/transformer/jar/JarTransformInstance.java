@@ -4,7 +4,6 @@ import com.google.common.base.Stopwatch;
 import com.mojang.logging.LogUtils;
 import net.neoforged.art.api.Renamer;
 import net.neoforged.art.api.Transformer;
-import net.neoforged.art.api.Transformer.ResourceEntry;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.env.ctx.AuditTrail;
 import org.sinytra.adapter.env.ctx.PatchEnvironment;
@@ -21,20 +20,18 @@ import org.sinytra.connector.transformer.patch.RefmapStorage.RefmapFiles;
 import org.sinytra.connector.transformer.plugin.PluginManager;
 import org.sinytra.connector.transformer.plugin.TransformerContextImpl;
 import org.sinytra.connector.transformer.transform.FabricMetadataTransformer;
+import org.sinytra.connector.transformer.transform.JarSignatureStripper;
 import org.sinytra.connector.transformer.transform.MixinPatchTransformer;
-import org.sinytra.connector.transformer.transform.TransformerUtil;
 import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -116,19 +113,21 @@ public class JarTransformInstance {
     }
 
     private void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
-        Files.copy(input.toPath(), output);
-        FabricMetadataTransformer transformer = new FabricMetadataTransformer(this.environment);
+        Renamer.Builder builder = Renamer.builder()
+            .logger(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
+            .debug(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
+            .ignoreJarPathPrefix("assets/", "data/");
 
-        try (FileSystem fs = FileSystems.newFileSystem(output)) {
-            Path path = fs.getPath(TransformerUtil.FABRIC_MOD_JSON);
-            byte[] data = Files.readAllBytes(path);
-            ResourceEntry entry = ResourceEntry.create(TransformerUtil.FABRIC_MOD_JSON, 0, data);
-            ResourceEntry processed = Objects.requireNonNull(transformer.process(entry), "Failed to process FMJ entry");
-            Files.write(path, processed.getData());
-        } catch (IOException e) {
-            throw new UncheckedIOException("Error patching generated jar file", e);
+        builder.add(new FabricMetadataTransformer(this.environment));
+        builder.add(new JarSignatureStripper());
+
+        try (Renamer renamer = builder.build()) {
+            renamer.run(input, output.toFile());
+        } catch (Throwable t) {
+            LOGGER.error("Encountered error while transforming jar file {}", input.getAbsolutePath(), t);
+            throw t;
         }
-        
+
         stopwatch.stop();
         LOGGER.debug(JarTransformer.TRANSFORM_MARKER, "Skipping transformation of jar {} after {} ms as it contains generated metadata, assuming it's a java library", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
     }

@@ -53,8 +53,10 @@ public class JarTransformInstance {
         this.remapper = new MappingAwareReferenceMapper(resolver.getCurrentMap(JarTransformer.SOURCE_NAMESPACE));
 
         IMappingFile mappingFile = FabricLoaderImpl.INSTANCE.getMappingResolver().getCurrentMap(JarTransformer.SOURCE_NAMESPACE);
-        ClassProvider intermediaryClassProvider = new OptimizedRenamingTransformer.IntermediaryClassProvider(classProvider, mappingFile, mappingFile.reverse(), s -> {});
-        this.enhancedRemapper = new OptimizedRenamingTransformer.MixinAwareEnhancedRemapper(intermediaryClassProvider, mappingFile, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE), s -> {});
+        ClassProvider intermediaryClassProvider = new OptimizedRenamingTransformer.IntermediaryClassProvider(classProvider, mappingFile, mappingFile.reverse(), s -> {
+        });
+        this.enhancedRemapper = new OptimizedRenamingTransformer.MixinAwareEnhancedRemapper(intermediaryClassProvider, mappingFile, IntermediateMapping.get(JarTransformer.SOURCE_NAMESPACE), s -> {
+        });
         this.cleanClassLookup = environment.getCleanClassLookup();
         this.bfu = new BytecodeFixerUpperFrontend(this.cleanClassLookup, MixinClassLookup.INSTANCE, this.environment);
         this.libs = libs;
@@ -135,8 +137,20 @@ public class JarTransformInstance {
     }
 
     private static void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
-        Files.copy(input.toPath(), output);
-        JarSignatureStripper.processJarInPlace(output);
+        Renamer.Builder builder = Renamer.builder()
+            .logger(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
+            .debug(s -> LOGGER.trace(JarTransformer.TRANSFORM_MARKER, s))
+            .ignoreJarPathPrefix("assets/", "data/");
+
+        builder.add(new JarSignatureStripper());
+
+        try (Renamer renamer = builder.build()) {
+            renamer.run(input, output.toFile());
+        } catch (Throwable t) {
+            LOGGER.error("Encountered error while transforming jar file {}", input.getAbsolutePath(), t);
+            throw t;
+        }
+
         stopwatch.stop();
         LOGGER.debug(JarTransformer.TRANSFORM_MARKER, "Skipping transformation of jar {} after {} ms as it contains generated metadata, assuming it's a java library", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
     }

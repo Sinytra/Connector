@@ -136,6 +136,7 @@ public class JarTransformInstance {
 
     private static void processGeneratedJar(File input, Path output, Stopwatch stopwatch) throws IOException {
         Files.copy(input.toPath(), output);
+        JarSignatureStripper.processJarInPlace(output);
         stopwatch.stop();
         LOGGER.debug(JarTransformer.TRANSFORM_MARKER, "Skipping transformation of jar {} after {} ms as it contains generated metadata, assuming it's a java library", input.getName(), stopwatch.elapsed(TimeUnit.MILLISECONDS));
     }

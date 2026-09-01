@@ -3,14 +3,29 @@
     <img height="163px" alt="banner" src="https://raw.githubusercontent.com/Sinytra/.github/main/art/connector_banner.svg">
   </a>
 </p>
+
 <p align="center">
   <a href="https://github.com/Sinytra/Connector/actions/workflows/build.yml"><img src="https://github.com/Sinytra/Connector/actions/workflows/build.yml/badge.svg"></a>
   <a href="https://github.com/Sinytra/Connector/releases/latest"><img src="https://img.shields.io/github/v/release/Sinytra/Connector?style=flat&label=Release&include_prereleases&sort=semver"></a>
   <a href="https://legacy.curseforge.com/minecraft/mc-mods/sinytra-connector"><img src="https://cf.way2muchnoise.eu/short_sinytra-connector.svg"></a>
   <a href="https://modrinth.com/mod/connector"><img src="https://img.shields.io/modrinth/dt/u58R1TMW?color=00AF5C&label=modrinth&style=flat&logo=modrinth"></a>
-  <a href="https://discord.sinytra.org"><img src="https://img.shields.io/discord/1141048834177388746?logo=discord&logoColor=white&label=Discord&color=5865f2"></a>
   <a href="https://nightly.link/Sinytra/Connector/workflows/build/dev/Nightly%20mod%20jar.zip"><img src="https://img.shields.io/badge/Nightly-Download-9a32f0?logo=github"></a>
 </p>
+
+<p align="center">
+  <a href="https://discord.sinytra.org">
+    <img alt="discord-plural" height="56" src="https://raw.githubusercontent.com/intergrav/devins-badges/refs/heads/v3/assets/cozy/social/discord-plural_vector.svg">
+  </a>
+
+  <a href="https://bsky.app/profile/su5ed.dev">
+    <img height="56" src='https://cdn.modrinth.com/data/cached_images/4f9f69d8bda87db19795c17a3080d8fb4ac4aa9a.png' alt='Follow us on Bluesky' />
+  </a>
+
+  <a href="https://www.patreon.com/cw/Su5eD">
+    <img alt="patreon-plural" height="56" src="https://raw.githubusercontent.com/Sinytra/.github/refs/heads/main/badges/misc/patreon_cozy.svg">
+  </a>
+</p>
+
 
 ## 📖 About
 

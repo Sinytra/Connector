@@ -2,13 +2,16 @@ package org.sinytra.connector.mod.mixin;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.ForgeHooksClient;
+import org.sinytra.connector.mod.compat.FluidHandlerCompat;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.ArrayList;
@@ -17,6 +20,13 @@ import java.util.Optional;
 
 @Mixin(ForgeHooksClient.class)
 public abstract class ForgeHooksClientMixin {
+
+    @Inject(method = "onTextureStitchedPost", at = @At("HEAD"), remap = false)
+    private static void connector$reloadFabricFluidTextures(TextureAtlas atlas, CallbackInfo ci) {
+        // Fabric initializes cached fluid sprites during its renderer reload, which runs after
+        // Forge mods can first query them from TextureStitchEvent.Post.
+        FluidHandlerCompat.reloadFluidTextures(atlas);
+    }
 
     @Inject(method = "gatherTooltipComponents(Lnet/minecraft/world/item/ItemStack;Ljava/util/List;Ljava/util/Optional;IIILnet/minecraft/client/gui/Font;)Ljava/util/List;", at = @At("RETURN"), remap = false, cancellable = true)
     private static void makeTooltipComponentListMutable(ItemStack stack, List<? extends FormattedText> textElements, Optional<TooltipComponent> itemComponent, int mouseX, int screenWidth, int screenHeight, Font fallbackFont, CallbackInfoReturnable<List<ClientTooltipComponent>> cir) {

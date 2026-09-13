@@ -6,7 +6,9 @@ import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandler;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariantAttributes;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -24,8 +26,11 @@ import net.minecraftforge.registries.RegisterEvent;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public final class FluidHandlerCompat {
@@ -36,6 +41,20 @@ public final class FluidHandlerCompat {
     public static void init(IEventBus bus) {
         initFabricFluidTypes();
         bus.addListener(FluidHandlerCompat::onRegisterFluids);
+    }
+
+    public static void reloadFluidTextures(TextureAtlas atlas) {
+        if (!TextureAtlas.LOCATION_BLOCKS.equals(atlas.location())) {
+            return;
+        }
+
+        Set<FluidRenderHandler> reloadedHandlers = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Fluid fluid : FABRIC_FLUID_TYPES.keySet()) {
+            FluidRenderHandler renderHandler = FluidRenderHandlerRegistry.INSTANCE.get(fluid);
+            if (renderHandler != null && reloadedHandlers.add(renderHandler)) {
+                renderHandler.reloadTextures(atlas);
+            }
+        }
     }
 
     public static FluidType getFabricFluidType(Fluid fluid) {
@@ -52,8 +71,7 @@ public final class FluidHandlerCompat {
             ResourceKey<Fluid> key = entry.getKey();
             Fluid fluid = entry.getValue();
             if (ModList.get().getModContainerById(key.location().getNamespace()).map(c -> ConnectorEarlyLoader.isConnectorMod(c.getModId())).orElse(false)) {
-                FluidRenderHandler renderHandler = FluidRenderHandlerRegistry.INSTANCE.get(fluid);
-                FluidType type = new FabricFluidType(FluidType.Properties.create(), fluid, renderHandler);
+                FluidType type = new FabricFluidType(FluidType.Properties.create(), fluid);
                 FABRIC_FLUID_TYPES.put(fluid, type);
                 FABRIC_FLUID_TYPES_BY_NAME.put(key.location(), type);
             }
@@ -67,14 +85,11 @@ public final class FluidHandlerCompat {
     @SuppressWarnings("UnstableApiUsage")
     private static class FabricFluidType extends FluidType {
         private final Fluid fluid;
-        @Nullable
-        private final FluidRenderHandler renderHandler;
         private final Component name;
 
-        public FabricFluidType(Properties properties, Fluid fluid, @Nullable FluidRenderHandler renderHandler) {
+        public FabricFluidType(Properties properties, Fluid fluid) {
             super(properties);
             this.fluid = fluid;
-            this.renderHandler = renderHandler;
             this.name = FluidVariantAttributes.getName(FluidVariant.of(fluid));
         }
 
@@ -91,37 +106,66 @@ public final class FluidHandlerCompat {
         @Override
         public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
             consumer.accept(new IClientFluidTypeExtensions() {
+                private final boolean[] missingSpriteWarnings = new boolean[2];
+
+                @Nullable
+                private FluidRenderHandler getRenderHandler() {
+                    return FluidRenderHandlerRegistry.INSTANCE.get(fluid);
+                }
+
                 private TextureAtlasSprite[] getSprites() {
-                    return renderHandler.getFluidSprites(null, null, fluid.defaultFluidState());
+                    FluidRenderHandler renderHandler = getRenderHandler();
+                    return renderHandler == null
+                            ? new TextureAtlasSprite[0]
+                            : renderHandler.getFluidSprites(null, null, fluid.defaultFluidState());
+                }
+
+                private ResourceLocation spriteName(TextureAtlasSprite[] sprites, int index, String kind) {
+                    if (sprites == null || sprites.length <= index || sprites[index] == null) {
+                        if (!missingSpriteWarnings[index]) {
+                            LOGGER.warn("Missing {} sprite for Fabric fluid {}", kind, ForgeRegistries.FLUIDS.getKey(fluid));
+                            missingSpriteWarnings[index] = true;
+                        }
+                        return MissingTextureAtlasSprite.getLocation();
+                    }
+                    return sprites[index].contents().name();
                 }
 
                 @Override
                 public ResourceLocation getStillTexture() {
-                    TextureAtlasSprite[] sprites = getSprites();
-                    return sprites[0].contents().name();
+                    return spriteName(getSprites(), 0, "still");
                 }
 
                 @Override
                 public ResourceLocation getFlowingTexture() {
-                    TextureAtlasSprite[] sprites = getSprites();
-                    return sprites[1].contents().name();
+                    return spriteName(getSprites(), 1, "flowing");
                 }
 
                 @Nullable
                 @Override
                 public ResourceLocation getOverlayTexture() {
                     TextureAtlasSprite[] sprites = getSprites();
-                    return sprites.length > 2 ? sprites[2].contents().name() : null;
+                    return sprites != null && sprites.length > 2 && sprites[2] != null
+                            ? sprites[2].contents().name()
+                            : null;
                 }
 
                 @Override
                 public int getTintColor() {
+                    FluidRenderHandler renderHandler = getRenderHandler();
+                    if (renderHandler == null) {
+                        return 0xFFFFFFFF;
+                    }
                     int baseColor = renderHandler.getFluidColor(null, null, fluid.defaultFluidState());
                     return 0xFF000000 | baseColor;
                 }
 
                 @Override
                 public int getTintColor(FluidState state, BlockAndTintGetter getter, BlockPos pos) {
+                    FluidRenderHandler renderHandler = getRenderHandler();
+                    if (renderHandler == null) {
+                        return 0xFFFFFFFF;
+                    }
                     int baseColor = renderHandler.getFluidColor(getter, pos, state);
                     return 0xFF000000 | baseColor;
                 }

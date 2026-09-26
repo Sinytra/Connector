@@ -3,6 +3,7 @@ package org.sinytra.connector.transformer.transform;
 import com.google.gson.*;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.fart.api.Transformer;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.AnnotationNode;
@@ -38,14 +39,17 @@ public class MixinPatchTransformer implements Transformer {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final PatchEnvironment environment;
+    @Nullable
+    private final Collection<String> transformMixinClasses;
 
     // Applied to all classes including non-mixins
     private final List<ClassTransformer> classTransforms;
     // Applied to mixins only
     private final Patcher patcher;
 
-    public MixinPatchTransformer(TransformerEnvironment runtimeEnvironment, PatchEnvironment environment, List<? extends MethodPatch> extraPatches) {
+    public MixinPatchTransformer(TransformerEnvironment runtimeEnvironment, PatchEnvironment environment, List<? extends MethodPatch> extraPatches, @Nullable Collection<String> transformMixinClasses) {
         this.environment = environment;
+        this.transformMixinClasses = transformMixinClasses;
 
         this.classTransforms = List.of(
             new EnvironmentStripperTransformer(runtimeEnvironment.getEnvType()),
@@ -147,13 +151,14 @@ public class MixinPatchTransformer implements Transformer {
     public ClassEntry process(ClassEntry entry) {
         PatchResult patchResult = PatchResult.PASS;
 
+        String className = entry.getClassName();
         ClassReader reader = new ClassReader(entry.getData());
         ClassNode node = new ClassNode();
         reader.accept(node, 0);
 
         // Some mods generate their mixin configs at runtime, therefore we must scan all classes
         // regardless of whether they're listed in present config files (see Andromeda)
-        if (isMixinClass(node)) {
+        if (isMixinClass(node) && (this.transformMixinClasses == null || this.transformMixinClasses.contains(className))) {
             PatchResult txResult = this.patcher.process(node);
             patchResult = patchResult.or(txResult);
         } else {
@@ -169,6 +174,7 @@ public class MixinPatchTransformer implements Transformer {
             node.accept(writer);
             return ClassEntry.create(entry.getName(), entry.getTime(), writer.toByteArray());
         }
+
         return entry;
     }
 

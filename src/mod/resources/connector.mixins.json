@@ -11,6 +11,7 @@
     "network.StreamCodecMixin",
     "registries.DataPackRegistriesHooksAccessor",
     "registries.EntityDataSerializersMixin",
+    "registries.FrozenRegistryWriteMixin",
     "registries.MappedRegistryAccessor",
     "registries.NetworkRegistryMixin",
     "registries.PoiTypesMixin",

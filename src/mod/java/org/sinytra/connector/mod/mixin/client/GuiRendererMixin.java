@@ -11,12 +11,12 @@ import java.util.List;
 
 @Mixin(GuiRenderer.class)
 public class GuiRendererMixin {
-    @ModifyArg(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/neoforged/neoforge/client/gui/PictureInPictureRendererPool;createPools(Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Ljava/util/List;)Ljava/util/Map;"))
+    @ModifyArg(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/neoforged/neoforge/client/gui/PictureInPictureRendererPool;createPools(Ljava/util/List;)Ljava/util/Map;"))
     private List<?> wrapPictureInPictureRenderers(List<?> factories) {
         return factories.stream()
             .map(factory -> {
                 if (factory instanceof PictureInPictureRenderer<?> renderer) {
-                    return new PictureInPictureRendererRegistration(renderer.getRenderStateClass(), buf -> renderer);
+                    return new PictureInPictureRendererRegistration(renderer.getRenderStateClass(), () -> renderer);
                 }
                 return factory;
             })

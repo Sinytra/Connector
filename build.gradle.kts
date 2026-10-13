@@ -16,8 +16,6 @@ val versionMc = libs.versions.minecraft.get()
 
 val curseForgeId = project.property("curseForgeId") as String
 val modrinthId = project.property("modrinthId") as String
-val githubRepository = project.property("githubRepository") as String
-val publishBranch = project.property("publishBranch") as String
 val forgifiedFabricApiCurseForge = project.property("forgifiedFabricApiCurseForge") as String
 val forgifiedFabricApiModrinth = project.property("forgifiedFabricApiModrinth") as String
 val launchpadCurseForge = project.property("launchpadCurseForge") as String
@@ -224,8 +222,8 @@ publishMods {
 
     github {
         accessToken = providers.environmentVariable("GITHUB_TOKEN")
-        repository = githubRepository
-        commitish = publishBranch
+        repository = providers.environmentVariable("GITHUB_REPOSITORY").orElse("")
+        commitish = providers.environmentVariable("GITHUB_SHA").orElse("")
     }
     curseforge {
         accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")

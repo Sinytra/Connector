@@ -8,6 +8,7 @@ modId="connector"
 version="${file.jarVersion}"
 displayName="Sinytra Connector"
 iconFile="logo.png"
+bannerFile="logo.png"
 authors="Su5eD"
 displayURL="https://github.com/Sinytra/Connector"
 description='''

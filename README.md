@@ -92,12 +92,12 @@ also getting you a fixed version ASAP.
 We do our best to actively support in-demand versions and backport compatible changes where possible. While unsupported
 versions will not receive further updates from us maintainers, pull requests for them are still welcome.
 
-| Minecraft version | Channel      | Status                             |
-|-------------------|--------------|------------------------------------|
-| 26.2.x            | 🟢 Supported | All new features and bugfixes.     |
-| 26.1.x            | 🟢 Supported | All new features and bugfixes.     |
-| 1.21.1            | 🟡️ LTS       | Bugfixes and non-breaking updates. |
-| 1.20.1            | 🔴 EOL       | Bugfixes and non-breaking updates. |
+| Minecraft version | Channel      | Status                        |
+|-------------------|--------------|-------------------------------|
+| 26.2.x            | 🟢 Supported | All new features and bugfixes |
+| 26.1.x            | 🟢 Supported | All new features and bugfixes |
+| 1.21.1            | 🟡️ LTS       | Some bugfixes                 |
+| 1.20.1            | 🔴 EOL       | Unsupported                   |
 
 Channels:
 

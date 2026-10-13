@@ -47,7 +47,7 @@ public class ConnectorMethodProcessor extends SimpleMethodProcessor {
                 LocalVariableLookup lvt = new LocalVariableLookup(input);
                 LocalVariableNode mobEffect = lvt.getByTypedOrdinal(Type.getObjectType("net/minecraft/world/effect/MobEffectInstance"), 1).orElse(null);
                 if (mobEffect != null) {
-                    mobEffect.start = lvt.getByIndex(0).start;
+                    mobEffect.start = lvt.getByIndexOrNull(0).start;
                     input.instructions.insert(mobEffect.start, listOf(
                         new InsnNode(Opcodes.ACONST_NULL),
                         new VarInsnNode(Opcodes.ASTORE, mobEffect.index)

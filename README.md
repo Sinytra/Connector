@@ -26,21 +26,22 @@
   </a>
 </p>
 
-
 ## 📖 About
 
 **Sinytra Connector** is a translation/compatibility layer that allows running [Fabric](https://fabricmc.net) mods
-on [NeoForge](https://neoforged.net). Its goal is to bring the two platforms closer together, saving
-developers time and effort maintaining their mods for multiple platforms at once, as well as allowing players to play
-all their favourite mods in one modpack.
+on [NeoForge](https://neoforged.net). Its goal is to bring the two platforms closer together, saving developers time and
+effort maintaining their mods for multiple platforms at once, as well as allowing players to play all their favourite
+mods in one modpack.
 
 **📘 Find compatible mods & official docs at [connector.sinytra.org](https://connector.sinytra.org).**
 
 ### 🔗 Related Projects
 
 - Visit our [website](https://connector.sinytra.org) to find information on mod compatibility and common issues
-- Developing cross-platform mods? Check out [Launchpad](https://github.com/Sinytra/Launchpad) and [Forgified Fabric API](https://github.com/Sinytra/ForgifiedFabricAPI)
-- Install [Connector Extras](https://github.com/Sinytra/ConnectorExtras) for improved compatibility with third-party libraries and APIs
+- Developing cross-platform mods? Check out [Launchpad](https://github.com/Sinytra/Launchpad)
+  and [Forgified Fabric API](https://github.com/Sinytra/ForgifiedFabricAPI)
+- Install [Connector Extras](https://github.com/Sinytra/ConnectorExtras) for improved compatibility with third-party
+  libraries and APIs
 
 ### 💬 Join the Community
 
@@ -57,18 +58,18 @@ To install Connector and its dependencies, follow the standard installation step
 1. Install [**NeoForge**](https://neoforged.net). We recommend using the latest stable version.
 
 2. Install Connector and dependencies
-   - [**Forgified Fabric API**](https://github.com/Sinytra/ForgifiedFabricAPI/releases/latest)
-   - [**Launchpad**](https://github.com/Sinytra/Launchpad/releases/latest)
-   - [**Connector**](https://github.com/Sinytra/Connector/releases/latest)
+    - [**Forgified Fabric API**](https://github.com/Sinytra/ForgifiedFabricAPI/releases/latest)
+    - [**Launchpad**](https://github.com/Sinytra/Launchpad/releases/latest)
+    - [**Connector**](https://github.com/Sinytra/Connector/releases/latest)
 
-3. You're good to go! With all dependencies installed, grab your favourite Fabric mods and
-   **just drop them in the mods folder** like you would with any NeoForge mods. Connector will handle loading them for
-   you with no additional steps required.
+3. You're good to go! With all dependencies installed, grab your favourite Fabric mods and **just drop them in the mods
+   folder** like you would with any NeoForge mods. Connector will handle loading them for you with no additional steps
+   required.
 
 ## 🔍 Get help
 
-If you're having trouble running a mod on Connector, join our community on [Discord](https://discord.sinytra.org), ask us
-on [GitHub Discussions](https://github.com/Sinytra/Connector/discussions) or open an issue in this repository.
+If you're having trouble running a mod on Connector, join our community on [Discord](https://discord.sinytra.org), ask
+us on [GitHub Discussions](https://github.com/Sinytra/Connector/discussions) or open an issue in this repository.
 
 Here's a few tips to follow when reporting issues:
 
@@ -88,10 +89,21 @@ also getting you a fixed version ASAP.
 
 ### Supported versions
 
-✅ **26.1.2** is our **primary supported version** and will receive the latest fixes and compatibility improvements.
+We do our best to actively support in-demand versions and backport compatible changes where possible. While unsupported
+versions will not receive further updates from us maintainers, pull requests for them are still welcome.
 
-⚠️ **1.21.1** is our **long-term-support** version and will still receive critical bugfixes.
-The latest compatibility fixes might not be available.
+| Minecraft version | Channel      | Status                             |
+|-------------------|--------------|------------------------------------|
+| 26.2.x            | 🟢 Supported | All new features and bugfixes.     |
+| 26.1.x            | 🟢 Supported | All new features and bugfixes.     |
+| 1.21.1            | 🟡️ LTS       | Bugfixes and non-breaking updates. |
+| 1.20.1            | 🔴 EOL       | Bugfixes and non-breaking updates. |
+
+Channels:
+
+- 🟢 **Supported**: latest fixes and compatibility improvements
+- 🟡️ **LTS**: critical bugfixes only. The latest compatibility fixes might not be available.
+- 🔴 **EOL**: unsupported
 
 ### Issue policy
 
@@ -154,5 +166,6 @@ All information regarding Connector's configuration options can be found on
 
 ## ⚖️ License
 
-Sinytra Connector is, and will always remain, licensed under the [MIT License](https://github.com/Sinytra/Connector/blob/master/LICENSE).
-All files in this repository should be treated as such unless otherwise explicitly stated.
+Sinytra Connector is, and will always remain, licensed under
+the [MIT License](https://github.com/Sinytra/Connector/blob/master/LICENSE). All files in this repository should be
+treated as such unless otherwise explicitly stated.

@@ -1,7 +1,5 @@
 package org.sinytra.connector.locator;
 
-import com.electronwill.nightconfig.core.UnmodifiableCommentedConfig;
-import com.electronwill.nightconfig.toml.TomlFormat;
 import com.mojang.logging.LogUtils;
 import net.fabricmc.loader.api.metadata.CustomValue;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
@@ -9,8 +7,6 @@ import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.fml.ModLoadingException;
 import net.neoforged.fml.jarcontents.JarContents;
 import net.neoforged.fml.loading.mixin.MixinFacade;
-import net.neoforged.fml.loading.moddiscovery.ModFile;
-import net.neoforged.fml.loading.moddiscovery.readers.JarModsDotTomlModFileReader;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import net.neoforged.neoforgespi.language.IConfigurable;
 import net.neoforged.neoforgespi.language.IModFileInfo;
@@ -32,9 +28,7 @@ import org.sinytra.connector.util.CrashReportHeader;
 import org.sinytra.launchpad.api.Constants;
 import org.slf4j.Logger;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.jar.Manifest;
 
 public class ConnectorModFileReader implements IModFileReader {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -81,7 +75,7 @@ public class ConnectorModFileReader implements IModFileReader {
             return null;
         }
 
-        if (isNeoForgeMod(jar)) {
+        if (MetadataReader.isNeoForgeMod(jar)) {
             return null;
         }
 
@@ -109,32 +103,6 @@ public class ConnectorModFileReader implements IModFileReader {
             .orElse(false);
         if (launchpadCompatible) {
             return true;
-        }
-
-        return false;
-    }
-
-    private static boolean isNeoForgeMod(JarContents jar) {
-        Manifest manifest = jar.getManifest();
-        if (manifest != null) {
-            if (manifest.getMainAttributes().containsKey(ModFile.TYPE)) {
-                return true;
-            }
-        }
-
-        if (jar.containsFile(JarModsDotTomlModFileReader.MODS_TOML)) {
-            var modsToml = jar.get(JarModsDotTomlModFileReader.MODS_TOML);
-            if (modsToml != null) {
-                UnmodifiableCommentedConfig config;
-                try (var reader = modsToml.bufferedReader()) {
-                    config = TomlFormat.instance().createParser().parse(reader).unmodifiable();
-                } catch (IOException e) {
-                    LOGGER.error("Failed to read {} from {}", modsToml, jar.getPrimaryPath(), e);
-                    return true;
-                }
-
-                return !config.contains(List.of("properties", org.sinytra.connector.api.Constants.PLACEHOLDER_PROPERTY));
-            }
         }
 
         return false;

@@ -11,6 +11,7 @@ import net.neoforged.neoforgespi.locating.IModFileReader;
 import net.neoforged.neoforgespi.locating.ModFileDiscoveryAttributes;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.transformer.jar.JarTransformer;
+import org.sinytra.connector.transformer.jar.MetadataReader;
 import org.sinytra.connector.transformer.runner.discovery.JarInspector;
 import org.sinytra.connector.transformer.runner.discovery.ProbeModDiscoverer;
 import org.sinytra.connector.transformer.transform.TransformerUtil;
@@ -65,25 +66,28 @@ public class PortableTransformerFrontend {
         JarTransformer.TransformableJar primaryJar = discoveredJars.stream()
             .filter(j -> j.input().toPath().equals(primarySource))
             .findFirst()
-            .orElseThrow();
+            .orElseThrow(() -> new IllegalArgumentException("Primary source " + primarySource + " is not a Fabric mod"));
         String primaryModid = primaryJar.modPath().metadata().modMetadata().getId();
 
         // Prepare jars
         Multimap<JarTransformer.TransformableJar, JarTransformer.TransformableJar> parentToChildren = HashMultimap.create();
+        List<Path> nativeNestedJars = new ArrayList<>();
         Stream<JarTransformer.TransformableJar> discoveredNestedJars = discoveredJars.stream()
             .flatMap(jar -> {
                 LoaderModMetadata metadata = jar.modPath().metadata().modMetadata();
-                return inspector.discoverNestedJarsRecursive(jar, metadata.getJars(), parentToChildren);
+                return inspector.discoverNestedJarsRecursive(jar, metadata.getJars(), parentToChildren, nativeNestedJars);
             });
         List<JarTransformer.TransformableJar> allJars = Stream.concat(discoveredJars.stream(), discoveredNestedJars).toList();
 
-        List<Path> resolvedClassPath = new ArrayList<>(ProbeModDiscoverer.resolveClassPath(classPath, tempDir));
+        List<Path> runtimeJars = new ArrayList<>(classPath);
+        runtimeJars.addAll(jars.other());
+        runtimeJars.addAll(nativeNestedJars);
+        List<Path> resolvedClassPath = new ArrayList<>(ProbeModDiscoverer.resolveClassPath(runtimeJars, tempDir));
 
         IModFile coremods = findCoremodsLibrary(resolvedClassPath);
         environment.setCoremodsFile(coremods);
 
         Collection<String> loadedModIDs = getLoadedModIDs(resolvedClassPath);
-        resolvedClassPath.addAll(jars.other());
 
         List<JarTransformer.TransformableJar> finalCandidates = allJars.stream()
             .filter(j -> !loadedModIDs.contains(j.modPath().metadata().modMetadata().getId()))
@@ -106,11 +110,12 @@ public class PortableTransformerFrontend {
         List<Path> otherJars = new ArrayList<>();
 
         for (Path path : paths) {
-            JarContents jar = JarContents.ofPath(path);
-            if (jar.containsFile(TransformerUtil.FABRIC_MOD_JSON)) {
-                fabricJars.add(path);
-            } else {
-                otherJars.add(path);
+            try (JarContents jar = JarContents.ofPath(path)) {
+                if (jar.containsFile(TransformerUtil.FABRIC_MOD_JSON) && !MetadataReader.isNeoForgeMod(jar)) {
+                    fabricJars.add(path);
+                } else {
+                    otherJars.add(path);
+                }
             }
         }
 

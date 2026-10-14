@@ -1,5 +1,7 @@
 package org.sinytra.connector.transformer.jar;
 
+import com.electronwill.nightconfig.core.UnmodifiableCommentedConfig;
+import com.electronwill.nightconfig.toml.TomlFormat;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -10,6 +12,8 @@ import net.fabricmc.loader.impl.metadata.*;
 import net.neoforged.fml.jarcontents.JarContents;
 import net.neoforged.fml.jarcontents.JarResource;
 import net.neoforged.fml.loading.LogMarkers;
+import net.neoforged.fml.loading.moddiscovery.ModFile;
+import net.neoforged.fml.loading.moddiscovery.readers.JarModsDotTomlModFileReader;
 import net.neoforged.fml.util.PathPrettyPrinting;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.transformer.TransformerEnvironment;
@@ -27,6 +31,7 @@ import java.util.stream.Collectors;
 
 public class MetadataReader {
     public static final String FMJ = "fabric.mod.json";
+    public static final String PLACEHOLDER_PROPERTY = "connector:placeholder";
     private static final String LOOM_GENERATED_PROPERTY = "fabric-loom:generated";
     private static final String LOOM_REMAP_ATTRIBUTE = "Fabric-Loom-Remap";
 
@@ -58,6 +63,32 @@ public class MetadataReader {
         } catch (ParseMetadataException e) {
             throw new RuntimeException("Malformed %s from %s".formatted(fmj, path), e);
         }
+    }
+
+    public static boolean isNeoForgeMod(JarContents jar) {
+        Manifest manifest = jar.getManifest();
+        if (manifest != null) {
+            if (manifest.getMainAttributes().containsKey(ModFile.TYPE)) {
+                return true;
+            }
+        }
+
+        if (jar.containsFile(JarModsDotTomlModFileReader.MODS_TOML)) {
+            var modsToml = jar.get(JarModsDotTomlModFileReader.MODS_TOML);
+            if (modsToml != null) {
+                UnmodifiableCommentedConfig config;
+                try (var reader = modsToml.bufferedReader()) {
+                    config = TomlFormat.instance().createParser().parse(reader).unmodifiable();
+                } catch (IOException e) {
+                    LOGGER.error("Failed to read {} from {}", modsToml, jar.getPrimaryPath(), e);
+                    return true;
+                }
+
+                return !config.contains(List.of("properties", PLACEHOLDER_PROPERTY));
+            }
+        }
+
+        return false;
     }
 
     public static FabricModFileMetadata readJarMetadata(JarContents jar, LoaderModMetadata metadata, TransformerEnvironment environment) {

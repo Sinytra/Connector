@@ -6,7 +6,6 @@ import com.mojang.logging.LogUtils;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.art.api.ClassProvider;
 import net.neoforged.fml.jarcontents.JarContents;
-import net.neoforged.fml.jarmoduleinfo.JarModuleInfo;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.adapter.env.ctx.AuditTrail;
 import org.sinytra.adapter.util.AdapterUtil;
@@ -142,7 +141,7 @@ public final class JarTransformer {
         for (Path lib : paths) {
             try {
                 JarContents contents = JarContents.ofPath(lib);
-                Set<String> packages = JarModuleInfo.from(contents).createDescriptor(contents).packages();
+                Collection<String> packages = TransformerUtil.getPackages(contents);
                 for (String pkg : packages) {
                     allPackages.add(AdapterUtil.shortenPackage(pkg));
                 }

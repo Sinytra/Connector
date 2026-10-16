@@ -11,6 +11,7 @@ import net.neoforged.neoforgespi.locating.IModFile;
 import net.neoforged.neoforgespi.locating.IModFile.Type;
 import org.jetbrains.annotations.Nullable;
 import org.sinytra.connector.transformer.jar.FabricModFileMetadata;
+import org.sinytra.connector.transformer.transform.TransformerUtil;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -96,7 +97,7 @@ public class SplitPackageMerger {
         Set<String> existingPackages = new HashSet<>();
         for (IModFile modFile : existing) {
             if (!ignoredModFiles.contains(modFile)) {
-                Set<String> packages = JarModuleInfo.from(modFile.getContents()).createDescriptor(modFile.getContents()).packages();
+                Collection<String> packages = TransformerUtil.getPackages(modFile.getContents());
                 existingPackages.addAll(packages);
             }
         }

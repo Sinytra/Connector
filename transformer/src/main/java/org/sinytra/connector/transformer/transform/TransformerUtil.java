@@ -1,12 +1,16 @@
 package org.sinytra.connector.transformer.transform;
 
 import com.google.common.hash.Hashing;
+import net.neoforged.fml.jarcontents.JarContents;
+import net.neoforged.fml.jarmoduleinfo.JarModuleInfo;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.module.InvalidModuleDescriptorException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
@@ -83,6 +87,15 @@ public final class TransformerUtil {
     static {
         String prop = System.getProperty("connector.cache.enabled");
         CACHE_ENABLED = prop == null || prop.equals("true");
+    }
+
+    public static Collection<String> getPackages(JarContents contents) {
+        try {
+            return JarModuleInfo.from(contents).createDescriptor(contents).packages();
+        } catch (InvalidModuleDescriptorException e) {
+            // ignored
+            return Set.of();
+        }
     }
 
     public static boolean isJavaReservedKeyword(String str) {

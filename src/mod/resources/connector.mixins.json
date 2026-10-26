@@ -25,6 +25,7 @@
   "client": [
     "client.ForgeHooksClientMixin",
     "client.FullFaceCalculatorAccessor",
+    "client.GuiRendererFieldMixin",
     "client.GuiRendererMixin",
     "client.KeyMappingMixin",
     "client.ModelBlockRendererMixin"

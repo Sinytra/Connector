@@ -1,8 +1,8 @@
 [versions]
 minecraft = "26.2"
-neoforge = "26.2.0.90"
+neoforge = "26.2.0.93"
 
-adapter-core = "2.0.117-overhaul+26.1.2"
+adapter-core = "2.0.121+26.1.2"
 launchpad = "1.10.1+26.2"
 auto-renaming-tool = "2.0.23"
 classtweaker = "0.3.0"

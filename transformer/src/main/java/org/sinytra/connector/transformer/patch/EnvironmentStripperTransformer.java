@@ -8,12 +8,11 @@ import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
-import org.sinytra.adapter.analysis.selector.AnnotationHandle;
-import org.sinytra.adapter.analysis.selector.AnnotationValueHandle;
-import org.sinytra.adapter.env.ann.ClassTarget;
-import org.sinytra.adapter.env.ctx.PatchContext;
-import org.sinytra.adapter.env.ctx.PatchResult;
-import org.sinytra.adapter.transform.ClassTransformer;
+import org.sinytra.adapter.api.ClassPatchContext;
+import org.sinytra.adapter.api.ClassTransformer;
+import org.sinytra.adapter.api.PatchResult;
+import org.sinytra.adapter.model.ann.AnnotationHandle;
+import org.sinytra.adapter.model.ann.AnnotationValueHandle;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -32,7 +31,7 @@ public class EnvironmentStripperTransformer implements ClassTransformer {
     }
 
     @Override
-    public PatchResult apply(ClassNode classNode, ClassTarget classTarget, PatchContext context) {
+    public PatchResult apply(ClassNode classNode, ClassPatchContext context) {
         boolean applied = stripEnvironmentInterface(classNode.interfaces, classNode.invisibleAnnotations);
 
         List<MethodNode> removeMethods = new ArrayList<>();

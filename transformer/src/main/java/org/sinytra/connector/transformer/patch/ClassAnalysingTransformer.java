@@ -5,8 +5,8 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.sinytra.adapter.env.ctx.PatchResult;
-import org.sinytra.adapter.util.MethodQualifier;
+import org.sinytra.adapter.api.PatchResult;
+import org.sinytra.adapter.model.MethodQualifier;
 
 import java.util.Map;
 

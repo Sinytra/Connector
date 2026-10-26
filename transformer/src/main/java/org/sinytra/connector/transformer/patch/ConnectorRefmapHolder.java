@@ -1,6 +1,6 @@
 package org.sinytra.connector.transformer.patch;
 
-import org.sinytra.adapter.env.ctx.RefmapHolder;
+import org.sinytra.adapter.api.RefmapHolder;
 
 import java.util.*;
 

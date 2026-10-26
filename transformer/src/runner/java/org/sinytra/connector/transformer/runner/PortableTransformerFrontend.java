@@ -46,6 +46,10 @@ public class PortableTransformerFrontend {
             initialized = true;
         }
 
+        if (!Files.exists(cleanPath)) {
+            throw new RuntimeException("Clean path file does not exist");
+        }
+
         Files.createDirectories(outputDir);
         Path tempDir = outputDir.resolve("temp");
         Files.createDirectories(tempDir);

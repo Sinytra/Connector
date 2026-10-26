@@ -3,7 +3,7 @@ package org.sinytra.connector.locator;
 import com.mojang.logging.LogUtils;
 import net.neoforged.fml.ModLoadingException;
 import net.neoforged.fml.ModLoadingIssue;
-import org.sinytra.adapter.env.ctx.AuditTrail;
+import org.sinytra.adapter.api.AuditTrail;
 import org.sinytra.connector.transformer.jar.JarTransformer;
 import org.sinytra.connector.util.ConnectorConfig;
 import org.slf4j.Logger;

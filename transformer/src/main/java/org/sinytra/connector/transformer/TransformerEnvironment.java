@@ -4,7 +4,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.art.api.ClassProvider;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.adapter.util.provider.ClassLookup;
+import org.sinytra.adapter.api.ClassLookup;
 import org.sinytra.connector.transformer.transform.TransformProgressMeter;
 
 import java.io.IOException;

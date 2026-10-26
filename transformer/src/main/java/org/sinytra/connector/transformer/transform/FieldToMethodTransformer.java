@@ -12,7 +12,7 @@ import net.neoforged.art.api.Transformer;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
-import org.sinytra.adapter.env.ctx.PatchResult;
+import org.sinytra.adapter.api.PatchResult;
 import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
 import org.slf4j.Logger;
 

@@ -7,7 +7,7 @@ import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.art.api.ClassProvider;
 import net.neoforged.fml.jarcontents.JarContents;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.adapter.env.ctx.AuditTrail;
+import org.sinytra.adapter.api.AuditTrail;
 import org.sinytra.adapter.util.AdapterUtil;
 import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;

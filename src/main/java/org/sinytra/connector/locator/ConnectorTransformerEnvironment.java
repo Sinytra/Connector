@@ -14,7 +14,7 @@ import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import net.neoforged.neoforgespi.locating.IModFile;
 import net.neoforged.neoforgespi.transformation.BytecodeProvider;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.adapter.util.provider.ClassLookup;
+import org.sinytra.adapter.api.ClassLookup;
 import org.sinytra.connector.ConnectorEarlyLoader;
 import org.sinytra.connector.transformer.DependencyConfiguration;
 import org.sinytra.connector.transformer.TransformerBytecodeProvider;

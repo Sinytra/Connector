@@ -4,7 +4,7 @@ import com.mojang.logging.LogUtils;
 import net.neoforged.art.api.Transformer;
 import net.neoforged.fml.loading.LogMarkers;
 import net.neoforged.fml.util.ServiceLoaderUtil;
-import org.sinytra.adapter.transform.patch.MethodPatch;
+import org.sinytra.adapter.api.MethodPatch;
 import org.sinytra.connector.transformer.api.TransformerContext;
 import org.sinytra.connector.transformer.api.TransformerPlugin;
 import org.sinytra.connector.transformer.api.TransformerRegistrar;

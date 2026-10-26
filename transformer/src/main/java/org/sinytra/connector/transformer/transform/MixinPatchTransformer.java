@@ -7,15 +7,10 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
-import org.sinytra.adapter.env.ctx.MixinClassGenerator;
-import org.sinytra.adapter.env.ctx.PatchContext;
-import org.sinytra.adapter.env.ctx.PatchEnvironment;
-import org.sinytra.adapter.env.ctx.PatchResult;
-import org.sinytra.adapter.env.util.MixinAnnotations;
-import org.sinytra.adapter.patch.DynamicPatches;
-import org.sinytra.adapter.patch.Patcher;
-import org.sinytra.adapter.transform.ClassTransformer;
-import org.sinytra.adapter.transform.patch.MethodPatch;
+import org.sinytra.adapter.api.*;
+import org.sinytra.adapter.model.constant.MixinAnnotations;
+import org.sinytra.adapter.pipeline.ctx.PatchContext;
+import org.sinytra.adapter.pipeline.ctx.PatchContextImpl;
 import org.sinytra.adapter.types.FieldTypeUsageTransformer;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.patch.EnvironmentStripperTransformer;
@@ -154,7 +149,7 @@ public class MixinPatchTransformer implements Transformer {
             patchResult = patchResult.or(txResult);
         } else {
             for (ClassTransformer transform : this.classTransforms) {
-                patchResult = patchResult.or(transform.apply(node, null, PatchContext.create(node, List.of(), this.environment)));
+                patchResult = patchResult.or(transform.apply(node, new PatchContextImpl(node, null, List.of(), this.environment)));
             }
         }
 

@@ -1,6 +1,6 @@
 package org.sinytra.connector.transformer.plugin;
 
-import org.sinytra.adapter.transform.patch.MethodPatch;
+import org.sinytra.adapter.api.MethodPatch;
 import org.sinytra.connector.transformer.api.*;
 import org.sinytra.connector.transformer.patch.ClassAnalysingTransformer;
 import org.sinytra.connector.transformer.patch.ClassNodeTransformer;

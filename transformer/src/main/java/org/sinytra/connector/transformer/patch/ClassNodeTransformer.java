@@ -4,7 +4,7 @@ import net.neoforged.art.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
-import org.sinytra.adapter.env.ctx.PatchResult;
+import org.sinytra.adapter.api.PatchResult;
 
 import java.util.List;
 

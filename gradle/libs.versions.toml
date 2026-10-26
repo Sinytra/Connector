@@ -2,8 +2,7 @@
 minecraft = "26.1.2"
 neoforge = "26.1.2.100"
 
-adapter-core = "2.0.54+26.1.2"
-adapter-runtime = "1.0.0+26.1.2"
+adapter-core = "2.0.121+26.1.2"
 launchpad = "1.9.1+26.1.2"
 auto-renaming-tool = "2.0.23"
 classtweaker = "0.3.0-beta.2"
@@ -18,7 +17,6 @@ wiki-toolkit = "0.4.1"
 
 [libraries]
 adapter-core = { module = "org.sinytra.adapter:core", version.ref = "adapter-core" }
-adapter-runtime = { module = "org.sinytra.adapter:runtime", version.ref = "adapter-runtime" }
 launchpad = { module = "org.sinytra.launchpad:launchpad", version.ref = "launchpad" }
 auto-renaming-tool = { module = "org.sinytra:AutoRenamingTool", version.ref = "auto-renaming-tool" }
 classtweaker = { module = "net.fabricmc:class-tweaker", version.ref = "classtweaker" }

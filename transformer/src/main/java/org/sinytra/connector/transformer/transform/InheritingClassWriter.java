@@ -3,7 +3,7 @@ package org.sinytra.connector.transformer.transform;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
-import org.sinytra.adapter.env.ctx.PatchEnvironment;
+import org.sinytra.adapter.api.PatchEnvironment;
 
 import java.lang.reflect.Modifier;
 import java.util.*;

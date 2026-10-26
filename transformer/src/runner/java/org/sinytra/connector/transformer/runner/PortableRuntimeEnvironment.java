@@ -5,7 +5,7 @@ import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 import net.neoforged.art.api.ClassProvider;
 import net.neoforged.neoforgespi.locating.IModFile;
 import org.jetbrains.annotations.Nullable;
-import org.sinytra.adapter.util.provider.ClassLookup;
+import org.sinytra.adapter.api.ClassLookup;
 import org.sinytra.connector.transformer.TransformerBytecodeProvider;
 import org.sinytra.connector.transformer.TransformerEnvironment;
 import org.sinytra.connector.transformer.jar.EarlyCoremodTransformer;

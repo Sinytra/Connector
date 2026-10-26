@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -45,7 +46,9 @@ public class ConnectorMethodProcessor extends SimpleMethodProcessor {
             new Target("net.minecraft.world.entity.LivingEntity", "forceAddEffect", "(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)V"),
             input -> {
                 LocalVariableLookup lvt = new LocalVariableLookup(input);
-                LocalVariableNode mobEffect = lvt.getByTypedOrdinal(Type.getObjectType("net/minecraft/world/effect/MobEffectInstance"), 1).orElse(null);
+                LocalVariableNode mobEffect = Optional.ofNullable(lvt.getForType(Type.getObjectType("net/minecraft/world/effect/MobEffectInstance")))
+                    .map(l -> l.size() > 1 ? l.get(1) : null)
+                    .orElse(null);
                 if (mobEffect != null) {
                     mobEffect.start = lvt.getByIndex(0).start;
                     input.instructions.insert(mobEffect.start, listOf(

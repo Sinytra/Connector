@@ -110,9 +110,6 @@ dependencies {
     api(project(":transformer"))
     implementation(project(":transformer")) { isTransitive = false }
 
-    implementation(libs.adapter.runtime)
-    jarJar(libs.adapter.runtime)
-
     implementation(libs.launchpad)
     "modImplementation"(libs.launchpad)
 

@@ -6,9 +6,9 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.sinytra.adapter.env.ctx.PatchResult;
-import org.sinytra.adapter.env.util.MixinAnnotations;
-import org.sinytra.adapter.transform.patch.MethodPatch;
+import org.sinytra.adapter.api.MethodPatch;
+import org.sinytra.adapter.api.PatchResult;
+import org.sinytra.adapter.model.constant.MixinAnnotations;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -75,7 +75,7 @@ public class MixinPatches {
                 .targetInjectionPoint("Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
                 .modifyInjectionPoint("Lnet/neoforged/neoforge/client/settings/KeyMappingLookup;put(Lcom/mojang/blaze3d/platform/InputConstants$Key;Lnet/minecraft/client/KeyMapping;)V")
                 .targetMixinType(MixinAnnotations.REDIRECT)
-                .transform((context, configuration) -> {
+                .transform(context -> {
                     MethodNode methodNode = context.methodNode();
                     for (AbstractInsnNode insn : methodNode.instructions) {
                         if (insn.getOpcode() == Opcodes.ARETURN) {

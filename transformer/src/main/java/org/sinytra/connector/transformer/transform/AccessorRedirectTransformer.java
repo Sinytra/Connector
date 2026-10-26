@@ -4,8 +4,8 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
-import org.sinytra.adapter.env.ctx.PatchResult;
-import org.sinytra.adapter.transform.patch.MethodPatch;
+import org.sinytra.adapter.api.MethodPatch;
+import org.sinytra.adapter.api.PatchResult;
 import org.sinytra.connector.transformer.patch.AccessorToInvokerTransformer;
 import org.sinytra.connector.transformer.patch.ClassNodeTransformer;
 
@@ -26,7 +26,7 @@ public class AccessorRedirectTransformer implements ClassNodeTransformer.ClassPr
                     .targetClass(entry.getKey().replace('.', '/'))
                     .targetField(s)
                     .transform(new AccessorToInvokerTransformer(s))
-                    .transform((context, configuration) -> {
+                    .transform(context -> {
                         ClassNode classNode = context.classNode();
                         MethodNode methodNode = context.methodNode();
 

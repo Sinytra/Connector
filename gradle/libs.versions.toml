@@ -1,19 +1,19 @@
 [versions]
 minecraft = "26.1.2"
-neoforge = "26.1.2.100"
+neoforge = "26.1.2.124"
 
 adapter-core = "2.0.121+26.1.2"
-launchpad = "1.9.1+26.1.2"
+launchpad = "1.10.2+26.1.2"
 auto-renaming-tool = "2.0.23"
-classtweaker = "0.3.0-beta.2"
-forgified-fabric-loader = "2.5.85+0.19.3+26.1.2"
-forgified-fabric-api = "0.155.2+26.1.2+3.5.0"
+classtweaker = "0.3.0"
+forgified-fabric-loader = "2.5.90+0.19.5+26.1.2"
+forgified-fabric-api = "0.155.3+26.1.2+3.5.10"
 
-moddev = "2.0.141"
-shadow = "9.4.2"
-mod-publish = "2.1.1"
-gradleutils = "5.1.1"
-wiki-toolkit = "0.4.1"
+moddev = "2.0.148"
+shadow = "9.6.1"
+mod-publish = "2.2.1"
+gradleutils = "6.0.0"
+wiki-toolkit = "0.5.0"
 
 [libraries]
 adapter-core = { module = "org.sinytra.adapter:core", version.ref = "adapter-core" }

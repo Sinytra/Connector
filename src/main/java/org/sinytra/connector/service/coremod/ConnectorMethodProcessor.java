@@ -50,7 +50,7 @@ public class ConnectorMethodProcessor extends SimpleMethodProcessor {
                     .map(l -> l.size() > 1 ? l.get(1) : null)
                     .orElse(null);
                 if (mobEffect != null) {
-                    mobEffect.start = lvt.getByIndex(0).start;
+                    mobEffect.start = lvt.getByIndexOrNull(0).start;
                     input.instructions.insert(mobEffect.start, listOf(
                         new InsnNode(Opcodes.ACONST_NULL),
                         new VarInsnNode(Opcodes.ASTORE, mobEffect.index)

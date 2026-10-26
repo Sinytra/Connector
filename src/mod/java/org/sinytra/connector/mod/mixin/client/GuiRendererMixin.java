@@ -3,7 +3,6 @@ package org.sinytra.connector.mod.mixin.client;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.client.gui.render.GuiRenderer;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
-import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 import org.spongepowered.asm.mixin.Final;
@@ -24,9 +23,6 @@ public class GuiRendererMixin {
     @Shadow
     @Final
     private GuiRenderState renderState;
-    @Shadow
-    @Final
-    private FeatureRenderDispatcher featureRenderDispatcher;
 
     // Added by GuiRendererFieldMixin
     @Shadow
@@ -53,7 +49,7 @@ public class GuiRendererMixin {
         PictureInPictureRenderer<T> renderer = this.pictureInPictureRenderers != null ? (PictureInPictureRenderer<T>) this.pictureInPictureRenderers.get(state.getClass()) : null;
         if (renderer != null) {
             if (firstPass) {
-                renderer.prepare(state, this.renderState, this.featureRenderDispatcher, guiScale);
+                renderer.prepare(state, this.renderState, guiScale);
             }
             cir.setReturnValue(true);
         }

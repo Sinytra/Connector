@@ -2,6 +2,9 @@ package org.sinytra.connector.transformer.transform;
 
 import com.google.gson.*;
 import com.mojang.logging.LogUtils;
+import net.fabricmc.loader.api.SemanticVersion;
+import net.fabricmc.loader.api.Version;
+import net.fabricmc.loader.api.VersionParsingException;
 import net.neoforged.art.api.Transformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -9,7 +12,6 @@ import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.sinytra.adapter.api.*;
 import org.sinytra.adapter.model.constant.MixinAnnotations;
-import org.sinytra.adapter.pipeline.ctx.PatchContext;
 import org.sinytra.adapter.pipeline.ctx.PatchContextImpl;
 import org.sinytra.adapter.types.FieldTypeUsageTransformer;
 import org.sinytra.connector.transformer.TransformerEnvironment;
@@ -19,7 +21,6 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,6 +31,7 @@ import static org.sinytra.connector.transformer.transform.TransformerUtil.rethro
 
 public class MixinPatchTransformer implements Transformer {
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final String MIXINEXTRAS_MIN_VERSION = "0.5.0";
 
     private final PatchEnvironment environment;
 
@@ -54,43 +56,44 @@ public class MixinPatchTransformer implements Transformer {
 
     public void finalize(Path zipRoot, Collection<String> configs, Map<String, SimpleRefmap> refmapFiles, Set<String> dirtyRefmaps) throws IOException {
         Map<String, MixinClassGenerator.GeneratedClass> generatedMixinClasses = this.environment.classGenerator().getGeneratedMixinClasses();
-        if (!generatedMixinClasses.isEmpty()) {
-            for (String config : configs) {
-                Path entry = zipRoot.resolve(config);
-                if (Files.exists(entry)) {
-                    try (Reader reader = Files.newBufferedReader(entry)) {
-                        JsonElement element = JsonParser.parseReader(reader);
-                        JsonObject json = element.getAsJsonObject();
-                        if (json.has("package")) {
-                            String pkg = json.get("package").getAsString();
-                            Map<String, MixinClassGenerator.GeneratedClass> mixins = getMixinsInPackage(pkg, generatedMixinClasses);
-                            if (!mixins.isEmpty()) {
-                                JsonArray jsonMixins = json.has("mixins") ? json.get("mixins").getAsJsonArray() : new JsonArray();
-                                LOGGER.info("Adding {} mixins to config {}", mixins.size(), config);
-                                mixins.keySet().forEach(jsonMixins::add);
-                                json.add("mixins", jsonMixins);
+        for (String config : configs) {
+            Path entry = zipRoot.resolve(config);
+            if (!Files.exists(entry)) {
+                continue;
+            }
+            JsonObject json;
+            try (Reader reader = Files.newBufferedReader(entry)) {
+                json = JsonParser.parseReader(reader).getAsJsonObject();
+            }
+            boolean changed = requireMixinExtrasVersion(json, config);
 
-                                String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
-                                Files.writeString(entry, output, StandardCharsets.UTF_8);
+            Map<String, MixinClassGenerator.GeneratedClass> mixins = json.has("package")
+                ? getMixinsInPackage(json.get("package").getAsString(), generatedMixinClasses)
+                : Map.of();
+            if (!mixins.isEmpty()) {
+                JsonArray jsonMixins = json.has("mixins") ? json.get("mixins").getAsJsonArray() : new JsonArray();
+                LOGGER.info("Adding {} mixins to config {}", mixins.size(), config);
+                mixins.keySet().forEach(jsonMixins::add);
+                json.add("mixins", jsonMixins);
+                changed = true;
 
-                                // Update refmap
-                                if (json.has("refmap")) {
-                                    String refmapName = json.get("refmap").getAsString();
-                                    if (dirtyRefmaps.contains(refmapName)) {
-                                        SimpleRefmap refmap = refmapFiles.get(refmapName);
-                                        Path path = zipRoot.resolve(refmapName);
-                                        if (Files.exists(path)) {
-                                            String refmapString = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(refmap);
-                                            Files.writeString(path, refmapString, StandardCharsets.UTF_8);
-                                        }
-                                    }
-                                }
-                            }
+                // Update refmap
+                if (json.has("refmap")) {
+                    String refmapName = json.get("refmap").getAsString();
+                    if (dirtyRefmaps.contains(refmapName)) {
+                        SimpleRefmap refmap = refmapFiles.get(refmapName);
+                        Path path = zipRoot.resolve(refmapName);
+                        if (Files.exists(path)) {
+                            String refmapString = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(refmap);
+                            Files.writeString(path, refmapString, StandardCharsets.UTF_8);
                         }
-                    } catch (IOException e) {
-                        throw new UncheckedIOException(e);
                     }
                 }
+            }
+
+            if (changed) {
+                String output = new GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(json);
+                Files.writeString(entry, output, StandardCharsets.UTF_8);
             }
         }
         // Strip unused service providers
@@ -117,6 +120,26 @@ public class MixinPatchTransformer implements Transformer {
                         }
                     }));
             }
+        }
+    }
+
+    private static boolean requireMixinExtrasVersion(JsonObject json, String config) {
+        JsonObject mixinExtras = json.get("mixinextras") instanceof JsonObject object ? object : new JsonObject();
+        JsonElement declared = mixinExtras.has("minVersion") ? mixinExtras.get("minVersion") : json.get("minMixinExtrasVersion");
+        if (declared != null && declared.isJsonPrimitive() && isGreaterOrEqual(declared.getAsString(), MIXINEXTRAS_MIN_VERSION)) {
+            return false;
+        }
+        LOGGER.debug("Requiring MixinExtras {} in config {}", MIXINEXTRAS_MIN_VERSION, config);
+        mixinExtras.addProperty("minVersion", MIXINEXTRAS_MIN_VERSION);
+        json.add("mixinextras", mixinExtras);
+        return true;
+    }
+
+    private static boolean isGreaterOrEqual(String version, String minimum) {
+        try {
+            return SemanticVersion.parse(version).compareTo((Version) SemanticVersion.parse(minimum)) >= 0;
+        } catch (VersionParsingException e) {
+            return false;
         }
     }
 

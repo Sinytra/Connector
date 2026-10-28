@@ -2,7 +2,7 @@
 minecraft = "26.1.2"
 neoforge = "26.1.2.124"
 
-adapter-core = "2.0.121+26.1.2"
+adapter-core = "2.0.123+26.1.2"
 launchpad = "1.10.2+26.1.2"
 auto-renaming-tool = "2.0.23"
 classtweaker = "0.3.0"

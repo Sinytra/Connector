@@ -252,15 +252,25 @@ public final class JarTransformer {
             Map<String, ClassInfo> cache = (Map<String, ClassInfo>) cacheField.get();
             cache.clear();
 
-            VarHandle nonExpandedCacheField = lookup.findStaticVarHandle(ClassInfo.class, "nonExpandedCache", Map.class);
-            Map<String, ClassInfo> nonExpandedCache = (Map<String, ClassInfo>) nonExpandedCacheField.get();
-            nonExpandedCache.clear();
+            // nonExpandedCache only exists in Mixin 0.12+; Forge and Mohist ship 0.8.5, where the
+            // lookup throws and used to abort the rest of the cleanup (including restoring
+            // java/lang/Object in the main cache).
+            Map<String, ClassInfo> nonExpandedCache = null;
+            try {
+                VarHandle nonExpandedCacheField = lookup.findStaticVarHandle(ClassInfo.class, "nonExpandedCache", Map.class);
+                nonExpandedCache = (Map<String, ClassInfo>) nonExpandedCacheField.get();
+                nonExpandedCache.clear();
+            } catch (NoSuchFieldException ignored) {
+                // Mixin 0.8.5
+            }
 
             VarHandle objectField = lookup.findStaticVarHandle(ClassInfo.class, "OBJECT", ClassInfo.class);
             ClassInfo object = (ClassInfo) objectField.get();
 
             cache.put("java/lang/Object", object);
-            nonExpandedCache.put("java/lang/Object", object);
+            if (nonExpandedCache != null) {
+                nonExpandedCache.put("java/lang/Object", object);
+            }
         } catch (Throwable t) {
             LOGGER.error("Error cleaning up after jar transformation", t);
         }

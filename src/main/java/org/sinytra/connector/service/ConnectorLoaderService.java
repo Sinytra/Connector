@@ -87,6 +87,9 @@ public class ConnectorLoaderService implements ITransformationService {
     @SuppressWarnings("unchecked")
     @Override
     public void onLoad(IEnvironment env, Set<String> otherServices) {
+        if (MohistCompat.isMohistRuntime()) {
+            LOGGER.info("Mohist compatibility mode active");
+        }
         List<ILaunchPluginService> injectPlugins = List.of(new ConnectorPreLaunchPlugin());
 
         try {
@@ -121,10 +124,19 @@ public class ConnectorLoaderService implements ITransformationService {
         else {
             LOGGER.warn("Broken FML mod files found, not adding Connector locator errors");
         }
-        return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(
-            new FabricASMFixer.FabricASMGeneratedClassesSecureJar(),
-            ModuleLayerMigrator.moveModule(AUTHLIB_MODULE)
-        )));
+        try {
+            return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(
+                new FabricASMFixer.FabricASMGeneratedClassesSecureJar(),
+                ModuleLayerMigrator.moveModule(AUTHLIB_MODULE)
+            )));
+        } catch (Throwable error) {
+            // Mohist ships a forked securejarhandler; authlib migration may differ there.
+            // Losing the authlib move only affects Fabric API internals, not server startup.
+            LOGGER.warn("Could not migrate the '{}' module to the GAME layer (continuing without it): {}", AUTHLIB_MODULE, error.toString());
+            return List.of(new Resource(IModuleLayerManager.Layer.GAME, List.of(
+                new FabricASMFixer.FabricASMGeneratedClassesSecureJar()
+            )));
+        }
     }
 
     @Override

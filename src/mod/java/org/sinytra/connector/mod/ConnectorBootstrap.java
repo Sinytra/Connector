@@ -1,6 +1,7 @@
 package org.sinytra.connector.mod;
 
 import org.sinytra.connector.loader.ConnectorEarlyLoader;
+import org.sinytra.connector.service.MohistCompat;
 import net.minecraftforge.coremod.api.ASMAPI;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -21,8 +22,16 @@ public class ConnectorBootstrap implements IMixinConfigPlugin {
         CrashReportUpgrade.registerCrashLogInfo();
     }
 
+    // Mohist's Mixin build rejects injectors on interface targets, which aborts the launch while
+    // BuiltInRegistries initialises. This mixin only redirects piglin bartering, so skipping it there
+    // is preferable to failing to start.
+    private static final String I_FORGE_ITEM_MIXIN = "org.sinytra.connector.mod.mixin.IForgeItemMixin";
+
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (MohistCompat.isMohistRuntime() && I_FORGE_ITEM_MIXIN.equals(mixinClassName)) {
+            return false;
+        }
         return !ConnectorEarlyLoader.hasEncounteredException();
     }
 
